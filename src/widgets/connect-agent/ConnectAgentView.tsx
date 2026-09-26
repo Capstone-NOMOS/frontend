@@ -17,7 +17,11 @@ const CLIS = [
 const STEPS = [
   { key: "login", label: "로그인 (아이디/비밀번호 또는 토큰)", out: "✓ caleb 로 로그인됨" },
   { key: "detect", label: "로컬 Claude Code 감지 (claude --version)", out: "✓ claude 2.1.x 감지됨" },
-  { key: "mcp", label: "NOMOS MCP 서버를 Claude Code 설정에 자동 등록", out: "✓ ~/.claude/settings.json 에 nomos MCP 등록" },
+  {
+    key: "mcp",
+    label: "NOMOS MCP 서버를 Claude Code 설정에 자동 등록",
+    out: "✓ ~/.claude/settings.json 에 nomos MCP 등록",
+  },
   { key: "ws", label: "서버와 WebSocket 연결", out: "✓ 연결됨. 프로젝트에 참여하면 에이전트가 활성화됩니다." },
 ];
 
@@ -34,7 +38,12 @@ export function ConnectAgentView() {
     if (hydrated && !me) router.replace("/login");
   }, [hydrated, me, router]);
 
-  useEffect(() => () => { if (timer.current) window.clearInterval(timer.current); }, []);
+  useEffect(
+    () => () => {
+      if (timer.current) window.clearInterval(timer.current);
+    },
+    [],
+  );
 
   const simulate = () => {
     setProgress(0);
@@ -51,7 +60,9 @@ export function ConnectAgentView() {
 
   const next = () => {
     let pending: string | null = null;
-    try { pending = localStorage.getItem("nomos.pendingJoin"); } catch {}
+    try {
+      pending = localStorage.getItem("nomos.pendingJoin");
+    } catch {}
     router.push(pending ? `/join/${pending}` : "/projects");
   };
 
@@ -60,24 +71,44 @@ export function ConnectAgentView() {
   return (
     <div className="min-h-dvh dots-bg">
       <header className="flex h-16 items-center justify-between px-5 sm:px-8">
-        <Link href="/" aria-label="NOMOS 홈"><Logo /></Link>
-        <Link href="/projects" className="text-[13px] font-medium text-ink-600 hover:text-ink-900">나중에 하기</Link>
+        <Link href="/" aria-label="NOMOS 홈">
+          <Logo />
+        </Link>
+        <Link href="/projects" className="text-[13px] font-medium text-ink-600 hover:text-ink-900">
+          나중에 하기
+        </Link>
       </header>
       <main className="mx-auto max-w-[720px] px-4 pb-16 pt-4 sm:px-6">
         <div className="card p-6 sm:p-8 animate-rise">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-[22px] font-semibold tracking-tight">에이전트 연결</h1>
-            {connected ? <Badge tone="success"><Check size={11} /> 연결됨</Badge> : <Badge>미연결</Badge>}
+            {connected ? (
+              <Badge tone="success">
+                <Check size={11} /> 연결됨
+              </Badge>
+            ) : (
+              <Badge>미연결</Badge>
+            )}
           </div>
           <p className="mt-1 text-[13.5px] text-ink-500">
-            {me.nickname} 님의 노트북에서 브릿지를 설치하면, NOMOS 서버 — 나 — 내 에이전트가 연결됩니다. 브릿지는 태스크를 WebSocket으로 받아 로컬 에이전트를 기동하고, 실행 로그를 서버로 스트리밍합니다.
+            {me.nickname} 님의 노트북에서 브릿지를 설치하면, NOMOS 서버 — 나 — 내 에이전트가 연결됩니다. 브릿지는
+            태스크를 WebSocket으로 받아 로컬 에이전트를 기동하고, 실행 로그를 서버로 스트리밍합니다.
           </p>
 
           <div className="mt-6">
             <div className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-ink-500">1. 내가 쓰는 CLI</div>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               {CLIS.map((c) => (
-                <button key={c.id} disabled={!c.supported} onClick={() => setCli(c.id)} className={cn("rounded-xl border p-3 text-left transition", cli === c.id ? "border-ink-900 ring-2 ring-ink-900/10" : "border-ink-200 hover:border-ink-300", !c.supported && "cursor-not-allowed opacity-60")}>
+                <button
+                  key={c.id}
+                  disabled={!c.supported}
+                  onClick={() => setCli(c.id)}
+                  className={cn(
+                    "rounded-xl border p-3 text-left transition",
+                    cli === c.id ? "border-ink-900 ring-2 ring-ink-900/10" : "border-ink-200 hover:border-ink-300",
+                    !c.supported && "cursor-not-allowed opacity-60",
+                  )}
+                >
                   <div className="flex items-center justify-between">
                     <span className="text-[14px] font-semibold">{c.name}</span>
                     <Badge tone={c.supported ? "success" : "neutral"}>{c.note}</Badge>
@@ -89,16 +120,28 @@ export function ConnectAgentView() {
           </div>
 
           <div className="mt-6">
-            <div className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-ink-500">2. 터미널에서 브릿지 실행</div>
+            <div className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-ink-500">
+              2. 터미널에서 브릿지 실행
+            </div>
             <div className="overflow-hidden rounded-xl border border-ink-200 bg-ink-900 text-white">
-              <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2 text-[11.5px] text-white/60"><TerminalSquare size={13} /> zsh</div>
+              <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2 text-[11.5px] text-white/60">
+                <TerminalSquare size={13} /> zsh
+              </div>
               <div className="px-4 py-3 font-mono text-[13px] leading-6">
-                <div><span className="text-white/40">$</span> npx nomos connect</div>
+                <div>
+                  <span className="text-white/40">$</span> npx nomos connect
+                </div>
                 {STEPS.slice(0, Math.max(0, progress)).map((s) => (
-                  <div key={s.key} className="text-emerald-300">  {s.out}</div>
+                  <div key={s.key} className="text-emerald-300">
+                    {" "}
+                    {s.out}
+                  </div>
                 ))}
                 {progress >= 0 && progress < STEPS.length && (
-                  <div className="flex items-center gap-2 text-white/70">  <Loader2 size={12} className="animate-spin" /> {STEPS[progress].label}…</div>
+                  <div className="flex items-center gap-2 text-white/70">
+                    {" "}
+                    <Loader2 size={12} className="animate-spin" /> {STEPS[progress].label}…
+                  </div>
                 )}
               </div>
             </div>
@@ -113,7 +156,14 @@ export function ConnectAgentView() {
               const active = !connected && progress === i;
               return (
                 <li key={s.key} className="flex items-center gap-3 text-[13.5px]">
-                  <span className={cn("inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold", done ? "bg-auto text-white" : active ? "bg-ink-900 text-white" : "bg-ink-100 text-ink-500")}>{done ? <Check size={12} /> : active ? <Loader2 size={12} className="animate-spin" /> : i + 1}</span>
+                  <span
+                    className={cn(
+                      "inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold",
+                      done ? "bg-auto text-white" : active ? "bg-ink-900 text-white" : "bg-ink-100 text-ink-500",
+                    )}
+                  >
+                    {done ? <Check size={12} /> : active ? <Loader2 size={12} className="animate-spin" /> : i + 1}
+                  </span>
                   <span className={cn(done ? "text-ink-900" : "text-ink-600")}>{s.label}</span>
                 </li>
               );
@@ -130,7 +180,9 @@ export function ConnectAgentView() {
                 프로젝트로 이동 <ArrowRight size={16} />
               </Button>
             )}
-            <span className="text-[12.5px] text-ink-500">브릿지가 끊기면 서버는 30초 안에 오프라인으로 표시합니다.</span>
+            <span className="text-[12.5px] text-ink-500">
+              브릿지가 끊기면 서버는 30초 안에 오프라인으로 표시합니다.
+            </span>
           </div>
         </div>
       </main>

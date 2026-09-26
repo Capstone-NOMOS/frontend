@@ -1,13 +1,5 @@
 export type TaskState =
-  | "READY"
-  | "QUEUED"
-  | "IN_PROGRESS"
-  | "WAITING_HUMAN"
-  | "SUBMITTED"
-  | "VERIFYING"
-  | "DONE"
-  | "FAILED"
-  | "ESCALATED";
+  "READY" | "QUEUED" | "IN_PROGRESS" | "WAITING_HUMAN" | "SUBMITTED" | "VERIFYING" | "DONE" | "FAILED" | "ESCALATED";
 
 export interface Task {
   id: string;

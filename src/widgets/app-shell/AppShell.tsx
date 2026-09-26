@@ -61,7 +61,9 @@ export function AppShell({ projectId, children }: { projectId: string; children:
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-6 text-center">
         <Logo />
         <h1 className="text-lg font-semibold">이 프로젝트에 접근할 수 없습니다</h1>
-        <p className="max-w-sm text-sm text-ink-500">프로젝트가 없거나 멤버가 아닙니다. 초대 링크로 참여하거나 다른 프로젝트를 선택해주세요.</p>
+        <p className="max-w-sm text-sm text-ink-500">
+          프로젝트가 없거나 멤버가 아닙니다. 초대 링크로 참여하거나 다른 프로젝트를 선택해주세요.
+        </p>
         <Button href="/projects" variant="outline">
           프로젝트 목록
         </Button>
@@ -81,24 +83,46 @@ export function AppShell({ projectId, children }: { projectId: string; children:
         <div className="fixed inset-0 z-50 lg:hidden">
           <button aria-label="닫기" className="absolute inset-0 bg-ink-900/30" onClick={() => setOpen(false)} />
           <aside className="absolute inset-y-0 left-0 flex w-[min(300px,85vw)] flex-col bg-white shadow-pop animate-rise">
-            <SidebarContent projectId={projectId} onSearch={() => { setOpen(false); setSearch(true); }} onClose={() => setOpen(false)} />
+            <SidebarContent
+              projectId={projectId}
+              onSearch={() => {
+                setOpen(false);
+                setSearch(true);
+              }}
+              onClose={() => setOpen(false)}
+            />
           </aside>
         </div>
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* mobile top bar */}
-        <header className="flex h-14 shrink-0 items-center gap-2 border-b border-ink-200 px-3 lg:hidden" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
-          <button aria-label="메뉴" onClick={() => setOpen(true)} className="rounded-lg p-2 text-ink-700 hover:bg-ink-100">
+        <header
+          className="flex h-14 shrink-0 items-center gap-2 border-b border-ink-200 px-3 lg:hidden"
+          style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
+        >
+          <button
+            aria-label="메뉴"
+            onClick={() => setOpen(true)}
+            className="rounded-lg p-2 text-ink-700 hover:bg-ink-100"
+          >
             <Menu size={20} />
           </button>
           <Link href={`/p/${projectId}`} className="min-w-0 flex-1 truncate text-[15px] font-semibold">
             {project.name}
           </Link>
-          <button aria-label="검색" onClick={() => setSearch(true)} className="rounded-lg p-2 text-ink-700 hover:bg-ink-100">
+          <button
+            aria-label="검색"
+            onClick={() => setSearch(true)}
+            className="rounded-lg p-2 text-ink-700 hover:bg-ink-100"
+          >
             <Search size={19} />
           </button>
-          <Link href={`/p/${projectId}/inbox`} aria-label="받은 편지함" className="rounded-lg p-2 text-ink-700 hover:bg-ink-100">
+          <Link
+            href={`/p/${projectId}/inbox`}
+            aria-label="받은 편지함"
+            className="rounded-lg p-2 text-ink-700 hover:bg-ink-100"
+          >
             <Inbox size={19} />
           </Link>
         </header>
@@ -122,7 +146,23 @@ function ShellSkeleton() {
   );
 }
 
-function NavItem({ href, icon, label, active, badge, trailing, onNavigate }: { href: string; icon: ReactNode; label: string; active: boolean; badge?: number; trailing?: ReactNode; onNavigate?: () => void }) {
+function NavItem({
+  href,
+  icon,
+  label,
+  active,
+  badge,
+  trailing,
+  onNavigate,
+}: {
+  href: string;
+  icon: ReactNode;
+  label: string;
+  active: boolean;
+  badge?: number;
+  trailing?: ReactNode;
+  onNavigate?: () => void;
+}) {
   return (
     <Link
       href={href}
@@ -135,12 +175,22 @@ function NavItem({ href, icon, label, active, badge, trailing, onNavigate }: { h
       <span className={cn("text-ink-500", active && "text-ink-900")}>{icon}</span>
       <span className="min-w-0 flex-1 truncate">{label}</span>
       {trailing}
-      {badge ? <span className="rounded-full bg-ink-900 px-1.5 text-[10px] font-semibold leading-4 text-white">{badge}</span> : null}
+      {badge ? (
+        <span className="rounded-full bg-ink-900 px-1.5 text-[10px] font-semibold leading-4 text-white">{badge}</span>
+      ) : null}
     </Link>
   );
 }
 
-function SidebarContent({ projectId, onSearch, onClose }: { projectId: string; onSearch: () => void; onClose?: () => void }) {
+function SidebarContent({
+  projectId,
+  onSearch,
+  onClose,
+}: {
+  projectId: string;
+  onSearch: () => void;
+  onClose?: () => void;
+}) {
   const onNavigate = onClose;
   const { state, me, actions } = useApp();
   const { project, myRole, visibleRooms, tasks, agentFor, canWrite } = useProject(projectId);
@@ -149,7 +199,10 @@ function SidebarContent({ projectId, onSearch, onClose }: { projectId: string; o
   const [projOpen, setProjOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const myProjects = useMemo(() => state.projects.filter((p) => state.members.some((m) => m.projectId === p.id && m.userId === me?.id)), [state.projects, state.members, me]);
+  const myProjects = useMemo(
+    () => state.projects.filter((p) => state.members.some((m) => m.projectId === p.id && m.userId === me?.id)),
+    [state.projects, state.members, me],
+  );
   const myAgent = me ? state.agents.find((a) => a.userId === me.id) : undefined;
 
   const inboxCount = useMemo(() => {
@@ -174,7 +227,12 @@ function SidebarContent({ projectId, onSearch, onClose }: { projectId: string; o
 
   const roomStatus = (room: Room) => {
     if (room.type === "OWNER") {
-      const pending = state.messages.some((m) => m.roomId === room.id && ((m.card?.kind === "spec" && m.card.status === "pending") || (m.card?.kind === "report" && m.card.status === "pending")));
+      const pending = state.messages.some(
+        (m) =>
+          m.roomId === room.id &&
+          ((m.card?.kind === "spec" && m.card.status === "pending") ||
+            (m.card?.kind === "report" && m.card.status === "pending")),
+      );
       return pending ? <span className="h-1.5 w-1.5 rounded-full bg-human" /> : null;
     }
     const agent = agentFor(room.type);
@@ -190,7 +248,10 @@ function SidebarContent({ projectId, onSearch, onClose }: { projectId: string; o
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-2 px-3 pt-4 pb-2">
         <div className="relative min-w-0 flex-1">
-          <button onClick={() => setProjOpen((v) => !v)} className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-ink-100">
+          <button
+            onClick={() => setProjOpen((v) => !v)}
+            className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-ink-100"
+          >
             <Logo size={16} wordmark={false} />
             <span className="min-w-0 flex-1 truncate text-[15px] font-semibold">{project.name}</span>
             <ChevronDown size={16} className="text-ink-500" />
@@ -200,15 +261,24 @@ function SidebarContent({ projectId, onSearch, onClose }: { projectId: string; o
               {myProjects.map((p) => (
                 <button
                   key={p.id}
-                  onClick={() => { setProjOpen(false); router.push(`/p/${p.id}`); }}
-                  className={cn("flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-[13px] hover:bg-ink-100", p.id === projectId && "font-semibold")}
+                  onClick={() => {
+                    setProjOpen(false);
+                    router.push(`/p/${p.id}`);
+                  }}
+                  className={cn(
+                    "flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-[13px] hover:bg-ink-100",
+                    p.id === projectId && "font-semibold",
+                  )}
                 >
                   <span className="truncate">{p.name}</span>
                   <Badge tone="brand">{p.level}</Badge>
                 </button>
               ))}
               <div className="my-1 border-t border-ink-100" />
-              <Link href="/projects/new" className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-[13px] text-ink-700 hover:bg-ink-100">
+              <Link
+                href="/projects/new"
+                className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-[13px] text-ink-700 hover:bg-ink-100"
+              >
                 <Plus size={14} /> 새 프로젝트
               </Link>
             </div>
@@ -222,7 +292,10 @@ function SidebarContent({ projectId, onSearch, onClose }: { projectId: string; o
       </div>
 
       <div className="px-3 pb-2">
-        <button onClick={onSearch} className="flex h-9 w-full items-center gap-2 rounded-lg border border-ink-200 bg-white px-2.5 text-[13px] text-ink-500 hover:bg-ink-50">
+        <button
+          onClick={onSearch}
+          className="flex h-9 w-full items-center gap-2 rounded-lg border border-ink-200 bg-white px-2.5 text-[13px] text-ink-500 hover:bg-ink-50"
+        >
           <Search size={15} />
           <span className="flex-1 text-left">검색</span>
           <Kbd>⌘K</Kbd>
@@ -231,8 +304,21 @@ function SidebarContent({ projectId, onSearch, onClose }: { projectId: string; o
 
       <nav className="flex-1 space-y-4 overflow-y-auto px-3 pb-3">
         <div className="space-y-0.5">
-          <NavItem href={`${base}/inbox`} icon={<Inbox size={16} />} label="받은 편지함" active={is(`${base}/inbox`)} badge={inboxCount} onNavigate={onNavigate} />
-          <NavItem href={base} icon={<LayoutDashboard size={16} />} label="대시보드" active={is(base)} onNavigate={onNavigate} />
+          <NavItem
+            href={`${base}/inbox`}
+            icon={<Inbox size={16} />}
+            label="받은 편지함"
+            active={is(`${base}/inbox`)}
+            badge={inboxCount}
+            onNavigate={onNavigate}
+          />
+          <NavItem
+            href={base}
+            icon={<LayoutDashboard size={16} />}
+            label="대시보드"
+            active={is(base)}
+            onNavigate={onNavigate}
+          />
         </div>
 
         <div>
@@ -266,21 +352,60 @@ function SidebarContent({ projectId, onSearch, onClose }: { projectId: string; o
         <div>
           <div className="mb-1 px-2.5 text-[11px] font-semibold uppercase tracking-wide text-ink-500">문서 (MCP)</div>
           <div className="space-y-0.5">
-            <NavItem href={`${base}/docs/constitution`} icon={<BookOpen size={16} />} label="헌법" active={is(`${base}/docs/constitution`)} onNavigate={onNavigate} />
-            <NavItem href={`${base}/docs/spec`} icon={<FileText size={16} />} label="명세" active={is(`${base}/docs/spec`)} onNavigate={onNavigate} />
-            <NavItem href={`${base}/docs/contract`} icon={<FileText size={16} />} label="계약" active={is(`${base}/docs/contract`)} onNavigate={onNavigate} />
-            <NavItem href={`${base}/docs/adr`} icon={<FileText size={16} />} label="결정기록" active={is(`${base}/docs/adr`)} onNavigate={onNavigate} />
+            <NavItem
+              href={`${base}/docs/constitution`}
+              icon={<BookOpen size={16} />}
+              label="헌법"
+              active={is(`${base}/docs/constitution`)}
+              onNavigate={onNavigate}
+            />
+            <NavItem
+              href={`${base}/docs/spec`}
+              icon={<FileText size={16} />}
+              label="명세"
+              active={is(`${base}/docs/spec`)}
+              onNavigate={onNavigate}
+            />
+            <NavItem
+              href={`${base}/docs/contract`}
+              icon={<FileText size={16} />}
+              label="계약"
+              active={is(`${base}/docs/contract`)}
+              onNavigate={onNavigate}
+            />
+            <NavItem
+              href={`${base}/docs/adr`}
+              icon={<FileText size={16} />}
+              label="결정기록"
+              active={is(`${base}/docs/adr`)}
+              onNavigate={onNavigate}
+            />
           </div>
         </div>
 
         <div className="space-y-0.5">
-          <NavItem href={`${base}/activity`} icon={<Activity size={16} />} label="활동 · 비용" active={is(`${base}/activity`)} onNavigate={onNavigate} />
-          <NavItem href={`${base}/settings`} icon={<Settings size={16} />} label="설정" active={is(`${base}/settings`)} onNavigate={onNavigate} />
+          <NavItem
+            href={`${base}/activity`}
+            icon={<Activity size={16} />}
+            label="활동 · 비용"
+            active={is(`${base}/activity`)}
+            onNavigate={onNavigate}
+          />
+          <NavItem
+            href={`${base}/settings`}
+            icon={<Settings size={16} />}
+            label="설정"
+            active={is(`${base}/settings`)}
+            onNavigate={onNavigate}
+          />
         </div>
       </nav>
 
       <div className="relative border-t border-ink-200 p-3">
-        <button onClick={() => setMenuOpen((v) => !v)} className="flex w-full items-center gap-2.5 rounded-lg px-1.5 py-1.5 text-left hover:bg-ink-100">
+        <button
+          onClick={() => setMenuOpen((v) => !v)}
+          className="flex w-full items-center gap-2.5 rounded-lg px-1.5 py-1.5 text-left hover:bg-ink-100"
+        >
           <Avatar name={me?.nickname ?? "?"} size={32} />
           <span className="min-w-0 flex-1">
             <span className="flex items-center gap-1.5">
@@ -307,13 +432,26 @@ function SidebarContent({ projectId, onSearch, onClose }: { projectId: string; o
         </button>
         {menuOpen && (
           <div className="absolute bottom-full left-3 right-3 z-20 mb-1 rounded-xl border border-ink-200 bg-white p-1.5 shadow-pop animate-rise">
-            <div className="px-2.5 pb-1 pt-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-500">데모: 역할 전환</div>
+            <div className="px-2.5 pb-1 pt-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
+              데모: 역할 전환
+            </div>
             {state.members
               .filter((m) => m.projectId === projectId)
               .map((m) => {
                 const u = state.users.find((x) => x.id === m.userId)!;
                 return (
-                  <button key={m.userId} onClick={() => { actions.switchUser(m.userId); setMenuOpen(false); router.push(base); }} className={cn("flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] hover:bg-ink-100", me?.id === u.id && "font-semibold")}>
+                  <button
+                    key={m.userId}
+                    onClick={() => {
+                      actions.switchUser(m.userId);
+                      setMenuOpen(false);
+                      router.push(base);
+                    }}
+                    className={cn(
+                      "flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] hover:bg-ink-100",
+                      me?.id === u.id && "font-semibold",
+                    )}
+                  >
                     <Avatar name={u.nickname} size={20} />
                     <span className="flex-1 truncate">{u.nickname}</span>
                     <RoleBadge role={m.role} />
@@ -321,13 +459,29 @@ function SidebarContent({ projectId, onSearch, onClose }: { projectId: string; o
                 );
               })}
             <div className="my-1 border-t border-ink-100" />
-            <Link href="/connect" className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-[13px] text-ink-700 hover:bg-ink-100">
+            <Link
+              href="/connect"
+              className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-[13px] text-ink-700 hover:bg-ink-100"
+            >
               <Plug size={14} /> 에이전트 연결
             </Link>
-            <button onClick={() => { actions.resetDemo(); setMenuOpen(false); router.push("/projects"); }} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[13px] text-ink-700 hover:bg-ink-100">
+            <button
+              onClick={() => {
+                actions.resetDemo();
+                setMenuOpen(false);
+                router.push("/projects");
+              }}
+              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[13px] text-ink-700 hover:bg-ink-100"
+            >
               <RefreshCcw size={14} /> 데모 데이터 초기화
             </button>
-            <button onClick={() => { actions.logout(); router.push("/login"); }} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[13px] text-ink-700 hover:bg-ink-100">
+            <button
+              onClick={() => {
+                actions.logout();
+                router.push("/login");
+              }}
+              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[13px] text-ink-700 hover:bg-ink-100"
+            >
               <LogOut size={14} /> 로그아웃
             </button>
           </div>

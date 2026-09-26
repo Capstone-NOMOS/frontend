@@ -1,7 +1,10 @@
 import { Badge } from "@/shared/ui";
 import type { TaskState } from "../model/types";
 
-export const TASK_META: Record<TaskState, { label: string; tone: "neutral" | "info" | "warn" | "success" | "danger" | "brand" }> = {
+export const TASK_META: Record<
+  TaskState,
+  { label: string; tone: "neutral" | "info" | "warn" | "success" | "danger" | "brand" }
+> = {
   READY: { label: "READY", tone: "neutral" },
   QUEUED: { label: "QUEUED", tone: "neutral" },
   IN_PROGRESS: { label: "IN PROGRESS", tone: "info" },

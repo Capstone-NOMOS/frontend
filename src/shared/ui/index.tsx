@@ -1,7 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { forwardRef, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type TextareaHTMLAttributes } from "react";
+import {
+  forwardRef,
+  type ButtonHTMLAttributes,
+  type InputHTMLAttributes,
+  type ReactNode,
+  type TextareaHTMLAttributes,
+} from "react";
 import { cn } from "@/shared/lib/format";
 
 export { Markdown } from "./Markdown";
@@ -54,26 +60,27 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
 });
 
 // ---------- Input ----------
-export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement> & { label?: string; hint?: string }>(
-  function Input({ label, hint, className, id, ...rest }, ref) {
-    const inputId = id ?? rest.name;
-    return (
-      <label className="block" htmlFor={inputId}>
-        {label && <span className="mb-1.5 block text-[13px] font-medium text-ink-700">{label}</span>}
-        <input
-          ref={ref}
-          id={inputId}
-          className={cn(
-            "h-11 w-full rounded-xl border border-ink-200 bg-white px-3.5 text-sm text-ink-900 placeholder:text-ink-400 outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-100",
-            className,
-          )}
-          {...rest}
-        />
-        {hint && <span className="mt-1.5 block text-xs text-ink-500">{hint}</span>}
-      </label>
-    );
-  },
-);
+export const Input = forwardRef<
+  HTMLInputElement,
+  InputHTMLAttributes<HTMLInputElement> & { label?: string; hint?: string }
+>(function Input({ label, hint, className, id, ...rest }, ref) {
+  const inputId = id ?? rest.name;
+  return (
+    <label className="block" htmlFor={inputId}>
+      {label && <span className="mb-1.5 block text-[13px] font-medium text-ink-700">{label}</span>}
+      <input
+        ref={ref}
+        id={inputId}
+        className={cn(
+          "h-11 w-full rounded-xl border border-ink-200 bg-white px-3.5 text-sm text-ink-900 placeholder:text-ink-400 outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-100",
+          className,
+        )}
+        {...rest}
+      />
+      {hint && <span className="mt-1.5 block text-xs text-ink-500">{hint}</span>}
+    </label>
+  );
+});
 
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<HTMLTextAreaElement>>(function Textarea(
   { className, ...rest },
@@ -92,7 +99,15 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<H
 });
 
 // ---------- Badge ----------
-export function Badge({ children, tone = "neutral", className }: { children: ReactNode; tone?: "neutral" | "brand" | "success" | "warn" | "danger" | "info" | "fe" | "be" | "pm"; className?: string }) {
+export function Badge({
+  children,
+  tone = "neutral",
+  className,
+}: {
+  children: ReactNode;
+  tone?: "neutral" | "brand" | "success" | "warn" | "danger" | "info" | "fe" | "be" | "pm";
+  className?: string;
+}) {
   const tones = {
     neutral: "bg-ink-100 text-ink-700",
     brand: "bg-brand-50 text-brand-600",
@@ -105,7 +120,13 @@ export function Badge({ children, tone = "neutral", className }: { children: Rea
     pm: "bg-pm-100 text-pm-500",
   } as const;
   return (
-    <span className={cn("inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-semibold leading-4 tracking-wide", tones[tone], className)}>
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-semibold leading-4 tracking-wide",
+        tones[tone],
+        className,
+      )}
+    >
       {children}
     </span>
   );
@@ -119,11 +140,32 @@ function hash(s: string) {
   return Math.abs(h);
 }
 
-export function Avatar({ name, size = 32, className, tone }: { name: string; size?: number; className?: string; tone?: "fe" | "be" | "pm" }) {
-  const cls = tone === "fe" ? "bg-fe-500" : tone === "be" ? "bg-be-500" : tone === "pm" ? "bg-brand-600" : palette[hash(name) % palette.length];
+export function Avatar({
+  name,
+  size = 32,
+  className,
+  tone,
+}: {
+  name: string;
+  size?: number;
+  className?: string;
+  tone?: "fe" | "be" | "pm";
+}) {
+  const cls =
+    tone === "fe"
+      ? "bg-fe-500"
+      : tone === "be"
+        ? "bg-be-500"
+        : tone === "pm"
+          ? "bg-brand-600"
+          : palette[hash(name) % palette.length];
   return (
     <span
-      className={cn("inline-flex shrink-0 items-center justify-center rounded-full font-semibold text-white", cls, className)}
+      className={cn(
+        "inline-flex shrink-0 items-center justify-center rounded-full font-semibold text-white",
+        cls,
+        className,
+      )}
       style={{ width: size, height: size, fontSize: Math.max(10, size * 0.42) }}
       aria-hidden
     >
@@ -132,11 +174,33 @@ export function Avatar({ name, size = 32, className, tone }: { name: string; siz
   );
 }
 
-export function AgentMark({ tone, size = 32, className }: { tone: "fe" | "be" | "pm"; size?: number; className?: string }) {
-  const cls = tone === "fe" ? "bg-fe-100 text-fe-500" : tone === "be" ? "bg-be-100 text-be-500" : "bg-pm-100 text-pm-500";
+export function AgentMark({
+  tone,
+  size = 32,
+  className,
+}: {
+  tone: "fe" | "be" | "pm";
+  size?: number;
+  className?: string;
+}) {
+  const cls =
+    tone === "fe" ? "bg-fe-100 text-fe-500" : tone === "be" ? "bg-be-100 text-be-500" : "bg-pm-100 text-pm-500";
   return (
-    <span className={cn("inline-flex shrink-0 items-center justify-center rounded-lg", cls, className)} style={{ width: size, height: size }} aria-hidden>
-      <svg width={size * 0.55} height={size * 0.55} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <span
+      className={cn("inline-flex shrink-0 items-center justify-center rounded-lg", cls, className)}
+      style={{ width: size, height: size }}
+      aria-hidden
+    >
+      <svg
+        width={size * 0.55}
+        height={size * 0.55}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         <rect x="4" y="7" width="16" height="12" rx="3" />
         <path d="M12 3v4M8 12h.01M16 12h.01M9 16h6" />
       </svg>
@@ -146,14 +210,38 @@ export function AgentMark({ tone, size = 32, className }: { tone: "fe" | "be" | 
 
 // ---------- Misc ----------
 export function Kbd({ children }: { children: ReactNode }) {
-  return <kbd className="rounded-md border border-ink-200 bg-white px-1.5 py-0.5 font-mono text-[10px] text-ink-500">{children}</kbd>;
+  return (
+    <kbd className="rounded-md border border-ink-200 bg-white px-1.5 py-0.5 font-mono text-[10px] text-ink-500">
+      {children}
+    </kbd>
+  );
 }
 
-export function Logo({ size = 22, wordmark = true, className }: { size?: number; wordmark?: boolean; className?: string }) {
+export function Logo({
+  size = 22,
+  wordmark = true,
+  className,
+}: {
+  size?: number;
+  wordmark?: boolean;
+  className?: string;
+}) {
   return (
     <span className={cn("inline-flex items-center gap-2", className)}>
-      <span className="inline-flex items-center justify-center rounded-lg bg-ink-900 text-white" style={{ width: size + 6, height: size + 6 }}>
-        <svg width={size * 0.7} height={size * 0.7} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+      <span
+        className="inline-flex items-center justify-center rounded-lg bg-ink-900 text-white"
+        style={{ width: size + 6, height: size + 6 }}
+      >
+        <svg
+          width={size * 0.7}
+          height={size * 0.7}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
           <path d="M5 19V5l14 14V5" />
         </svg>
       </span>

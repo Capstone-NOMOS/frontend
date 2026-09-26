@@ -1,0 +1,11 @@
+.next/
+out/
+build/
+node_modules/
+next-env.d.ts
+pnpm-lock.yaml
+
+# 마크다운은 손대지 않는다. 명세서가 판단 기준이고(AGENTS.md), AGENTS.md에는
+# next dev가 재생성하는 관리 블록이 있다. 표 패딩 재배치로 diff만 지저분해진다.
+*.md
+docs/*.docx

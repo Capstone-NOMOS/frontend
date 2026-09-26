@@ -12,7 +12,17 @@ import { TaskBadge } from "@/entities/task";
 import { RoleBadge } from "@/entities/user";
 import { useApp, useProject } from "@/lib/store";
 import { Composer } from "./Composer";
-import { DispatchCard, LogCard, Notice, PolicyCard, QuestionCard, RepoCard, ReportCard, SpecCard, VerificationCard } from "./Cards";
+import {
+  DispatchCard,
+  LogCard,
+  Notice,
+  PolicyCard,
+  QuestionCard,
+  RepoCard,
+  ReportCard,
+  SpecCard,
+  VerificationCard,
+} from "./Cards";
 
 export function RoomView({ projectId, roomId }: { projectId: string; roomId: string }) {
   const { state, me, actions } = useApp();
@@ -46,7 +56,15 @@ export function RoomView({ projectId, roomId }: { projectId: string; roomId: str
   if (!visible) {
     return (
       <div className="flex h-full items-center justify-center p-6">
-        <EmptyState title="403 · 이 Room에 접근할 수 없습니다" desc={`${ROOM_META[room.type].name}은 ${ROOM_META[room.type].who}의 공간입니다. FE·BE는 자기 Room만 볼 수 있습니다.`} action={<Button href={`/p/${projectId}`} variant="outline">대시보드로</Button>} />
+        <EmptyState
+          title="403 · 이 Room에 접근할 수 없습니다"
+          desc={`${ROOM_META[room.type].name}은 ${ROOM_META[room.type].who}의 공간입니다. FE·BE는 자기 Room만 볼 수 있습니다.`}
+          action={
+            <Button href={`/p/${projectId}`} variant="outline">
+              대시보드로
+            </Button>
+          }
+        />
       </div>
     );
   }
@@ -58,18 +76,28 @@ export function RoomView({ projectId, roomId }: { projectId: string; roomId: str
   const roomTasks = tasks.filter((t) => room.type !== "OWNER" && t.role === room.type);
   const repo = room.type === "OWNER" ? null : repos.find((r) => r.ownerRole === room.type);
   const mention = room.type === "OWNER" ? "PM" : `${room.type} 에이전트`;
-  const placeholder = room.type === "OWNER" ? "요구사항을 한 문장으로 적어주세요. PM이 명세로 정리합니다" : `${room.type} 에이전트에게 말하거나, 질문에 답해주세요`;
+  const placeholder =
+    room.type === "OWNER"
+      ? "요구사항을 한 문장으로 적어주세요. PM이 명세로 정리합니다"
+      : `${room.type} 에이전트에게 말하거나, 질문에 답해주세요`;
 
   const statusChip = () => {
     if (room.type === "OWNER") {
-      const pending = messages.some((m) => (m.card?.kind === "spec" || m.card?.kind === "report") && m.card.status === "pending");
+      const pending = messages.some(
+        (m) => (m.card?.kind === "spec" || m.card?.kind === "report") && m.card.status === "pending",
+      );
       return pending ? <Badge tone="warn">승인 대기</Badge> : <Badge tone="pm">PM 대기 중</Badge>;
     }
     const waiting = roomTasks.find((t) => t.state === "WAITING_HUMAN");
     if (waiting) return <Badge tone="warn">{waiting.id} 결정 대기</Badge>;
     const working = roomTasks.find((t) => t.state === "IN_PROGRESS");
     if (working && roleAgent) return <Badge tone="info">에이전트 작업 중 · {working.id}</Badge>;
-    if (roleAgent) return <Badge tone={roleAgent.status === "offline" ? "danger" : "success"}>에이전트 {AGENT_STATUS[roleAgent.status].label}</Badge>;
+    if (roleAgent)
+      return (
+        <Badge tone={roleAgent.status === "offline" ? "danger" : "success"}>
+          에이전트 {AGENT_STATUS[roleAgent.status].label}
+        </Badge>
+      );
     return <Badge>에이전트 미연결</Badge>;
   };
 
@@ -92,32 +120,63 @@ export function RoomView({ projectId, roomId }: { projectId: string; roomId: str
           <div className="hidden sm:block">{statusChip()}</div>
           <div className="hidden items-center -space-x-1.5 md:flex">
             {roleUser && <Avatar name={roleUser.nickname} size={26} className="ring-2 ring-white" />}
-            {room.type !== "OWNER" && <AgentMark tone={room.type === "FE" ? "fe" : "be"} size={26} className="ring-2 ring-white" />}
+            {room.type !== "OWNER" && (
+              <AgentMark tone={room.type === "FE" ? "fe" : "be"} size={26} className="ring-2 ring-white" />
+            )}
             <AgentMark tone="pm" size={26} className="ring-2 ring-white" />
           </div>
-          <button onClick={() => setPanel((v) => !v)} className={cn("rounded-lg p-2 text-ink-500 hover:bg-ink-100", panel && "bg-ink-100 text-ink-900")} aria-label="Room 정보">
+          <button
+            onClick={() => setPanel((v) => !v)}
+            className={cn("rounded-lg p-2 text-ink-500 hover:bg-ink-100", panel && "bg-ink-100 text-ink-900")}
+            aria-label="Room 정보"
+          >
             <Info size={18} />
           </button>
         </header>
 
         {!writable && (
           <div className="flex items-center gap-2 border-b border-amber-200 bg-human-bg px-4 py-2 text-[12.5px] text-human sm:px-6">
-            <Eye size={14} /> 대표는 이 Room을 읽을 수만 있습니다. {meta.who}이 대화하는 공간이며, 대표의 요청은 Room 3에서 PM을 통해 전달됩니다.
+            <Eye size={14} /> 대표는 이 Room을 읽을 수만 있습니다. {meta.who}이 대화하는 공간이며, 대표의 요청은 Room
+            3에서 PM을 통해 전달됩니다.
           </div>
         )}
 
         {/* messages */}
         <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
           <div className="mx-auto flex max-w-[780px] flex-col gap-1 px-4 pb-6 pt-4 sm:px-6">
-            {messages.length === 0 && <EmptyState title="아직 메시지가 없습니다" desc={room.type === "OWNER" ? "첫 요구사항을 적으면 PM이 명세를 정리합니다." : "대표가 명세를 승인하면 태스크가 도착합니다."} />}
+            {messages.length === 0 && (
+              <EmptyState
+                title="아직 메시지가 없습니다"
+                desc={
+                  room.type === "OWNER"
+                    ? "첫 요구사항을 적으면 PM이 명세를 정리합니다."
+                    : "대표가 명세를 승인하면 태스크가 도착합니다."
+                }
+              />
+            )}
             {messages.map((m, i) => {
               const prev = messages[i - 1];
               const showDay = !prev || !sameDay(prev.ts, m.ts);
-              const grouped = prev && !showDay && prev.authorType === m.authorType && prev.authorId === m.authorId && m.authorType !== "system" && new Date(m.ts).getTime() - new Date(prev.ts).getTime() < 5 * 60 * 1000 && !prev.card;
+              const grouped =
+                prev &&
+                !showDay &&
+                prev.authorType === m.authorType &&
+                prev.authorId === m.authorId &&
+                m.authorType !== "system" &&
+                new Date(m.ts).getTime() - new Date(prev.ts).getTime() < 5 * 60 * 1000 &&
+                !prev.card;
               return (
                 <div key={m.id} id={m.id} className="animate-rise">
                   {showDay && <DayDivider ts={m.ts} />}
-                  <MessageRow m={m} meId={me.id} room={room} grouped={Boolean(grouped)} projectId={projectId} writable={writable} isOwner={myRole === "OWNER"} />
+                  <MessageRow
+                    m={m}
+                    meId={me.id}
+                    room={room}
+                    grouped={Boolean(grouped)}
+                    projectId={projectId}
+                    writable={writable}
+                    isOwner={myRole === "OWNER"}
+                  />
                 </div>
               );
             })}
@@ -142,7 +201,14 @@ export function RoomView({ projectId, roomId }: { projectId: string; roomId: str
               <Composer placeholder={placeholder} mention={mention} onSend={(t) => actions.sendMessage(roomId, t)} />
             ) : (
               <div className="rounded-2xl border border-dashed border-ink-200 px-4 py-3 text-center text-[13px] text-ink-500">
-                읽기 전용 — 요청은 <Link href={`/p/${projectId}/rooms/${rooms.find((r) => r.type === "OWNER")?.id}`} className="font-medium text-brand-600 hover:underline">Room 3</Link>에서 PM에게 전달하세요
+                읽기 전용 — 요청은{" "}
+                <Link
+                  href={`/p/${projectId}/rooms/${rooms.find((r) => r.type === "OWNER")?.id}`}
+                  className="font-medium text-brand-600 hover:underline"
+                >
+                  Room 3
+                </Link>
+                에서 PM에게 전달하세요
               </div>
             )}
           </div>
@@ -152,11 +218,19 @@ export function RoomView({ projectId, roomId }: { projectId: string; roomId: str
       {/* right panel */}
       {panel && (
         <>
-          <button className="fixed inset-0 z-30 bg-ink-900/20 xl:hidden" onClick={() => setPanel(false)} aria-label="닫기" />
+          <button
+            className="fixed inset-0 z-30 bg-ink-900/20 xl:hidden"
+            onClick={() => setPanel(false)}
+            aria-label="닫기"
+          />
           <aside className="fixed inset-y-0 right-0 z-40 w-[min(340px,90vw)] overflow-y-auto border-l border-ink-200 bg-white p-5 shadow-pop xl:static xl:z-auto xl:w-[320px] xl:shadow-none animate-rise">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-[13px] font-semibold uppercase tracking-wide text-ink-500">Room 정보</h2>
-              <button onClick={() => setPanel(false)} className="rounded-lg p-1.5 text-ink-500 hover:bg-ink-100 xl:hidden" aria-label="닫기">
+              <button
+                onClick={() => setPanel(false)}
+                className="rounded-lg p-1.5 text-ink-500 hover:bg-ink-100 xl:hidden"
+                aria-label="닫기"
+              >
                 <X size={16} />
               </button>
             </div>
@@ -180,7 +254,10 @@ export function RoomView({ projectId, roomId }: { projectId: string; roomId: str
                       <AgentMark tone={room.type === "FE" ? "fe" : "be"} size={28} />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-[13px] font-medium">{roleAgent.label}</span>
-                        <span className="flex items-center gap-1.5 text-[11.5px] text-ink-500"><StatusDot status={roleAgent.status} pulse /> {AGENT_STATUS[roleAgent.status].label} · 로컬 브릿지</span>
+                        <span className="flex items-center gap-1.5 text-[11.5px] text-ink-500">
+                          <StatusDot status={roleAgent.status} pulse /> {AGENT_STATUS[roleAgent.status].label} · 로컬
+                          브릿지
+                        </span>
                       </span>
                     </li>
                   )}
@@ -202,7 +279,10 @@ export function RoomView({ projectId, roomId }: { projectId: string; roomId: str
                   ) : (
                     <ul className="space-y-1.5">
                       {roomTasks.map((t) => (
-                        <li key={t.id} className="flex items-center gap-2 rounded-lg border border-ink-200 px-2.5 py-2 text-[12.5px]">
+                        <li
+                          key={t.id}
+                          className="flex items-center gap-2 rounded-lg border border-ink-200 px-2.5 py-2 text-[12.5px]"
+                        >
                           <span className="font-mono text-ink-500">{t.id}</span>
                           <span className="min-w-0 flex-1 truncate">{t.title}</span>
                           <TaskBadge state={t.state} />
@@ -218,7 +298,9 @@ export function RoomView({ projectId, roomId }: { projectId: string; roomId: str
                   <div className="mb-2 text-[12px] font-semibold text-ink-700">레포</div>
                   {repo ? (
                     <div className="rounded-lg border border-ink-200 px-3 py-2 text-[12.5px]">
-                      <div className="flex items-center gap-1.5 font-medium"><Link2 size={12} /> {repo.url.replace("https://github.com/", "")}</div>
+                      <div className="flex items-center gap-1.5 font-medium">
+                        <Link2 size={12} /> {repo.url.replace("https://github.com/", "")}
+                      </div>
                       <div className="mt-0.5 font-mono text-[11.5px] text-ink-500">{`${repo.localPath}/**`}</div>
                     </div>
                   ) : (
@@ -263,7 +345,23 @@ function DayDivider({ ts }: { ts: string }) {
   );
 }
 
-function MessageRow({ m, meId, room, grouped, projectId, writable, isOwner }: { m: Message; meId: string; room: Room; grouped: boolean; projectId: string; writable: boolean; isOwner: boolean }) {
+function MessageRow({
+  m,
+  meId,
+  room,
+  grouped,
+  projectId,
+  writable,
+  isOwner,
+}: {
+  m: Message;
+  meId: string;
+  room: Room;
+  grouped: boolean;
+  projectId: string;
+  writable: boolean;
+  isOwner: boolean;
+}) {
   const { state } = useApp();
   const tasks = state.tasks.filter((t) => t.projectId === projectId);
   const time = <span className="text-[11px] text-ink-400 tabular-nums">{fmtTime(m.ts)}</span>;
@@ -279,7 +377,14 @@ function MessageRow({ m, meId, room, grouped, projectId, writable, isOwner }: { 
       case "log":
         return <LogCard card={c} />;
       case "question":
-        return <QuestionCard message={m} card={c} canAnswer={writable} answeredByName={state.users.find((u) => u.id === c.answeredBy)?.nickname} />;
+        return (
+          <QuestionCard
+            message={m}
+            card={c}
+            canAnswer={writable}
+            answeredByName={state.users.find((u) => u.id === c.answeredBy)?.nickname}
+          />
+        );
       case "verification":
         return <VerificationCard card={c} />;
       case "report":
@@ -296,7 +401,9 @@ function MessageRow({ m, meId, room, grouped, projectId, writable, isOwner }: { 
   if (m.authorType === "system") {
     const c = m.card;
     const centered = c?.kind === "notice";
-    return <div className={cn("py-1", centered ? "flex justify-center text-center" : "pl-0 sm:pl-10")}>{renderCard()}</div>;
+    return (
+      <div className={cn("py-1", centered ? "flex justify-center text-center" : "pl-0 sm:pl-10")}>{renderCard()}</div>
+    );
   }
 
   if (m.authorType === "user") {
@@ -307,7 +414,9 @@ function MessageRow({ m, meId, room, grouped, projectId, writable, isOwner }: { 
         <div className={cn("flex flex-col items-end", grouped ? "mt-0.5" : "mt-3")}>
           <div className="flex max-w-[85%] items-end gap-2">
             {time}
-            <div className="whitespace-pre-wrap rounded-2xl rounded-br-md bg-ink-100 px-4 py-2.5 text-[14.5px] leading-6 text-ink-900">{m.text}</div>
+            <div className="whitespace-pre-wrap rounded-2xl rounded-br-md bg-ink-100 px-4 py-2.5 text-[14.5px] leading-6 text-ink-900">
+              {m.text}
+            </div>
           </div>
           {m.card && <div className="w-full max-w-[85%]">{renderCard()}</div>}
         </div>
@@ -323,7 +432,9 @@ function MessageRow({ m, meId, room, grouped, projectId, writable, isOwner }: { 
               {time}
             </div>
           )}
-          <div className="inline-block max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-tl-md border border-ink-200 bg-white px-4 py-2.5 text-[14.5px] leading-6">{m.text}</div>
+          <div className="inline-block max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-tl-md border border-ink-200 bg-white px-4 py-2.5 text-[14.5px] leading-6">
+            {m.text}
+          </div>
           {renderCard()}
         </div>
       </div>
@@ -342,11 +453,17 @@ function MessageRow({ m, meId, room, grouped, projectId, writable, isOwner }: { 
         {!grouped && (
           <div className="mb-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
             <span className="text-[13px] font-semibold">{isPm ? "PM" : `${room.type} 에이전트`}</span>
-            <span className="text-[11.5px] text-ink-500">{isPm ? "NOMOS 서버 · 프로젝트 문서 공유" : `${agent?.label ?? ""}${owner ? ` · managed by ${owner.nickname}` : ""}`}</span>
+            <span className="text-[11.5px] text-ink-500">
+              {isPm
+                ? "NOMOS 서버 · 프로젝트 문서 공유"
+                : `${agent?.label ?? ""}${owner ? ` · managed by ${owner.nickname}` : ""}`}
+            </span>
             {time}
           </div>
         )}
-        {m.text && <div className="max-w-[700px] whitespace-pre-wrap text-[14.5px] leading-7 text-ink-900">{m.text}</div>}
+        {m.text && (
+          <div className="max-w-[700px] whitespace-pre-wrap text-[14.5px] leading-7 text-ink-900">{m.text}</div>
+        )}
         {renderCard()}
       </div>
     </div>

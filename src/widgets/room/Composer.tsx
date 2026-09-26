@@ -4,7 +4,17 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowUp, AtSign, Paperclip } from "lucide-react";
 import { cn } from "@/shared/lib/format";
 
-export function Composer({ placeholder, mention, onSend, disabled }: { placeholder: string; mention: string; onSend: (text: string) => void; disabled?: boolean }) {
+export function Composer({
+  placeholder,
+  mention,
+  onSend,
+  disabled,
+}: {
+  placeholder: string;
+  mention: string;
+  onSend: (text: string) => void;
+  disabled?: boolean;
+}) {
   const [text, setText] = useState("");
   const [withMention, setWithMention] = useState(true);
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -29,7 +39,10 @@ export function Composer({ placeholder, mention, onSend, disabled }: { placehold
         <button
           type="button"
           onClick={() => setWithMention((v) => !v)}
-          className={cn("inline-flex h-7 items-center gap-1 rounded-full border px-2.5 text-[12px] font-medium transition", withMention ? "border-brand-200 bg-brand-50 text-brand-600" : "border-ink-200 bg-white text-ink-500")}
+          className={cn(
+            "inline-flex h-7 items-center gap-1 rounded-full border px-2.5 text-[12px] font-medium transition",
+            withMention ? "border-brand-200 bg-brand-50 text-brand-600" : "border-ink-200 bg-white text-ink-500",
+          )}
           title="멘션 대상"
         >
           <AtSign size={12} /> {mention}
@@ -52,7 +65,11 @@ export function Composer({ placeholder, mention, onSend, disabled }: { placehold
       />
       <div className="flex items-center justify-between px-2.5 pb-2.5">
         <div className="flex items-center gap-0.5">
-          <button type="button" className="rounded-lg p-1.5 text-ink-400 hover:bg-ink-100 hover:text-ink-700" title="파일 첨부 (v2)">
+          <button
+            type="button"
+            className="rounded-lg p-1.5 text-ink-400 hover:bg-ink-100 hover:text-ink-700"
+            title="파일 첨부 (v2)"
+          >
             <Paperclip size={16} />
           </button>
           <span className="hidden text-[11.5px] text-ink-400 sm:inline">Enter 전송 · Shift+Enter 줄바꿈</span>

@@ -8,5 +8,13 @@ export const AGENT_STATUS: Record<AgentStatus, { label: string; cls: string }> =
 };
 
 export function StatusDot({ status, pulse }: { status: AgentStatus; pulse?: boolean }) {
-  return <span className={cn("inline-block h-2 w-2 rounded-full", AGENT_STATUS[status].cls, pulse && status === "working" && "pulse-dot")} />;
+  return (
+    <span
+      className={cn(
+        "inline-block h-2 w-2 rounded-full",
+        AGENT_STATUS[status].cls,
+        pulse && status === "working" && "pulse-dot",
+      )}
+    />
+  );
 }

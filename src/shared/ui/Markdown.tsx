@@ -43,7 +43,9 @@ export function Markdown({ content, className }: { content: string; className?: 
     if (h) {
       const level = h[1].length;
       const text = inline(h[2], k);
-      nodes.push(level === 1 ? <h1 key={k++}>{text}</h1> : level === 2 ? <h2 key={k++}>{text}</h2> : <h3 key={k++}>{text}</h3>);
+      nodes.push(
+        level === 1 ? <h1 key={k++}>{text}</h1> : level === 2 ? <h2 key={k++}>{text}</h2> : <h3 key={k++}>{text}</h3>,
+      );
       i++;
       continue;
     }
@@ -58,7 +60,10 @@ export function Markdown({ content, className }: { content: string; className?: 
     if (line.startsWith("|")) {
       const rows: string[][] = [];
       while (i < lines.length && lines[i].startsWith("|")) {
-        const cells = lines[i].split("|").slice(1, -1).map((c) => c.trim());
+        const cells = lines[i]
+          .split("|")
+          .slice(1, -1)
+          .map((c) => c.trim());
         if (!cells.every((c) => /^-+$/.test(c))) rows.push(cells);
         i++;
       }
@@ -67,11 +72,19 @@ export function Markdown({ content, className }: { content: string; className?: 
         <div key={k++} className="overflow-x-auto">
           <table>
             <thead>
-              <tr>{head?.map((c, ci) => <th key={ci}>{inline(c, ci)}</th>)}</tr>
+              <tr>
+                {head?.map((c, ci) => (
+                  <th key={ci}>{inline(c, ci)}</th>
+                ))}
+              </tr>
             </thead>
             <tbody>
               {body.map((r, ri) => (
-                <tr key={ri}>{r.map((c, ci) => <td key={ci}>{inline(c, ci)}</td>)}</tr>
+                <tr key={ri}>
+                  {r.map((c, ci) => (
+                    <td key={ci}>{inline(c, ci)}</td>
+                  ))}
+                </tr>
               ))}
             </tbody>
           </table>
@@ -98,7 +111,8 @@ export function Markdown({ content, className }: { content: string; className?: 
     }
 
     const buf: string[] = [];
-    while (i < lines.length && lines[i].trim() !== "" && !/^(#{1,3}\s|```|>|\||\s*[-*]\s+|\s*\d+\.\s+)/.test(lines[i])) buf.push(lines[i++]);
+    while (i < lines.length && lines[i].trim() !== "" && !/^(#{1,3}\s|```|>|\||\s*[-*]\s+|\s*\d+\.\s+)/.test(lines[i]))
+      buf.push(lines[i++]);
     nodes.push(<p key={k++}>{inline(buf.join(" "), k)}</p>);
   }
 

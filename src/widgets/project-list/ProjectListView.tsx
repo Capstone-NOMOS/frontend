@@ -32,12 +32,31 @@ export function ProjectListView() {
   return (
     <div className="min-h-dvh dots-bg">
       <header className="flex h-16 items-center justify-between px-5 sm:px-8">
-        <Link href="/" aria-label="NOMOS 홈"><Logo /></Link>
+        <Link href="/" aria-label="NOMOS 홈">
+          <Logo />
+        </Link>
         <div className="flex items-center gap-3">
           <span className="hidden items-center gap-1.5 text-[12.5px] text-ink-500 sm:inline-flex">
-            {myAgent?.connected ? <><StatusDot status={myAgent.status} /> 에이전트 연결됨</> : <><span className="h-2 w-2 rounded-full bg-ink-300" /> 에이전트 미연결 · <Link href="/connect" className="font-medium text-ink-900 hover:underline">연결</Link></>}
+            {myAgent?.connected ? (
+              <>
+                <StatusDot status={myAgent.status} /> 에이전트 연결됨
+              </>
+            ) : (
+              <>
+                <span className="h-2 w-2 rounded-full bg-ink-300" /> 에이전트 미연결 ·{" "}
+                <Link href="/connect" className="font-medium text-ink-900 hover:underline">
+                  연결
+                </Link>
+              </>
+            )}
           </span>
-          <button onClick={() => { actions.logout(); router.push("/login"); }} className="flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-ink-100">
+          <button
+            onClick={() => {
+              actions.logout();
+              router.push("/login");
+            }}
+            className="flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-ink-100"
+          >
             <Avatar name={me.nickname} size={26} />
             <span className="text-[13px] font-medium">{me.nickname}</span>
           </button>
@@ -48,7 +67,9 @@ export function ProjectListView() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-[24px] font-semibold tracking-tight">프로젝트</h1>
-            <p className="mt-1 text-[14px] text-ink-500">내가 속한 프로젝트와 역할입니다. 각 역할은 자기 Room만 봅니다.</p>
+            <p className="mt-1 text-[14px] text-ink-500">
+              내가 속한 프로젝트와 역할입니다. 각 역할은 자기 Room만 봅니다.
+            </p>
           </div>
           <Button href="/projects/new" size="md">
             <Plus size={15} /> 새 프로젝트
@@ -75,10 +96,16 @@ export function ProjectListView() {
                     <ArrowRight size={16} className="mt-1 shrink-0 text-ink-400" />
                   </div>
                   <div className="mt-4 flex flex-wrap items-center gap-2 text-[12px] text-ink-500">
-                    <Badge tone="brand">{p.level} · {level.title}</Badge>
+                    <Badge tone="brand">
+                      {p.level} · {level.title}
+                    </Badge>
                     <Badge>{p.stack}</Badge>
-                    <span className="inline-flex items-center gap-1"><Users size={12} /> {members.length}/3</span>
-                    <span>태스크 {tasks.filter((t) => t.state === "DONE").length}/{tasks.length}</span>
+                    <span className="inline-flex items-center gap-1">
+                      <Users size={12} /> {members.length}/3
+                    </span>
+                    <span>
+                      태스크 {tasks.filter((t) => t.state === "DONE").length}/{tasks.length}
+                    </span>
                   </div>
                 </Link>
               </li>
@@ -87,17 +114,28 @@ export function ProjectListView() {
           {mine.length === 0 && (
             <li className="col-span-full rounded-xl border border-dashed border-ink-200 bg-white/70 px-6 py-10 text-center">
               <p className="text-[14px] font-medium">아직 프로젝트가 없습니다</p>
-              <p className="mt-1 text-[13px] text-ink-500">대표라면 새 프로젝트를 만들고, 팀원이라면 초대 링크로 참여하세요.</p>
+              <p className="mt-1 text-[13px] text-ink-500">
+                대표라면 새 프로젝트를 만들고, 팀원이라면 초대 링크로 참여하세요.
+              </p>
             </li>
           )}
         </ul>
 
         <div className="card mt-6 p-5">
           <div className="text-[13.5px] font-semibold">초대 링크로 참여</div>
-          <p className="mt-0.5 text-[12.5px] text-ink-500">대표가 보낸 링크를 붙여넣으세요. 역할(FE/BE)은 링크에 박혀 있습니다.</p>
+          <p className="mt-0.5 text-[12.5px] text-ink-500">
+            대표가 보낸 링크를 붙여넣으세요. 역할(FE/BE)은 링크에 박혀 있습니다.
+          </p>
           <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-            <Input value={invite} onChange={(e) => setInvite(e.target.value)} placeholder="https://nomos.app/join/Jz7kFE" className="h-10" />
-            <Button variant="outline" onClick={join} className="shrink-0">참여</Button>
+            <Input
+              value={invite}
+              onChange={(e) => setInvite(e.target.value)}
+              placeholder="https://nomos.app/join/Jz7kFE"
+              className="h-10"
+            />
+            <Button variant="outline" onClick={join} className="shrink-0">
+              참여
+            </Button>
           </div>
         </div>
       </main>
