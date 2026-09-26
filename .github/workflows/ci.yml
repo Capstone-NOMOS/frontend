@@ -29,6 +29,5 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
-      # Vercel도 빌드하지만 PR에 상태 체크를 걸지 않는다. 머지 게이트는 여기뿐이다.
       - name: Build
         run: pnpm build

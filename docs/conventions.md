@@ -70,8 +70,22 @@ src/
 ## 금지 목록
 
 - 패키지 추가 (`dep:add`는 승인 대상 — 먼저 질문할 것)
+- `npm install` (패키지 매니저는 pnpm — adr/0005)
 - `.env*` 파일 수정
 - `middleware.ts` 생성 (→ `proxy.ts`)
 - Tailwind 기본 팔레트 직접 사용 (→ `docs/design.md`의 토큰)
 - 태스크 칸반에 드래그 이동 추가 (→ adr/0003)
 - `lib/store.tsx`에 새 기능 추가 (해체 예정 — `docs/architecture.md` §8)
+- 경계 린트 예외 추가 (`eslint.config.mjs`의 `boundaries` — adr/0006)
+
+## 검사
+
+이 문서의 규칙 중 아래는 **린트가 판정한다.** 설명이 아니라 게이트다.
+
+| 명령 | 검사 |
+| --- | --- |
+| `pnpm format` / `pnpm format:check` | Prettier (`printWidth: 120`, 마크다운 제외) |
+| `pnpm lint` | ESLint + 레이어 경계 (단방향 · 슬라이스 교차 · index 진입점) |
+| `pnpm typecheck` | `next typegen && tsc --noEmit` |
+
+CI가 PR마다 위 셋과 `pnpm build`를 돌린다 (→ adr/0006).
