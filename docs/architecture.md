@@ -66,17 +66,20 @@ WebSocket은 놓칠 수 있는 전송이다. 소켓만으로 상태를 쌓으면
 
 ## 7. 기술 선택
 
-| 영역 | 선택 |
-| --- | --- |
-| 프레임워크 | Next.js 16 App Router (→ [adr/0001](./adr/0001-next-16-유지.md)) |
-| 서버 상태 | TanStack Query |
-| UI 상태 | Zustand |
-| 실시간 | **미정 — BE와 함께 결정** (adr/0004 예정). 네이티브 WS + 재연결 래퍼 / Socket.IO 중 후자로 기울어 있음 |
-| 로그 뷰어 | `@tanstack/react-virtual` + 배치 flush |
-| 마크다운 | react-markdown + remark-gfm + rehype-sanitize |
-| API 타입 | openapi-typescript (계약에서 생성). BE가 TS지만 소스를 직접 import하지 않는다 |
-| 목업 | MSW |
-| UI 부품 | 자체 구현 유지. 모달·팝오버가 필요한 시점에 Radix만 부분 도입 |
+설치 여부는 `package.json`이 기준이다. **설치됨**은 의존성에 있다는 뜻이고, 코드에 적용됐다는 뜻은 아니다 (→ §8).
+
+| 영역 | 선택 | 상태 |
+| --- | --- | --- |
+| 프레임워크 | Next.js 16 App Router (→ [adr/0001](./adr/0001-next-16-유지.md)) | 설치됨 · 적용됨 |
+| 아이콘 | lucide-react | 설치됨 · 적용됨 |
+| 서버 상태 | `@tanstack/react-query` | 설치됨 · 미적용 |
+| UI 상태 | zustand | 설치됨 · 미적용 |
+| 로그 뷰어 | `@tanstack/react-virtual` + 배치 flush | 설치됨 · 미적용 |
+| 마크다운 | react-markdown + remark-gfm + rehype-sanitize | 설치됨 · 미적용 (현재는 `components/docs/Markdown.tsx` 자체 파서) |
+| API 타입 | openapi-typescript (계약에서 생성). BE가 TS지만 소스를 직접 import하지 않는다 | 설치됨 · 미적용 |
+| 목업 | MSW | 설치됨 · 미적용 |
+| 실시간 | **미정 — BE와 함께 결정** (adr/0004 예정). 네이티브 WS + 재연결 래퍼 / Socket.IO 중 후자로 기울어 있음 | **설치 금지** |
+| UI 부품 | 자체 구현 유지. 모달·팝오버가 필요한 시점에 Radix만 부분 도입 | 미설치 (그 시점에 질문) |
 
 **패키지 추가는 `dep:add` 승인 대상이다. 임의로 설치하지 말 것.**
 
