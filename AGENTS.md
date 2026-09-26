@@ -12,7 +12,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 AI 에이전트 팀 협업 도구의 웹 프론트엔드. 백엔드는 별도 레포(Node · TypeScript · PostgreSQL).
 
-스택: Next.js 16.3.5 (App Router) / React 19.2 / TypeScript / Tailwind v4 / Node 20.9+
+스택: Next.js 16.3.5 (App Router) / React 19.2 / TypeScript / Tailwind v4 / Node 20.9+ / **pnpm**
 
 ## 참조 문서
 
@@ -74,6 +74,9 @@ AI 에이전트 팀 협업 도구의 웹 프론트엔드. 백엔드는 별도 �
 ## 작업 방식
 
 - **패키지 추가 전 반드시 물어볼 것** (`dep:add`는 승인 대상)
+- 패키지 매니저는 **pnpm**. `npm install`을 쓰지 말 것 (`package-lock.json`이 되살아난다 → adr/0005)
+- 커밋 전 `pnpm format` · `pnpm lint` · `pnpm typecheck`. CI가 같은 것을 돌린다 (→ adr/0006)
+- **레이어 경계는 린트가 판정한다.** `pnpm lint` 실패를 우회하려 예외를 추가하지 말 것
 - `.env*` 수정 금지
 - 이슈는 `.github/ISSUE_TEMPLATE/custom.md`를 따를 것. 제목은 `[FEAT/BUG/REFACTOR/CHORE] 이슈 이름`, Description과 To Do를 채울 것
 - PR은 `.github/pull_request_template.md`를 따를 것. 제목은 `feat: 로그인 기능 구현` 형식, `Closes #N`으로 이슈 연결, UI 변경 시 스크린샷 첨부
