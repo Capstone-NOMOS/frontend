@@ -1,0 +1,1 @@
+export { JoinView } from "./JoinView";

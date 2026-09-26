@@ -1,9 +1,38 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef } from "react";
-import type { Agent, AppState, Card, Document, Event, Level, Membership, Message, Project, Repo, Role, Room, Task, User } from "./types";
+import { uid } from "@/shared/lib/format";
+import type { Level, Role } from "@/shared/model";
+import type { Agent } from "@/entities/agent";
+import type { Document } from "@/entities/document";
+import type { Event } from "@/entities/event";
+import type { Card, Message } from "@/entities/message";
+import type { Membership, Project, Repo } from "@/entities/project";
+import type { Room } from "@/entities/room";
+import type { Task } from "@/entities/task";
+import type { User } from "@/entities/user";
 import { SEED } from "./mock/seed";
-import { uid } from "./format";
+
+/** 목업 스토어의 상태 모양. 서버 연동 시 스토어와 함께 사라진다 (docs/architecture.md §8). */
+export interface Session {
+  userId: string;
+}
+
+export interface AppState {
+  version: number;
+  users: User[];
+  agents: Agent[];
+  projects: Project[];
+  members: Membership[];
+  repos: Repo[];
+  rooms: Room[];
+  messages: Message[];
+  tasks: Task[];
+  documents: Document[];
+  events: Event[];
+  session: Session | null;
+  pmTyping: Record<string, boolean>;
+}
 
 const STORAGE_KEY = "nomos.mock.v3";
 
@@ -636,9 +665,3 @@ export function useProject(projectId: string) {
   const events = state.events.filter((e) => e.projectId === projectId);
   return { project, members, myRole, rooms, visibleRooms, tasks, canWrite, agentFor, userFor, repos, docs, events };
 }
-
-export const ROOM_META: Record<Room["type"], { no: number; name: string; who: string }> = {
-  OWNER: { no: 3, name: "Room 3 · 대표", who: "대표 + PM" },
-  FE: { no: 1, name: "Room 1 · FE", who: "FE + FE 에이전트 + PM" },
-  BE: { no: 2, name: "Room 2 · BE", who: "BE + BE 에이전트 + PM" },
-};

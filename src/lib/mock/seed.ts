@@ -1,4 +1,8 @@
-import type { AppState, Document, Event, Message, Task } from "../types";
+import type { Document } from "@/entities/document";
+import type { Event } from "@/entities/event";
+import type { Message } from "@/entities/message";
+import type { Task } from "@/entities/task";
+import type { AppState } from "../store";
 
 const DAY = "2026-09-20";
 const t = (hm: string) => `${DAY}T${hm}:00+09:00`;
