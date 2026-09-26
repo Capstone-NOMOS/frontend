@@ -26,7 +26,7 @@ const CONSTITUTION = `# Jazzify 헌법
 ## 스택
 - FE: Next.js 16 (App Router) · TypeScript · Tailwind v4
 - BE: FastAPI · SQLAlchemy · PostgreSQL 16
-- 패키지 매니저: npm (FE) / uv (BE)
+- 패키지 매니저: pnpm (FE) / uv (BE)
 
 ## 컨벤션
 - 커밋 메시지: \`feat|fix|chore|refactor: 한글 요약\`
