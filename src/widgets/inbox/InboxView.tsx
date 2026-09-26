@@ -9,7 +9,15 @@ import type { Message } from "@/entities/message";
 import { ROOM_META, type Room } from "@/entities/room";
 import { useApp, useProject } from "@/lib/store";
 
-type InboxItem = { m: Message; room: Room; icon: React.ReactNode; title: string; desc: string; tag: string; tone: "brand" | "warn" | "neutral" };
+type InboxItem = {
+  m: Message;
+  room: Room;
+  icon: React.ReactNode;
+  title: string;
+  desc: string;
+  tag: string;
+  tone: "brand" | "warn" | "neutral";
+};
 
 export function InboxView({ projectId }: { projectId: string }) {
   const { state, me } = useApp();
@@ -23,16 +31,67 @@ export function InboxView({ projectId }: { projectId: string }) {
         const c = m.card!;
         const room = visibleRooms.find((r) => r.id === m.roomId)!;
         const writable = canWrite(room);
-        if (c.kind === "spec" && c.status === "pending" && myRole === "OWNER") return [{ m, room, icon: <Sparkles size={16} />, title: `명세 v${c.version} 승인 대기`, desc: c.title, tag: "승인", tone: "brand" }];
-        if (c.kind === "report" && c.status === "pending" && myRole === "OWNER") return [{ m, room, icon: <ClipboardCheck size={16} />, title: "완료 보고서 확인", desc: c.title, tag: "승인", tone: "brand" }];
-        if (c.kind === "question" && !c.answer && writable) return [{ m, room, icon: <CircleHelp size={16} />, title: `${c.taskId} · 에이전트가 결정을 기다립니다`, desc: c.question, tag: "결정", tone: "warn" }];
-        if (c.kind === "repo" && c.status === "pending" && writable) return [{ m, room, icon: <Link2 size={16} />, title: `${c.role} 레포 연결`, desc: "레포 URL과 로컬 경로를 등록해주세요", tag: "설정", tone: "neutral" }];
+        if (c.kind === "spec" && c.status === "pending" && myRole === "OWNER")
+          return [
+            {
+              m,
+              room,
+              icon: <Sparkles size={16} />,
+              title: `명세 v${c.version} 승인 대기`,
+              desc: c.title,
+              tag: "승인",
+              tone: "brand",
+            },
+          ];
+        if (c.kind === "report" && c.status === "pending" && myRole === "OWNER")
+          return [
+            {
+              m,
+              room,
+              icon: <ClipboardCheck size={16} />,
+              title: "완료 보고서 확인",
+              desc: c.title,
+              tag: "승인",
+              tone: "brand",
+            },
+          ];
+        if (c.kind === "question" && !c.answer && writable)
+          return [
+            {
+              m,
+              room,
+              icon: <CircleHelp size={16} />,
+              title: `${c.taskId} · 에이전트가 결정을 기다립니다`,
+              desc: c.question,
+              tag: "결정",
+              tone: "warn",
+            },
+          ];
+        if (c.kind === "repo" && c.status === "pending" && writable)
+          return [
+            {
+              m,
+              room,
+              icon: <Link2 size={16} />,
+              title: `${c.role} 레포 연결`,
+              desc: "레포 URL과 로컬 경로를 등록해주세요",
+              tag: "설정",
+              tone: "neutral",
+            },
+          ];
         return [];
       })
       .sort((a, b) => (a.m.ts < b.m.ts ? 1 : -1));
   }, [state.messages, visibleRooms, myRole, canWrite]);
 
-  const notices = useMemo(() => events.filter((e) => e.tone && e.tone !== "default").sort((a, b) => (a.ts < b.ts ? 1 : -1)).slice(0, 12), [events]);
+  const notices = useMemo(
+    () =>
+      events
+        .filter((e) => e.tone && e.tone !== "default")
+        .sort((a, b) => (a.ts < b.ts ? 1 : -1))
+        .slice(0, 12),
+    [events],
+  );
 
   if (!me) return null;
 
@@ -50,8 +109,22 @@ export function InboxView({ projectId }: { projectId: string }) {
             <ul className="space-y-2">
               {items.map((it) => (
                 <li key={it.m.id}>
-                  <Link href={`/p/${projectId}/rooms/${it.room.id}#${it.m.id}`} className="card flex items-center gap-3 px-4 py-3 transition hover:border-ink-300">
-                    <span className={cn("inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg", it.tone === "warn" ? "bg-human-bg text-human" : it.tone === "brand" ? "bg-brand-50 text-brand-600" : "bg-ink-100 text-ink-600")}>{it.icon}</span>
+                  <Link
+                    href={`/p/${projectId}/rooms/${it.room.id}#${it.m.id}`}
+                    className="card flex items-center gap-3 px-4 py-3 transition hover:border-ink-300"
+                  >
+                    <span
+                      className={cn(
+                        "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
+                        it.tone === "warn"
+                          ? "bg-human-bg text-human"
+                          : it.tone === "brand"
+                            ? "bg-brand-50 text-brand-600"
+                            : "bg-ink-100 text-ink-600",
+                      )}
+                    >
+                      {it.icon}
+                    </span>
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center gap-2">
                         <span className="truncate text-[14px] font-semibold">{it.title}</span>
@@ -76,7 +149,13 @@ export function InboxView({ projectId }: { projectId: string }) {
           <ul className="card divide-y divide-ink-100">
             {notices.map((e) => (
               <li key={e.id} className="flex items-start gap-3 px-4 py-3 text-[13px]">
-                <Bell size={14} className={cn("mt-0.5 shrink-0", e.tone === "danger" ? "text-forbidden" : e.tone === "warn" ? "text-human" : "text-auto")} />
+                <Bell
+                  size={14}
+                  className={cn(
+                    "mt-0.5 shrink-0",
+                    e.tone === "danger" ? "text-forbidden" : e.tone === "warn" ? "text-human" : "text-auto",
+                  )}
+                />
                 <span className="min-w-0 flex-1">
                   <span className="font-medium">{e.actor}</span> <span className="text-ink-600">{e.summary}</span>
                 </span>

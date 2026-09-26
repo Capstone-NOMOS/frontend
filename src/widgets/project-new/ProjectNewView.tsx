@@ -17,7 +17,8 @@ type Line = { from: "nomos" | "me"; text: string };
 const PROMPTS: Record<Exclude<Step, "done">, string> = {
   name: "새 프로젝트를 만들어볼까요? 이름이 뭔가요?",
   desc: "어떤 프로젝트인지 한 줄로 알려주세요.",
-  level: "에이전트 허용 레벨을 정해주세요. 레벨은 자율성이 아니라 '행동마다 누가 승인하는가'를 정한 표입니다. 안 고르면 L2가 기본값입니다.",
+  level:
+    "에이전트 허용 레벨을 정해주세요. 레벨은 자율성이 아니라 '행동마다 누가 승인하는가'를 정한 표입니다. 안 고르면 L2가 기본값입니다.",
   stack: "기술 스택이 정해져 있나요? 없으면 PM이 첫 명세와 함께 제안합니다.",
 };
 
@@ -100,14 +101,26 @@ export function ProjectNewView() {
     <div className="flex h-dvh flex-col bg-white">
       <header className="flex h-14 shrink-0 items-center justify-between border-b border-ink-200 px-4 sm:px-6">
         <div className="flex items-center gap-3">
-          <Link href="/projects" aria-label="프로젝트 목록"><Logo /></Link>
+          <Link href="/projects" aria-label="프로젝트 목록">
+            <Logo />
+          </Link>
           <span className="hidden text-ink-300 sm:inline">/</span>
           <span className="hidden text-[13.5px] font-medium sm:inline">새 프로젝트</span>
         </div>
         <ol className="flex items-center gap-1.5">
           {["이름", "설명", "레벨", "스택"].map((s, i) => (
-            <li key={s} className={cn("flex items-center gap-1 text-[11.5px]", i < stepIndex ? "text-auto" : i === stepIndex ? "text-ink-900 font-medium" : "text-ink-400")}>
-              {i < stepIndex ? <Check size={11} /> : <span className={cn("h-1.5 w-1.5 rounded-full", i === stepIndex ? "bg-ink-900" : "bg-ink-300")} />}
+            <li
+              key={s}
+              className={cn(
+                "flex items-center gap-1 text-[11.5px]",
+                i < stepIndex ? "text-auto" : i === stepIndex ? "text-ink-900 font-medium" : "text-ink-400",
+              )}
+            >
+              {i < stepIndex ? (
+                <Check size={11} />
+              ) : (
+                <span className={cn("h-1.5 w-1.5 rounded-full", i === stepIndex ? "bg-ink-900" : "bg-ink-300")} />
+              )}
               <span className="hidden sm:inline">{s}</span>
             </li>
           ))}
@@ -128,7 +141,9 @@ export function ProjectNewView() {
                 </div>
               ) : (
                 <div key={i} className="flex justify-end animate-rise">
-                  <div className="max-w-[80%] rounded-2xl rounded-br-md bg-ink-100 px-4 py-2.5 text-[15px] leading-6">{l.text}</div>
+                  <div className="max-w-[80%] rounded-2xl rounded-br-md bg-ink-100 px-4 py-2.5 text-[15px] leading-6">
+                    {l.text}
+                  </div>
                 </div>
               ),
             )}
@@ -136,9 +151,15 @@ export function ProjectNewView() {
             {step === "level" && !typing && (
               <div className="ml-0 grid grid-cols-1 gap-2 sm:ml-10 sm:grid-cols-2 animate-rise">
                 {LEVELS.map((l) => (
-                  <button key={l.id} onClick={() => pickLevel(l.id)} className="rounded-xl border border-ink-200 p-3.5 text-left transition hover:border-ink-900 hover:ring-2 hover:ring-ink-900/10">
+                  <button
+                    key={l.id}
+                    onClick={() => pickLevel(l.id)}
+                    className="rounded-xl border border-ink-200 p-3.5 text-left transition hover:border-ink-900 hover:ring-2 hover:ring-ink-900/10"
+                  >
                     <div className="flex items-center justify-between">
-                      <span className="text-[15px] font-semibold">{l.id} <span className="font-medium">{l.title}</span></span>
+                      <span className="text-[15px] font-semibold">
+                        {l.id} <span className="font-medium">{l.title}</span>
+                      </span>
                       {l.id === "L2" && <Badge>기본값</Badge>}
                     </div>
                     <div className="mt-1 text-[12.5px] text-ink-500">{l.detail}</div>
@@ -154,7 +175,9 @@ export function ProjectNewView() {
                     <span className="text-[15px] font-semibold">{project.name}</span>
                     <Badge tone="brand">{project.level}</Badge>
                   </div>
-                  <div className="mt-0.5 text-[13px] text-ink-500">{project.description} · {project.stack}</div>
+                  <div className="mt-0.5 text-[13px] text-ink-500">
+                    {project.description} · {project.stack}
+                  </div>
                   <ul className="mt-3 space-y-1 text-[12.5px] text-ink-600">
                     <li>✓ 정책표 — {project.level} 열이 프로젝트에 적용됨</li>
                     <li>✓ Room 3 (대표 + PM) 생성 · PM 에이전트 인스턴스 (NOMOS 키)</li>
@@ -170,7 +193,9 @@ export function ProjectNewView() {
                   <Button onClick={() => router.push(`/p/${project.id}`)}>
                     대시보드로 이동 <ArrowRight size={15} />
                   </Button>
-                  <Button variant="outline" href={`/p/${project.id}/settings`}>정책표 보기</Button>
+                  <Button variant="outline" href={`/p/${project.id}/settings`}>
+                    정책표 보기
+                  </Button>
                 </div>
               </div>
             )}
@@ -193,7 +218,10 @@ export function ProjectNewView() {
         <div className="shrink-0 border-t border-ink-100 bg-white safe-bottom">
           <div className="mx-auto max-w-[720px] px-3 py-3 sm:px-6">
             <form
-              onSubmit={(e) => { e.preventDefault(); submit(); }}
+              onSubmit={(e) => {
+                e.preventDefault();
+                submit();
+              }}
               className="flex items-center gap-2 rounded-2xl border border-ink-200 bg-white px-2 py-1.5 shadow-card focus-within:border-ink-300 focus-within:ring-4 focus-within:ring-ink-100"
             >
               <input
@@ -201,14 +229,27 @@ export function ProjectNewView() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 disabled={typing}
-                placeholder={step === "name" ? "예: Jazzify" : step === "desc" ? "예: 재즈 음원 추천 웹앱" : "예: Next.js + FastAPI (비워두면 PM이 제안)"}
+                placeholder={
+                  step === "name"
+                    ? "예: Jazzify"
+                    : step === "desc"
+                      ? "예: 재즈 음원 추천 웹앱"
+                      : "예: Next.js + FastAPI (비워두면 PM이 제안)"
+                }
                 className="h-10 flex-1 bg-transparent px-2 text-[15px] outline-none placeholder:text-ink-400"
               />
-              <button type="submit" disabled={typing || (step !== "stack" && !input.trim())} aria-label="보내기" className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-ink-900 text-white disabled:bg-ink-200">
+              <button
+                type="submit"
+                disabled={typing || (step !== "stack" && !input.trim())}
+                aria-label="보내기"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-ink-900 text-white disabled:bg-ink-200"
+              >
                 <ArrowUp size={16} />
               </button>
             </form>
-            {step === "stack" && <div className="mt-1.5 text-center text-[11.5px] text-ink-500">비워두고 보내면 PM이 제안합니다</div>}
+            {step === "stack" && (
+              <div className="mt-1.5 text-center text-[11.5px] text-ink-500">비워두고 보내면 PM이 제안합니다</div>
+            )}
           </div>
         </div>
       )}
