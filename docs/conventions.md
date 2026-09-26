@@ -27,16 +27,7 @@ API JSON 필드도 `camelCase`로 합의돼 있다. `snake_case` 응답을 변�
 
 ## 폴더 구조
 
-### 현재 (이행 전)
-
-```
-src/
-  app/          라우팅
-  components/   화면별 컴포넌트
-  lib/          타입·유틸·스토어·목데이터
-```
-
-### 이행 후 (FSD 부분 도입 → adr/0002)
+FSD 부분 도입 완료 (→ adr/0002). `components/`와 `lib/types.ts`는 사라졌다.
 
 ```
 src/
@@ -44,7 +35,13 @@ src/
   widgets/    화면 블록
   entities/   도메인 타입·API·쿼리키·도메인 배지
   shared/     도메인을 모르는 부품·fetch 래퍼·WS 클라이언트·포맷 유틸
+  lib/        ⚠ 목업 스토어 전용 예외 — 아래 참조
 ```
+
+**`src/lib/`은 레이어가 아니다.** `store.tsx`와 `mock/seed.ts`만 남아 있고, 해체 예정이라(`architecture.md` §8) 이번 이행에서 일부러 옮기지 않았다. 여기에 새 파일을 추가하지 말 것.
+
+엔티티 슬라이스 9개: `task` `agent` `user` `project` `room` `message` `document` `event` `policy`.
+위젯 슬라이스 13개: `room` `dashboard` `inbox` `activity` `docs` `settings` `landing` `join` `app-shell` `auth` `connect-agent` `project-list` `project-new`.
 
 **import는 `app → widgets → entities → shared` 단방향만.** 같은 레이어끼리 import 금지.
 

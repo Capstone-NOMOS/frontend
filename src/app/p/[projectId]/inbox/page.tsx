@@ -1,4 +1,4 @@
-import { InboxView } from "@/components/inbox/InboxView";
+import { InboxView } from "@/widgets/inbox";
 
 export default async function InboxPage({ params }: { params: Promise<{ projectId: string }> }) {
   const { projectId } = await params;
