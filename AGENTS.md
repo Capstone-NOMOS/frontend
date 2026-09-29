@@ -21,7 +21,6 @@ AI 에이전트 팀 협업 도구의 웹 프론트엔드. 백엔드는 별도 �
 | 작업 | 읽을 것 |
 | --- | --- |
 | 기능·도메인 로직 | `docs/NOMOS_기능명세서.md` (**유일한 기준**) |
-| API·이벤트 범위 | `docs/남은과업_백엔드요구사항.md` |
 | 데이터 흐름·실시간·인증 | `docs/architecture.md` |
 | 파일 생성·이동 | `docs/conventions.md` |
 | 색·배지·여백 | `docs/design.md` |
@@ -35,7 +34,7 @@ AI 에이전트 팀 협업 도구의 웹 프론트엔드. 백엔드는 별도 �
 
 학습 데이터가 15 이하일 수 있다. 확신이 없으면 `node_modules/next/dist/docs/`를 먼저 읽을 것.
 
-- 인증·라우트 가드는 `proxy.ts`. **`middleware.ts`를 만들지 말 것**
+- **서버 가드 파일(`proxy.ts`·`middleware.ts`)을 만들지 말 것.** 인증은 클라이언트 가드 + API 401·403 (→ docs/adr/0007)
 - `params` `searchParams` `cookies()` `headers()`는 전부 `await`
 - 린트는 `eslint` 직접 실행 (`next lint` 없음)
 - Turbopack이 기본. webpack 설정 추가 금지
