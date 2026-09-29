@@ -11,7 +11,6 @@ import {
   FileText,
   Inbox,
   LayoutDashboard,
-  LogOut,
   Menu,
   MessageSquare,
   Plug,
@@ -26,7 +25,7 @@ import { Avatar, Badge, Button, Kbd, Logo } from "@/shared/ui";
 import { cn } from "@/shared/lib/format";
 import { AGENT_STATUS, StatusDot } from "@/entities/agent";
 import { ROOM_META, type Room } from "@/entities/room";
-import { RoleBadge } from "@/entities/user";
+import { AccountMenu, RoleBadge } from "@/entities/user";
 import { useApp, useProject } from "@/lib/store";
 import { CommandSearch } from "./CommandSearch";
 
@@ -432,6 +431,10 @@ function SidebarContent({
         </button>
         {menuOpen && (
           <div className="absolute bottom-full left-3 right-3 z-20 mb-1 rounded-xl border border-ink-200 bg-white p-1.5 shadow-pop animate-rise">
+            <div className="px-2.5 py-1.5">
+              <AccountMenu />
+            </div>
+            <div className="my-1 border-t border-ink-100" />
             <div className="px-2.5 pb-1 pt-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
               데모: 역할 전환
             </div>
@@ -474,15 +477,6 @@ function SidebarContent({
               className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[13px] text-ink-700 hover:bg-ink-100"
             >
               <RefreshCcw size={14} /> 데모 데이터 초기화
-            </button>
-            <button
-              onClick={() => {
-                actions.logout();
-                router.push("/login");
-              }}
-              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[13px] text-ink-700 hover:bg-ink-100"
-            >
-              <LogOut size={14} /> 로그아웃
             </button>
           </div>
         )}

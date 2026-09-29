@@ -187,10 +187,7 @@ interface Ctx {
   hydrated: boolean;
   me: User | null;
   actions: {
-    login: (username: string) => User | null;
-    signup: (input: { username: string; nickname: string }) => User;
-    logout: () => void;
-    connectAgent: (userId: string) => void;
+    /** 목업 전용: 데모 페르소나 전환. 실제 로그인 사용자는 entities/user의 useCurrentUser */
     switchUser: (userId: string) => void;
     resetDemo: () => void;
     createProject: (input: { name: string; description: string; level: Level; stack: string }) => Project;
@@ -222,7 +219,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } catch {
       /* storage unavailable */
     }
-    dispatch({ type: "hydrate", state: next });
+    // 목업 전용: 로그인은 실제 API로 옮겨졌다. 목업 화면은 데모 페르소나(기본: 첫 사용자 = 대표)로 본다
+    dispatch({ type: "hydrate", state: { ...next, session: next.session ?? { userId: next.users[0].id } } });
   }, []);
 
   useEffect(() => {
@@ -393,40 +391,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const actions = useMemo<Ctx["actions"]>(
     () => ({
-      login: (username) => {
-        const u = stateRef.current.users.find((x) => x.username === username.trim());
-        if (!u) return null;
-        update((s) => ({ ...s, session: { userId: u.id } }));
-        return u;
-      },
-      signup: ({ username, nickname }) => {
-        const u: User = {
-          id: uid("u"),
-          username: username.trim(),
-          nickname: nickname.trim(),
-          pubkey: `nomos_pk_${Math.random().toString(36).slice(2, 6)}…${Math.random().toString(36).slice(2, 6)}`,
-          createdAt: now(),
-        };
-        update((s) => ({ ...s, users: [...s.users, u], session: { userId: u.id } }));
-        return u;
-      },
-      logout: () => update((s) => ({ ...s, session: null })),
-      connectAgent: (userId) =>
-        update((s) => {
-          const user = s.users.find((u) => u.id === userId);
-          const existing = s.agents.find((a) => a.userId === userId);
-          if (existing) return patchAgent(s, existing.id, { connected: true, status: "online" });
-          const agent: Agent = {
-            id: uid("a"),
-            userId,
-            harness: "claude-code",
-            label: `${user?.nickname ?? "나"}의 Claude Code`,
-            status: "online",
-            lastSeen: now(),
-            connected: true,
-          };
-          return { ...s, agents: [...s.agents, agent] };
-        }),
+      // 목업 전용 (데모 페르소나 전환)
       switchUser: (userId) => update((s) => ({ ...s, session: { userId } })),
       resetDemo: () =>
         update((s) => ({

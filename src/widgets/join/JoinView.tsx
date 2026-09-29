@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ArrowRight, Check } from "lucide-react";
 import { Avatar, Badge, Button, Logo } from "@/shared/ui";
 import { StatusDot } from "@/entities/agent";
@@ -17,15 +17,6 @@ export function JoinView({ token }: { token: string }) {
 
   const project = state.projects.find((p) => p.inviteTokens.FE === token || p.inviteTokens.BE === token);
   const role = project ? (project.inviteTokens.FE === token ? "FE" : "BE") : null;
-
-  useEffect(() => {
-    if (hydrated && !me) {
-      try {
-        localStorage.setItem("nomos.pendingJoin", token);
-      } catch {}
-      router.replace("/login");
-    }
-  }, [hydrated, me, router, token]);
 
   if (!hydrated || !me) return null;
 
@@ -65,12 +56,7 @@ export function JoinView({ token }: { token: string }) {
 
   const join = () => {
     const res = actions.joinProject(token);
-    if (res) {
-      setJoined(true);
-      try {
-        localStorage.removeItem("nomos.pendingJoin");
-      } catch {}
-    }
+    if (res) setJoined(true);
   };
 
   return wrap(

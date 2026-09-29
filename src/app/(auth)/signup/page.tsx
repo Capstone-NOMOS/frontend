@@ -1,5 +1,6 @@
 import { SignupForm } from "@/widgets/auth";
 
-export default function Page() {
-  return <SignupForm />;
+export default async function Page({ searchParams }: { searchParams: Promise<{ next?: string | string[] }> }) {
+  const { next } = await searchParams;
+  return <SignupForm next={typeof next === "string" ? next : undefined} />;
 }
