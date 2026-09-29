@@ -24,7 +24,7 @@
 
 ## 3. 인증과 권한
 
-- 사람 토큰 1시간, refresh 없음. 만료되면 재로그인한다
+- 사람 토큰 24시간(로그인 응답 `expiresIn: 86400`), refresh 없음. 만료되면 재로그인한다
 - 토큰은 로그인 응답 body로 받아 `sessionStorage`에 보관하고 `Authorization: Bearer` 헤더로 보낸다. 쿠키를 쓰지 않는다 (`credentials: 'include'` 금지)
 - 라우트 보호는 클라이언트 가드로 한다. **권한의 근거는 API의 401·403이다** (→ adr/0007)
 - `proxy.ts`·`middleware.ts`를 만들지 않는다. Next 서버는 사용자 토큰을 볼 수 없다
