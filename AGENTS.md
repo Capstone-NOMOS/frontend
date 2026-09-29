@@ -45,7 +45,8 @@ AI 에이전트 팀 협업 도구의 웹 프론트엔드. 백엔드는 별도 �
 자세한 내용은 `docs/architecture.md`.
 
 - 백엔드는 Node/TS. **Next Route Handler를 BFF로 쓰지 말 것** (같은 언어라 유혹이 크지만 서버가 둘이 되는 건 동일)
-- WebSocket 서버는 백엔드 소유. 프론트는 클라이언트로만 연결
+- **현재 API에 실시간 채널이 없다. 당분간 폴링** (`refetchInterval`). 실시간 라이브러리 설치 금지 (`docs/adr/0004`)
+- 데이터 조회는 반드시 쿼리 훅으로 감쌀 것. 컴포넌트에서 `fetch` 직접 호출 금지
 - 승인·질의 응답을 Server Action으로 처리하지 말 것 (판정 주체는 서버)
 - 실시간 데이터에 `revalidate`·`use cache` 금지
 - `page.tsx`는 위젯을 부르는 얇은 셸로 유지
