@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { ArrowRight, CircleHelp, ShieldBan, Table2 } from "lucide-react";
 import { AgentMark, Badge, Button, Logo } from "@/shared/ui";
-import { useApp } from "@/lib/store";
+import { useCurrentUser } from "@/entities/user";
 
 const STEPS = [
   {
@@ -29,9 +31,17 @@ const STEPS = [
 ];
 
 export function Landing() {
-  const { me, hydrated } = useApp();
+  const { status } = useCurrentUser();
+  const router = useRouter();
   const primary =
-    hydrated && me ? { href: "/projects", label: "프로젝트로 이동" } : { href: "/signup", label: "시작하기" };
+    status === "authenticated"
+      ? { href: "/projects", label: "프로젝트로 이동" }
+      : { href: "/signup", label: "시작하기" };
+
+  // 로그인 상태면 랜딩을 건너뛴다. 조직이 없으면 /projects의 AuthGate가 /onboarding으로 보낸다
+  useEffect(() => {
+    if (status === "authenticated") router.replace("/projects");
+  }, [status, router]);
 
   return (
     <div className="min-h-dvh bg-white">

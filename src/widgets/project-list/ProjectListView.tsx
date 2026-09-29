@@ -4,14 +4,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ArrowRight, Plus, Users } from "lucide-react";
-import { Avatar, Badge, Button, Input, Logo } from "@/shared/ui";
+import { Badge, Button, Input, Logo } from "@/shared/ui";
 import { StatusDot } from "@/entities/agent";
 import { LEVELS } from "@/entities/policy";
-import { RoleBadge } from "@/entities/user";
+import { AccountMenu, RoleBadge } from "@/entities/user";
 import { useApp } from "@/lib/store";
 
 export function ProjectListView() {
-  const { state, me, hydrated, actions } = useApp();
+  const { state, me, hydrated } = useApp();
   const router = useRouter();
   const [invite, setInvite] = useState("");
 
@@ -50,16 +50,7 @@ export function ProjectListView() {
               </>
             )}
           </span>
-          <button
-            onClick={() => {
-              actions.logout();
-              router.push("/login");
-            }}
-            className="flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-ink-100"
-          >
-            <Avatar name={me.nickname} size={26} />
-            <span className="text-[13px] font-medium">{me.nickname}</span>
-          </button>
+          <AccountMenu />
         </div>
       </header>
 
