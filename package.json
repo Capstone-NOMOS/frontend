@@ -14,7 +14,8 @@
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "gen:api": "openapi-typescript https://raw.githubusercontent.com/Capstone-NOMOS/backend/dev/docs/openapi.yaml -o src/shared/api/schema.d.ts"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.104.0",
