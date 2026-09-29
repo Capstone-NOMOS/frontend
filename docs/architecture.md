@@ -84,11 +84,11 @@
 | --- | --- | --- |
 | 프레임워크 | Next.js 16 App Router (→ [adr/0001](./adr/0001-next-16-유지.md)) | 설치됨 · 적용됨 |
 | 아이콘 | lucide-react | 설치됨 · 적용됨 |
-| 서버 상태 | `@tanstack/react-query` | 설치됨 · 미적용 |
+| 서버 상태 | `@tanstack/react-query` | 설치됨 · 적용됨 (`app/providers.tsx`) |
 | UI 상태 | zustand | 설치됨 · 미적용 |
 | 로그 뷰어 | `@tanstack/react-virtual` + 배치 flush | 설치됨 · 미적용 |
 | 마크다운 | react-markdown + remark-gfm + rehype-sanitize | 설치됨 · 미적용 (현재는 `components/docs/Markdown.tsx` 자체 파서) |
-| API 타입 | openapi-typescript (계약에서 생성). BE가 TS지만 소스를 직접 import하지 않는다 | 설치됨 · 미적용 |
+| API 타입 | openapi-typescript (계약에서 생성). BE가 TS지만 소스를 직접 import하지 않는다 | 설치됨 · 적용됨 (`pnpm gen:api` → `shared/api/schema.d.ts`) |
 | 목업 | MSW | 설치됨 · 미적용 |
 | 실시간 | **당분간 폴링** (TanStack Query `refetchInterval`). 실시간 채널은 BE 계획 확인 후 결정 (adr/0004) | **설치 금지** |
 | UI 부품 | 자체 구현 유지. 모달·팝오버가 필요한 시점에 Radix만 부분 도입 | 미설치 (그 시점에 질문) |
@@ -123,3 +123,27 @@ FSD 이행(adr/0002)에서 `src/lib/`만 레이어 밖 예외로 남겼다. 지�
 - 현재 API에는 실시간 채널이 없고, 노트 API의 `since_seq`는 폴링용으로 설계돼 있다
 - 기능명세서 F-14는 WebSocket을 요구한다. 명세와 API가 어긋나 있으며 BE 계획 확인이 필요하다
 - **결정 전까지 WebSocket·Socket.IO 등 실시간 라이브러리를 설치하지 말 것**
+
+## 10. API 연결 규칙
+
+호출 기반은 `src/shared/api/`에 있다 (`apiFetch`, `ApiError`, 토큰 보관, 에러 문구, 생성 타입).
+
+- **컴포넌트에서 `apiFetch`를 직접 부르지 않는다.** `entities/*/api`의 쿼리·뮤테이션 훅만 쓴다
+- **쿼리 키는 엔티티별 팩토리로만 만든다** (예: `taskKeys.list(projectId, filters)`)
+- 타입의 출처
+  - 요청 body → `schema.d.ts`의 `paths` (`RequestBody<"/auth/login", "post">`)
+  - 응답 → `schema.d.ts`에 스키마가 있으면 **반드시** 그것을 쓴다 (`Schemas["Me"]` 등)
+  - 응답 스키마가 없는(`unknown`) API만 `entities/*/model/api.ts`에 직접 쓴다.
+    이름에 `Api` 접두사(`ApiTask`)를 붙이고 `// TODO(api): BE 응답 스키마 추가 시 교체` 주석을 단다
+- **뮤테이션은 낙관적 업데이트 금지.** 성공 후 관련 쿼리를 invalidate한다
+- 엔티티를 API에 연결하면 **같은 PR에서** `lib/store.tsx`의 해당 부분을 지운다.
+  목업 화면이 아직 쓰고 있으면 지우지 말고 PR 본문에 남긴다
+- API가 없어 목업으로 남는 영역에는 "목업" 배지를 단다
+- 에러 문구는 `errorMessage(error)`로 얻는다. 분기는 `error.code`로만 한다 (서버 `message`는 고정 문구가 아니다)
+
+### 스키마 갱신
+
+`schema.d.ts`는 BE 레포 dev 브랜치의 `docs/openapi.yaml`에서 생성한다. FE 레포에 스펙 사본을 두지 않는다.
+
+- 네트워크가 필요하므로 CI에서는 돌리지 않는다. 로컬에서 `pnpm gen:api` 실행 후 생성물을 커밋한다
+- BE 스펙이 바뀌면 다시 실행한다. **`schema.d.ts`의 git diff가 곧 API 변경 내역**이며, PR 본문에 요약한다
