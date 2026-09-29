@@ -34,7 +34,7 @@ src/
   app/        라우팅·레이아웃·프로바이더·proxy.ts
   widgets/    화면 블록
   entities/   도메인 타입·API·쿼리키·도메인 배지
-  shared/     도메인을 모르는 부품·fetch 래퍼·WS 클라이언트·포맷 유틸
+  shared/     도메인을 모르는 부품·fetch 래퍼·(추후) 실시간 클라이언트·포맷 유틸
   lib/        ⚠ 목업 스토어 전용 예외 — 아래 참조
 ```
 
