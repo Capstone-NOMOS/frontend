@@ -20,11 +20,14 @@
 - 화면 내용은 `"use client"` 위젯이 담당
 - `params` `searchParams` `cookies()` `headers()`는 전부 `await`
 - 실시간으로 바뀌는 데이터에 `revalidate`·`use cache` 금지. 갱신 경로가 폴링과 캐시로 이원화되면 어긋난다
+- 서버 컴포넌트는 사용자 토큰이 없으므로 로그인이 필요한 API를 부르지 않는다 (→ adr/0007)
 
 ## 3. 인증과 권한
 
-- 세션은 JWT 24시간
-- 라우트 가드는 **`proxy.ts`**. `middleware.ts`를 만들지 말 것 (Next 16에서 대체됨)
+- 사람 토큰 1시간, refresh 없음. 만료되면 재로그인한다
+- 토큰은 로그인 응답 body로 받아 `sessionStorage`에 보관하고 `Authorization: Bearer` 헤더로 보낸다. 쿠키를 쓰지 않는다 (`credentials: 'include'` 금지)
+- 라우트 보호는 클라이언트 가드로 한다. **권한의 근거는 API의 401·403이다** (→ adr/0007)
+- `proxy.ts`·`middleware.ts`를 만들지 않는다. Next 서버는 사용자 토큰을 볼 수 없다
 - Room 접근 규칙은 서버가 강제하고 화면도 같은 규칙을 반영한다
   - 대표는 Room 1·2를 **읽을 수 있지만 입력창이 없다**
   - FE가 Room 2(BE)에 접근하면 403

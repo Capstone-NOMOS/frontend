@@ -13,7 +13,7 @@
 | 상태 문자열 값 | UPPER\_SNAKE, **서버 계약과 동일하게** | `READY`, `WAITING_HUMAN` |
 | 에이전트 상태 | 소문자, 서버 계약을 따름 | `online`, `working`, `offline` |
 
-Next.js 라우트 파일(`page.tsx`, `layout.tsx`, `proxy.ts`)은 프레임워크가 정한 이름을 그대로 쓴다.
+Next.js 라우트 파일(`page.tsx`, `layout.tsx`)은 프레임워크가 정한 이름을 그대로 쓴다.
 
 API JSON 필드도 `camelCase`로 합의돼 있다. `snake_case` 응답을 변환하는 코드를 프론트에 만들지 말 것 (→ `docs/architecture.md` §9).
 
@@ -31,7 +31,7 @@ FSD 부분 도입 완료 (→ adr/0002). `components/`와 `lib/types.ts`는 사�
 
 ```
 src/
-  app/        라우팅·레이아웃·프로바이더·proxy.ts
+  app/        라우팅·레이아웃·프로바이더
   widgets/    화면 블록
   entities/   도메인 타입·API·쿼리키·도메인 배지
   shared/     도메인을 모르는 부품·fetch 래퍼·(추후) 실시간 클라이언트·포맷 유틸
@@ -72,7 +72,7 @@ src/
 - 패키지 추가 (`dep:add`는 승인 대상 — 먼저 질문할 것)
 - `npm install` (패키지 매니저는 pnpm — adr/0005)
 - `.env*` 파일 수정
-- `middleware.ts` 생성 (→ `proxy.ts`)
+- `proxy.ts`·`middleware.ts` 생성 (인증은 클라이언트 가드 — adr/0007)
 - Tailwind 기본 팔레트 직접 사용 (→ `docs/design.md`의 토큰)
 - 태스크 칸반에 드래그 이동 추가 (→ adr/0003)
 - `lib/store.tsx`에 새 기능 추가 (해체 예정 — `docs/architecture.md` §8)
