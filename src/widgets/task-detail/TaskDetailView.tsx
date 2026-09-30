@@ -130,7 +130,11 @@ function Submissions({ taskId }: { taskId: string }) {
 
       <section className="card p-4">
         <SectionTitle>검증</SectionTitle>
-        {selected ? <Verifications artifact={selected} /> : <p className="text-[13px] text-ink-500">제출을 고르세요</p>}
+        {selected ? (
+          <Verifications artifact={selected} />
+        ) : (
+          !artifacts.isPending && <p className="text-[13px] text-ink-500">제출이 없습니다</p>
+        )}
       </section>
     </div>
   );

@@ -31,7 +31,8 @@ export function DashboardView({ projectId }: { projectId: string }) {
   // AppShell이 불러온 뒤에만 그려진다
   const { project, members, repos } = useProject(projectId).data!;
   const [teamRole, setTeamRole] = useState<TeamRole | undefined>();
-  const tasks = useTasks(projectId, { teamRole });
+  // 요약 타일은 전체 기준, 역할 필터는 칸반에만 건다. 한 번 받아 화면에서 거르므로 요청은 하나
+  const tasks = useTasks(projectId);
 
   // 아래는 API가 없어 목업 스토어를 읽는 영역. 실제 프로젝트 id는 목업에 없으므로 대개 비어 있다
   const { state } = useApp();
@@ -78,6 +79,7 @@ export function DashboardView({ projectId }: { projectId: string }) {
   const docHref = { CONSTITUTION: "constitution", SPEC: "spec", CONTRACT: "contract", ADR: "adr" } as const;
 
   const taskList = tasks.data ?? [];
+  const boardList = teamRole ? taskList.filter((t) => t.teamRole === teamRole) : taskList;
 
   return (
     <div className="h-full overflow-y-auto">
@@ -298,7 +300,7 @@ export function DashboardView({ projectId }: { projectId: string }) {
                 <div className="-mx-4 overflow-x-auto px-4 no-scrollbar">
                   <div className="grid min-w-[640px] grid-cols-4 gap-3">
                     {TASK_BOARD.map((col) => {
-                      const items = taskList.filter((t) => col.states.includes(t.state));
+                      const items = boardList.filter((t) => col.states.includes(t.state));
                       return (
                         <div key={col.key} className="rounded-xl bg-ink-50 p-2">
                           <div className="mb-2 flex items-center justify-between px-1 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
