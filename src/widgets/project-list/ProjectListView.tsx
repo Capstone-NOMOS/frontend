@@ -3,26 +3,35 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ArrowRight, Plus, Users } from "lucide-react";
-import { Badge, Button, Input, Logo } from "@/shared/ui";
-import { StatusDot } from "@/entities/agent";
+import { useQueryClient } from "@tanstack/react-query";
+import { ArrowRight, CalendarDays, Loader2, Plus } from "lucide-react";
+import { ApiError, errorMessage } from "@/shared/api";
+import { Badge, Button, Input, Logo, MockBadge } from "@/shared/ui";
+import { useOrgAgents } from "@/entities/agent";
 import { LEVELS } from "@/entities/policy";
-import { AccountMenu, RoleBadge } from "@/entities/user";
-import { useApp } from "@/lib/store";
+import { ProjectStatusBadge, fmtUsd, useProjects } from "@/entities/project";
+import { AccountMenu, useCurrentUser, userKeys } from "@/entities/user";
 
 export function ProjectListView() {
-  const { state, me, hydrated } = useApp();
+  // AuthGate 안쪽이므로 me와 orgId가 있다
+  const me = useCurrentUser().me!;
+  const orgId = me.orgId!;
+  const isRep = me.orgRole === "REPRESENTATIVE";
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [invite, setInvite] = useState("");
 
+  const projects = useProjects(orgId, { pollWhileEmpty: !isRep });
+  const agents = useOrgAgents(orgId);
+  const myAgent = agents.data?.agents.find((a) => a.userId === me.userId);
+
+  // 조직 소속이 바뀌었다(탈퇴·다른 조직). me를 다시 불러 AuthGate가 재라우팅하게 한다
+  const error = projects.error;
   useEffect(() => {
-    if (hydrated && !me) router.replace("/login");
-  }, [hydrated, me, router]);
-
-  if (!hydrated || !me) return null;
-
-  const mine = state.projects.filter((p) => state.members.some((m) => m.projectId === p.id && m.userId === me.id));
-  const myAgent = state.agents.find((a) => a.userId === me.id);
+    if (error instanceof ApiError && (error.code === "CROSS_ORG_ACCESS" || error.code === "NOT_IN_ORG")) {
+      void queryClient.invalidateQueries({ queryKey: userKeys.me() });
+    }
+  }, [error, queryClient]);
 
   const join = () => {
     const token = invite.trim().split("/").pop()?.split("?")[0];
@@ -37,9 +46,9 @@ export function ProjectListView() {
         </Link>
         <div className="flex items-center gap-3">
           <span className="hidden items-center gap-1.5 text-[12.5px] text-ink-500 sm:inline-flex">
-            {myAgent?.connected ? (
+            {myAgent ? (
               <>
-                <StatusDot status={myAgent.status} /> 에이전트 연결됨
+                <span className="h-2 w-2 rounded-full bg-auto" /> 에이전트 연결됨 · {myAgent.agentName}
               </>
             ) : (
               <>
@@ -59,64 +68,87 @@ export function ProjectListView() {
           <div>
             <h1 className="text-[24px] font-semibold tracking-tight">프로젝트</h1>
             <p className="mt-1 text-[14px] text-ink-500">
-              내가 속한 프로젝트와 역할입니다. 각 역할은 자기 Room만 봅니다.
+              {isRep ? `${me.orgName ?? "조직"}의 모든 프로젝트입니다.` : "내 에이전트가 배정된 프로젝트입니다."}
             </p>
           </div>
-          <Button href="/projects/new" size="md">
-            <Plus size={15} /> 새 프로젝트
-          </Button>
+          {isRep && (
+            <Button href="/projects/new" size="md">
+              <Plus size={15} /> 새 프로젝트 <MockBadge />
+            </Button>
+          )}
         </div>
 
-        <ul className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {mine.map((p) => {
-            const role = state.members.find((m) => m.projectId === p.id && m.userId === me.id)!.role;
-            const members = state.members.filter((m) => m.projectId === p.id);
-            const tasks = state.tasks.filter((t) => t.projectId === p.id);
-            const level = LEVELS.find((l) => l.id === p.level)!;
-            return (
-              <li key={p.id}>
-                <Link href={`/p/${p.id}`} className="card block p-5 transition hover:border-ink-300 animate-rise">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
+        {projects.isPending ? (
+          <div className="mt-10 flex justify-center text-ink-400" aria-busy="true">
+            <Loader2 size={20} className="animate-spin" aria-label="불러오는 중" />
+          </div>
+        ) : projects.isError ? (
+          <div className="mt-6 rounded-xl border border-ink-200 bg-white px-6 py-10 text-center">
+            <p className="text-[14px] text-ink-700">{errorMessage(projects.error)}</p>
+            <Button variant="outline" size="sm" className="mt-3" onClick={() => void projects.refetch()}>
+              다시 시도
+            </Button>
+          </div>
+        ) : (
+          <ul className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {projects.data.map((p) => {
+              const level = LEVELS.find((l) => l.id === p.autonomyPreset);
+              return (
+                <li key={p.id}>
+                  <Link href={`/p/${p.id}`} className="card block p-5 transition hover:border-ink-300 animate-rise">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-2">
                         <span className="truncate text-[17px] font-semibold">{p.name}</span>
-                        <RoleBadge role={role} />
+                        <ProjectStatusBadge status={p.status} />
                       </div>
-                      <div className="mt-0.5 truncate text-[13px] text-ink-500">{p.description}</div>
+                      <ArrowRight size={16} className="mt-1 shrink-0 text-ink-400" />
                     </div>
-                    <ArrowRight size={16} className="mt-1 shrink-0 text-ink-400" />
-                  </div>
-                  <div className="mt-4 flex flex-wrap items-center gap-2 text-[12px] text-ink-500">
-                    <Badge tone="brand">
-                      {p.level} · {level.title}
-                    </Badge>
-                    <Badge>{p.stack}</Badge>
-                    <span className="inline-flex items-center gap-1">
-                      <Users size={12} /> {members.length}/3
-                    </span>
-                    <span>
-                      태스크 {tasks.filter((t) => t.state === "DONE").length}/{tasks.length}
-                    </span>
-                  </div>
-                </Link>
+                    <div className="mt-4 flex flex-wrap items-center gap-2 text-[12px] text-ink-500">
+                      <Badge tone="brand">
+                        {p.autonomyPreset}
+                        {level && ` · ${level.title}`}
+                      </Badge>
+                      <span>PM 예산 {fmtUsd(p.pmBudgetUsd)}</span>
+                      {p.deadline && (
+                        <span className="inline-flex items-center gap-1">
+                          <CalendarDays size={12} /> {p.deadline}
+                        </span>
+                      )}
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
+            {projects.data.length === 0 && (
+              <li className="col-span-full rounded-xl border border-dashed border-ink-200 bg-white/70 px-6 py-10 text-center">
+                {isRep ? (
+                  <>
+                    <p className="text-[14px] font-medium">아직 프로젝트가 없습니다</p>
+                    <p className="mt-1 text-[13px] text-ink-500">새 프로젝트를 만들어 시작하세요.</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-[14px] font-medium">
+                      아직 배정된 프로젝트가 없습니다. 대표가 배정하면 여기에 나타납니다
+                    </p>
+                    <p className="mt-1 text-[13px] text-ink-500">
+                      배정되려면 에이전트가 연결돼 있어야 합니다.{" "}
+                      <Link href="/connect" className="font-medium text-ink-900 hover:underline">
+                        에이전트 연결
+                      </Link>
+                    </p>
+                  </>
+                )}
               </li>
-            );
-          })}
-          {mine.length === 0 && (
-            <li className="col-span-full rounded-xl border border-dashed border-ink-200 bg-white/70 px-6 py-10 text-center">
-              <p className="text-[14px] font-medium">아직 프로젝트가 없습니다</p>
-              <p className="mt-1 text-[13px] text-ink-500">
-                대표라면 새 프로젝트를 만들고, 팀원이라면 초대 링크로 참여하세요.
-              </p>
-            </li>
-          )}
-        </ul>
+            )}
+          </ul>
+        )}
 
         <div className="card mt-6 p-5">
-          <div className="text-[13.5px] font-semibold">초대 링크로 참여</div>
-          <p className="mt-0.5 text-[12.5px] text-ink-500">
-            대표가 보낸 링크를 붙여넣으세요. 역할(FE/BE)은 링크에 박혀 있습니다.
-          </p>
+          <div className="flex items-center gap-2 text-[13.5px] font-semibold">
+            초대 링크로 참여 <MockBadge />
+          </div>
+          <p className="mt-0.5 text-[12.5px] text-ink-500">대표가 보낸 링크를 붙여넣으세요.</p>
           <div className="mt-3 flex flex-col gap-2 sm:flex-row">
             <Input
               value={invite}

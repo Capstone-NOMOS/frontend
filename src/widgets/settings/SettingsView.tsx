@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Lock } from "lucide-react";
-import { Badge, Button, CopyField, Input, SectionTitle } from "@/shared/ui";
+import { Badge, Button, CopyField, Input, MockEmpty, SectionTitle } from "@/shared/ui";
 import { cn, fmtTokens } from "@/shared/lib/format";
 import type { Level } from "@/shared/model";
 import { DECIDER_META, LEVELS, POLICY_TABLE } from "@/entities/policy";
@@ -12,7 +12,7 @@ export function SettingsView({ projectId }: { projectId: string }) {
   const { actions } = useApp();
   const { project, myRole } = useProject(projectId);
   const [budget, setBudget] = useState<string>(project ? String(project.pmBudgetTokens) : "");
-  if (!project) return null;
+  if (!project) return <MockEmpty />;
   const isOwner = myRole === "OWNER";
   const origin = typeof window !== "undefined" ? window.location.origin : "";
 

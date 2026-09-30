@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Eye, Info, Link2, X } from "lucide-react";
-import { AgentMark, Avatar, Badge, Button, EmptyState } from "@/shared/ui";
+import { AgentMark, Avatar, Badge, Button, EmptyState, MockEmpty } from "@/shared/ui";
 import { cn, fmtDate, fmtTime, sameDay } from "@/shared/lib/format";
 import { AGENT_STATUS, StatusDot } from "@/entities/agent";
 import type { Message } from "@/entities/message";
@@ -50,7 +50,7 @@ export function RoomView({ projectId, roomId }: { projectId: string; roomId: str
     }
   }, [roomId]);
 
-  if (!project || !room || !me) return null;
+  if (!project || !room || !me) return <MockEmpty />;
 
   const visible = myRole === "OWNER" || room.type === myRole;
   if (!visible) {
