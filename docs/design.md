@@ -71,6 +71,12 @@ API에 연결된 화면은 서버 상태 8종을 `API_TASK_META` / `ApiTaskBadge
 
 산출물의 `gateMode`(`AUTO` `PM_REVIEW` `HUMAN`)는 decider 색을 그대로 쓴다 (success / info / warn).
 
+## 조직 멤버 배지
+
+`orgRole`: `REPRESENTATIVE` → pm ("대표") / `MEMBER` → neutral ("팀원").
+
+`isCollaborator`는 세 상태다: 필드 없음 → neutral "확인 불가" / `false` → warn "GitHub 권한 없음" / `true` → success "확인됨". 필드 없음은 "확인하지 못함"이지 권한 없음이 아니다. false와 같은 색을 쓰지 말 것.
+
 ## 타이포·형태
 
 - `--font-sans`: Geist Sans → 시스템 → Pretendard → Noto Sans KR 순 폴백. 한글이 섞이는 제품이라 폴백 순서를 바꾸지 말 것
