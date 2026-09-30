@@ -45,11 +45,11 @@
 
 | tone | 토큰 | 쓰는 곳 |
 | --- | --- | --- |
-| `neutral` | ink-100 / ink-700 | 기본, READY, QUEUED |
-| `brand` | brand-50 / brand-600 | SUBMITTED, VERIFYING |
-| `success` | auto-bg / auto | DONE, AUTO |
-| `warn` | human-bg / human | WAITING\_HUMAN, HUMAN |
-| `danger` | forbidden-bg / forbidden | FAILED, ESCALATED, FORBIDDEN |
+| `neutral` | ink-100 / ink-700 | 기본, READY, CLAIMED, QUEUED, 검증 SKIPPED, "목업" 배지 |
+| `brand` | brand-50 / brand-600 | SUBMITTED, VERIFYING, 재제출 |
+| `success` | auto-bg / auto | DONE, AUTO, 검증 PASS |
+| `warn` | human-bg / human | WAITING\_HUMAN, AWAITING\_APPROVAL, BLOCKED, HUMAN |
+| `danger` | forbidden-bg / forbidden | FAILED, ESCALATED, FORBIDDEN, 검증 FAIL |
 | `info` | review-bg / review | IN\_PROGRESS, PM\_REVIEW |
 | `fe` `be` `pm` | 행위자 색 | 역할 배지 |
 
@@ -60,6 +60,16 @@
 `TASK_META`가 9개 상태의 라벨과 tone을 고정한다. 상태를 화면에 직접 문자열로 찍지 말고 `TaskBadge`를 쓸 것.
 
 `READY` `QUEUED` → neutral / `IN_PROGRESS` → info / `WAITING_HUMAN` → warn / `SUBMITTED` `VERIFYING` → brand / `DONE` → success / `FAILED` `ESCALATED` → danger
+
+API에 연결된 화면은 서버 상태 8종을 `API_TASK_META` / `ApiTaskBadge`로 찍는다. 위 9종은 목업 화면 전용이다.
+
+`READY` `CLAIMED` → neutral / `IN_PROGRESS` → info / `VERIFYING` → brand / `AWAITING_APPROVAL` `BLOCKED` → warn / `ESCALATED` → danger / `DONE` → success
+
+## 검증 결과 배지
+
+`PASS` → success / `FAIL` → danger / `SKIPPED` → **neutral**. SKIPPED는 "못 돌렸다"이지 통과가 아니다. PASS와 같은 색을 쓰지 말고 `detail.reason`을 함께 보여줄 것.
+
+산출물의 `gateMode`(`AUTO` `PM_REVIEW` `HUMAN`)는 decider 색을 그대로 쓴다 (success / info / warn).
 
 ## 타이포·형태
 

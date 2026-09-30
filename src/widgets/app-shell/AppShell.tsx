@@ -21,23 +21,25 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { Avatar, Badge, Button, Kbd, Logo } from "@/shared/ui";
+import { Avatar, Badge, Kbd, Logo, MockBadge } from "@/shared/ui";
 import { cn } from "@/shared/lib/format";
-import { AGENT_STATUS, StatusDot } from "@/entities/agent";
+import { StatusDot } from "@/entities/agent";
+import {
+  ProjectErrorView,
+  ProjectStatusBadge,
+  useProject,
+  useProjects,
+  type ApiProjectDetail,
+} from "@/entities/project";
 import { ROOM_META, type Room } from "@/entities/room";
-import { AccountMenu, RoleBadge } from "@/entities/user";
-import { useApp, useProject } from "@/lib/store";
+import { AccountMenu, RoleBadge, displayName, useCurrentUser } from "@/entities/user";
+import { useApp, useProject as useMockProject } from "@/lib/store";
 import { CommandSearch } from "./CommandSearch";
 
 export function AppShell({ projectId, children }: { projectId: string; children: ReactNode }) {
-  const { state, hydrated, me } = useApp();
-  const router = useRouter();
+  const detail = useProject(projectId);
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState(false);
-
-  useEffect(() => {
-    if (hydrated && !me) router.replace("/login");
-  }, [hydrated, me, router]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -50,22 +52,12 @@ export function AppShell({ projectId, children }: { projectId: string; children:
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const project = state.projects.find((p) => p.id === projectId);
-  const member = me && state.members.find((m) => m.projectId === projectId && m.userId === me.id);
+  if (detail.isPending) return <ShellSkeleton />;
 
-  if (!hydrated || !me) return <ShellSkeleton />;
-
-  if (!project || !member) {
+  if (detail.isError) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-6 text-center">
-        <Logo />
-        <h1 className="text-lg font-semibold">이 프로젝트에 접근할 수 없습니다</h1>
-        <p className="max-w-sm text-sm text-ink-500">
-          프로젝트가 없거나 멤버가 아닙니다. 초대 링크로 참여하거나 다른 프로젝트를 선택해주세요.
-        </p>
-        <Button href="/projects" variant="outline">
-          프로젝트 목록
-        </Button>
+      <div className="min-h-screen">
+        <ProjectErrorView error={detail.error} onRetry={() => void detail.refetch()} />
       </div>
     );
   }
@@ -74,7 +66,7 @@ export function AppShell({ projectId, children }: { projectId: string; children:
     <div className="flex h-dvh w-full overflow-hidden bg-white">
       {/* desktop sidebar */}
       <aside className="hidden w-[264px] shrink-0 border-r border-ink-200 bg-ink-50/60 lg:flex lg:flex-col">
-        <SidebarContent projectId={projectId} onSearch={() => setSearch(true)} />
+        <SidebarContent projectId={projectId} detail={detail.data} onSearch={() => setSearch(true)} />
       </aside>
 
       {/* mobile drawer */}
@@ -84,6 +76,7 @@ export function AppShell({ projectId, children }: { projectId: string; children:
           <aside className="absolute inset-y-0 left-0 flex w-[min(300px,85vw)] flex-col bg-white shadow-pop animate-rise">
             <SidebarContent
               projectId={projectId}
+              detail={detail.data}
               onSearch={() => {
                 setOpen(false);
                 setSearch(true);
@@ -108,7 +101,7 @@ export function AppShell({ projectId, children }: { projectId: string; children:
             <Menu size={20} />
           </button>
           <Link href={`/p/${projectId}`} className="min-w-0 flex-1 truncate text-[15px] font-semibold">
-            {project.name}
+            {detail.data.project.name}
           </Link>
           <button
             aria-label="검색"
@@ -183,29 +176,32 @@ function NavItem({
 
 function SidebarContent({
   projectId,
+  detail,
   onSearch,
   onClose,
 }: {
   projectId: string;
+  detail: ApiProjectDetail;
   onSearch: () => void;
   onClose?: () => void;
 }) {
   const onNavigate = onClose;
+  const { project } = detail;
+  // AuthGate 안쪽이므로 me가 있다
+  const user = useCurrentUser().me!;
+  const isRep = user.orgRole === "REPRESENTATIVE";
+  const projects = useProjects(project.orgId);
+  // Room·받은 편지함은 아직 API가 없어 목업 스토어를 읽는다. 실제 프로젝트 id는 목업에 없으므로 대개 비어 있다
   const { state, me, actions } = useApp();
-  const { project, myRole, visibleRooms, tasks, agentFor, canWrite } = useProject(projectId);
+  const mock = useMockProject(projectId);
+  const { myRole, visibleRooms, tasks, agentFor, canWrite } = mock;
   const pathname = usePathname();
   const router = useRouter();
   const [projOpen, setProjOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const myProjects = useMemo(
-    () => state.projects.filter((p) => state.members.some((m) => m.projectId === p.id && m.userId === me?.id)),
-    [state.projects, state.members, me],
-  );
-  const myAgent = me ? state.agents.find((a) => a.userId === me.id) : undefined;
-
   const inboxCount = useMemo(() => {
-    if (!me || !project) return 0;
+    if (!me || !mock.project) return 0;
     const roomIds = new Set(visibleRooms.map((r) => r.id));
     return state.messages.filter((m) => {
       if (!roomIds.has(m.roomId)) return false;
@@ -218,7 +214,7 @@ function SidebarContent({
       if (c.kind === "repo" && c.status === "pending" && canWrite(room)) return true;
       return false;
     }).length;
-  }, [state.messages, visibleRooms, myRole, me, project, canWrite]);
+  }, [state.messages, visibleRooms, myRole, me, mock.project, canWrite]);
 
   const base = `/p/${projectId}`;
   const is = (p: string) => pathname === p;
@@ -241,7 +237,7 @@ function SidebarContent({
     return <StatusDot status={agent.status} pulse />;
   };
 
-  if (!project) return null;
+  const myAgentName = detail.members.find((m) => m.userId === user.userId)?.agentName;
 
   return (
     <div className="flex h-full flex-col">
@@ -257,7 +253,7 @@ function SidebarContent({
           </button>
           {projOpen && (
             <div className="absolute left-0 right-0 top-full z-20 mt-1 rounded-xl border border-ink-200 bg-white p-1.5 shadow-pop animate-rise">
-              {myProjects.map((p) => (
+              {(projects.data ?? []).map((p) => (
                 <button
                   key={p.id}
                   onClick={() => {
@@ -270,16 +266,24 @@ function SidebarContent({
                   )}
                 >
                   <span className="truncate">{p.name}</span>
-                  <Badge tone="brand">{p.level}</Badge>
+                  <Badge tone="brand">{p.autonomyPreset}</Badge>
                 </button>
               ))}
               <div className="my-1 border-t border-ink-100" />
               <Link
-                href="/projects/new"
+                href="/projects"
                 className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-[13px] text-ink-700 hover:bg-ink-100"
               >
-                <Plus size={14} /> 새 프로젝트
+                전체 프로젝트
               </Link>
+              {isRep && (
+                <Link
+                  href="/projects/new"
+                  className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-[13px] text-ink-700 hover:bg-ink-100"
+                >
+                  <Plus size={14} /> 새 프로젝트 <MockBadge />
+                </Link>
+              )}
             </div>
           )}
         </div>
@@ -288,6 +292,11 @@ function SidebarContent({
             <X size={18} />
           </button>
         )}
+      </div>
+
+      <div className="flex items-center gap-1.5 px-5 pb-2">
+        <Badge tone="brand">{project.autonomyPreset}</Badge>
+        <ProjectStatusBadge status={project.status} />
       </div>
 
       <div className="px-3 pb-2">
@@ -315,17 +324,20 @@ function SidebarContent({
             href={base}
             icon={<LayoutDashboard size={16} />}
             label="대시보드"
-            active={is(base)}
+            active={is(base) || startsWith(`${base}/tasks/`)}
             onNavigate={onNavigate}
           />
         </div>
 
         <div>
           <div className="mb-1 flex items-center justify-between px-2.5 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
-            <span>Rooms</span>
+            <span className="flex items-center gap-1.5">
+              Rooms <MockBadge />
+            </span>
             <Users size={12} />
           </div>
           <div className="space-y-0.5">
+            {visibleRooms.length === 0 && <p className="px-2.5 py-1 text-[12px] text-ink-400">목업 데이터 없음</p>}
             {visibleRooms
               .slice()
               .sort((a, b) => ROOM_META[a.type].no - ROOM_META[b.type].no)
@@ -349,7 +361,9 @@ function SidebarContent({
         </div>
 
         <div>
-          <div className="mb-1 px-2.5 text-[11px] font-semibold uppercase tracking-wide text-ink-500">문서 (MCP)</div>
+          <div className="mb-1 flex items-center gap-1.5 px-2.5 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
+            문서 (MCP) <MockBadge />
+          </div>
           <div className="space-y-0.5">
             <NavItem
               href={`${base}/docs/constitution`}
@@ -405,26 +419,14 @@ function SidebarContent({
           onClick={() => setMenuOpen((v) => !v)}
           className="flex w-full items-center gap-2.5 rounded-lg px-1.5 py-1.5 text-left hover:bg-ink-100"
         >
-          <Avatar name={me?.nickname ?? "?"} size={32} />
+          <Avatar name={displayName(user)} size={32} />
           <span className="min-w-0 flex-1">
             <span className="flex items-center gap-1.5">
-              <span className="truncate text-[13.5px] font-semibold">{me?.nickname}</span>
-              {myRole && <RoleBadge role={myRole} />}
+              <span className="truncate text-[13.5px] font-semibold">{displayName(user)}</span>
+              {isRep && <RoleBadge role="OWNER" />}
             </span>
-            <span className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-ink-500">
-              {myRole === "OWNER" ? (
-                <>
-                  <span className="h-1.5 w-1.5 rounded-full bg-brand-500" /> PM 에이전트 (서버)
-                </>
-              ) : myAgent ? (
-                <>
-                  <StatusDot status={myAgent.status} pulse /> Claude Code · {AGENT_STATUS[myAgent.status].label}
-                </>
-              ) : (
-                <>
-                  <span className="h-1.5 w-1.5 rounded-full bg-ink-300" /> 에이전트 미연결
-                </>
-              )}
+            <span className="mt-0.5 block truncate text-[11.5px] text-ink-500">
+              {isRep ? "대표" : (myAgentName ?? "이 프로젝트에 배정된 에이전트 없음")}
             </span>
           </span>
           <ChevronDown size={14} className="text-ink-500" />
@@ -435,33 +437,35 @@ function SidebarContent({
               <AccountMenu />
             </div>
             <div className="my-1 border-t border-ink-100" />
-            <div className="px-2.5 pb-1 pt-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
-              데모: 역할 전환
-            </div>
-            {state.members
-              .filter((m) => m.projectId === projectId)
-              .map((m) => {
-                const u = state.users.find((x) => x.id === m.userId)!;
-                return (
-                  <button
-                    key={m.userId}
-                    onClick={() => {
-                      actions.switchUser(m.userId);
-                      setMenuOpen(false);
-                      router.push(base);
-                    }}
-                    className={cn(
-                      "flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] hover:bg-ink-100",
-                      me?.id === u.id && "font-semibold",
-                    )}
-                  >
-                    <Avatar name={u.nickname} size={20} />
-                    <span className="flex-1 truncate">{u.nickname}</span>
-                    <RoleBadge role={m.role} />
-                  </button>
-                );
-              })}
-            <div className="my-1 border-t border-ink-100" />
+            {mock.members.length > 0 && (
+              <>
+                <div className="flex items-center gap-1.5 px-2.5 pb-1 pt-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
+                  데모: 역할 전환 <MockBadge />
+                </div>
+                {mock.members.map((m) => {
+                  const u = state.users.find((x) => x.id === m.userId)!;
+                  return (
+                    <button
+                      key={m.userId}
+                      onClick={() => {
+                        actions.switchUser(m.userId);
+                        setMenuOpen(false);
+                        router.push(base);
+                      }}
+                      className={cn(
+                        "flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] hover:bg-ink-100",
+                        me?.id === u.id && "font-semibold",
+                      )}
+                    >
+                      <Avatar name={u.nickname} size={20} />
+                      <span className="flex-1 truncate">{u.nickname}</span>
+                      <RoleBadge role={m.role} />
+                    </button>
+                  );
+                })}
+                <div className="my-1 border-t border-ink-100" />
+              </>
+            )}
             <Link
               href="/connect"
               className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-[13px] text-ink-700 hover:bg-ink-100"
@@ -476,7 +480,7 @@ function SidebarContent({
               }}
               className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[13px] text-ink-700 hover:bg-ink-100"
             >
-              <RefreshCcw size={14} /> 데모 데이터 초기화
+              <RefreshCcw size={14} /> 데모 데이터 초기화 <MockBadge />
             </button>
           </div>
         )}

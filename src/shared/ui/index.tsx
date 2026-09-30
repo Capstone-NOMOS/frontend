@@ -286,3 +286,25 @@ export function CopyField({ value, label }: { value: string; label?: string }) {
     </div>
   );
 }
+
+/** API가 없어 목업 데이터로 남은 영역 표시 (docs/architecture.md §10) */
+export function MockBadge() {
+  return (
+    <Badge tone="neutral" className="font-medium">
+      목업
+    </Badge>
+  );
+}
+
+/** 목업 전용 화면에 목업 데이터가 없을 때 (실제 프로젝트 id는 목업 스토어에 없다) */
+export function MockEmpty() {
+  return (
+    <div className="p-6">
+      <EmptyState
+        title="아직 API가 연결되지 않은 화면입니다"
+        desc="이 프로젝트의 목업 데이터가 없습니다."
+        action={<MockBadge />}
+      />
+    </div>
+  );
+}

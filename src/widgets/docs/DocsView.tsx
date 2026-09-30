@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { BookOpen, FileText, History, Lock, TerminalSquare } from "lucide-react";
-import { Badge, EmptyState, Markdown } from "@/shared/ui";
+import { Badge, EmptyState, Markdown, MockEmpty } from "@/shared/ui";
 import { cn, fmtDateTime } from "@/shared/lib/format";
 import type { DocType } from "@/entities/document";
 import { useProject } from "@/lib/store";
@@ -32,7 +32,7 @@ export function DocsView({ projectId, slug }: { projectId: string; slug: string 
   const [sel, setSel] = useState<number | null>(null);
   const doc = versions.find((v) => v.version === sel) ?? versions[0];
 
-  if (!project) return null;
+  if (!project) return <MockEmpty />;
 
   return (
     <div className="flex h-full flex-col lg:flex-row">
