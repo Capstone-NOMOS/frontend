@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch, type Schemas } from "@/shared/api";
-import type { ApiDeviceDecision, ApiDeviceRequest } from "../model/api";
 
 export const agentKeys = {
   all: ["agent"] as const,
@@ -25,16 +24,16 @@ const devicePath = (userCode: string) => `/agents/device/requests/${encodeURICom
 export function useDeviceRequest(userCode: string | null) {
   return useQuery({
     queryKey: agentKeys.device(userCode ?? ""),
-    queryFn: () => apiFetch<ApiDeviceRequest>(devicePath(userCode!)),
+    queryFn: () => apiFetch<Schemas["DeviceRequest"]>(devicePath(userCode!)),
     enabled: userCode !== null,
   });
 }
 
+// 승인·거부 응답 본문은 쓰지 않는다. 결과 상태는 invalidate 뒤 조회로 다시 읽는다
 export function useApproveDeviceRequest() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (userCode: string) =>
-      apiFetch<ApiDeviceDecision>(`${devicePath(userCode)}/approve`, { method: "POST" }),
+    mutationFn: (userCode: string) => apiFetch<unknown>(`${devicePath(userCode)}/approve`, { method: "POST" }),
     onSuccess: (_, userCode) => queryClient.invalidateQueries({ queryKey: agentKeys.device(userCode) }),
   });
 }
@@ -42,7 +41,7 @@ export function useApproveDeviceRequest() {
 export function useDenyDeviceRequest() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (userCode: string) => apiFetch<ApiDeviceDecision>(`${devicePath(userCode)}/deny`, { method: "POST" }),
+    mutationFn: (userCode: string) => apiFetch<unknown>(`${devicePath(userCode)}/deny`, { method: "POST" }),
     onSuccess: (_, userCode) => queryClient.invalidateQueries({ queryKey: agentKeys.device(userCode) }),
   });
 }

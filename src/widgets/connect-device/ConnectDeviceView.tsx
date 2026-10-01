@@ -6,19 +6,14 @@ import { useState } from "react";
 import { ShieldAlert } from "lucide-react";
 import { Badge, Button, Input, Logo } from "@/shared/ui";
 import { fmtDateTime, fmtTime } from "@/shared/lib/format";
-import { errorMessage } from "@/shared/api";
-import {
-  useApproveDeviceRequest,
-  useDenyDeviceRequest,
-  useDeviceRequest,
-  type ApiDeviceRequestStatus,
-} from "@/entities/agent";
+import { errorMessage, type Schemas } from "@/shared/api";
+import { useApproveDeviceRequest, useDenyDeviceRequest, useDeviceRequest } from "@/entities/agent";
 import { AccountMenu } from "@/entities/user";
 
 const PATH = "/connect/device";
 
 const OUTCOME: Record<
-  Exclude<ApiDeviceRequestStatus, "PENDING">,
+  Exclude<Schemas["DeviceRequest"]["status"], "PENDING">,
   { tone: "success" | "neutral"; label: string; text: string }
 > = {
   APPROVED: { tone: "success", label: "승인됨", text: "터미널로 돌아가세요. 곧 연결이 끝납니다." },
@@ -71,7 +66,14 @@ function CodeForm({ initial = "" }: { initial?: string }) {
 
   return (
     <>
-      <p className="mt-1 text-[13.5px] text-ink-500">터미널에서 로그인을 실행하면 나오는 8글자 코드를 입력하세요.</p>
+      <p className="mt-1 text-[13.5px] text-ink-500">
+        터미널에서 <code className="font-mono text-ink-700">npm run executor login</code>을 실행하면 나오는 8글자 코드를
+        입력하세요. 사용법은{" "}
+        <Link href="/connect" className="font-medium text-ink-900 underline underline-offset-2">
+          에이전트 연결
+        </Link>
+        에 있습니다.
+      </p>
       <form className="mt-6 space-y-4" onSubmit={submit}>
         <Input
           label="연결 코드"

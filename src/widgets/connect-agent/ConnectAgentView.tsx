@@ -20,9 +20,18 @@ const SETUP_STEPS = [
     hint: "Node 22 이상이 필요합니다.",
   },
   {
-    title: "연결 키로 로그인",
+    title: "브라우저에서 승인",
     commands: [`npm run executor login ${API_ORIGIN}`],
-    hint: "연결 키를 물으면 붙여넣고, 에이전트 이름은 엔터를 누르면 컴퓨터 이름으로 정해집니다.",
+    hint: (
+      <>
+        브라우저가 열리면 터미널에 나온 코드와 같은지 확인하고 <b>승인</b>을 누르세요. 에이전트 이름은 컴퓨터 이름으로
+        정해집니다. 브라우저가 열리지 않으면{" "}
+        <Link href="/connect/device" className="font-medium text-ink-900 underline underline-offset-2">
+          승인 화면
+        </Link>
+        에서 코드를 직접 입력하세요.
+      </>
+    ),
   },
   {
     title: "프로젝트에 배정된 뒤 실행",
@@ -110,43 +119,52 @@ export function ConnectAgentView() {
               ))}
             </ol>
 
-            <p className="mt-5 text-[13.5px] text-ink-700">
-              로그인할 때 <b>가입하면서 받은 연결 키</b>가 필요합니다. 키는 서버에 해시로만 저장되어 다시 보여줄 수
-              없습니다. 잃어버렸다면 아래에서 재발급하세요.
-            </p>
+            <details className="mt-5 rounded-xl border border-ink-200 p-4">
+              <summary className="cursor-pointer text-[13.5px] font-medium text-ink-900">
+                브라우저를 열 수 없는 환경(SSH 등)이라면 연결 키로 로그인
+              </summary>
+              {/* npm은 -- 앞의 --플래그를 자기 옵션으로 가져간다 */}
+              <div className="mt-3">
+                <CopyField value={`npm run executor -- login ${API_ORIGIN} --connect-key`} />
+              </div>
+              <p className="mt-2 text-[12.5px] text-ink-500">
+                키를 물으면 <b>가입하면서 받은 연결 키</b>를 붙여넣으세요. 키는 서버에 해시로만 저장되어 다시 보여줄 수
+                없습니다. 잃어버렸다면 아래에서 재발급하세요.
+              </p>
 
-            <div className="mt-3 rounded-xl border border-ink-200 p-4">
-              {rotate.data ? (
-                <>
-                  <CopyField label="새 연결 키" value={rotate.data.connectKey} />
-                  <p className="mt-2 text-[12.5px] font-medium text-human">
-                    이 화면을 떠나면 다시 볼 수 없습니다. 지금 복사해 두세요.
-                  </p>
-                </>
-              ) : confirming ? (
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <span className="text-[13px] font-medium text-forbidden">기존 키는 즉시 무효가 됩니다.</span>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setConfirming(false)}
-                      disabled={rotate.isPending}
-                    >
-                      취소
-                    </Button>
-                    <Button size="sm" onClick={() => rotate.mutate()} disabled={rotate.isPending}>
-                      {rotate.isPending ? "재발급 중…" : "재발급"}
-                    </Button>
+              <div className="mt-3">
+                {rotate.data ? (
+                  <>
+                    <CopyField label="새 연결 키" value={rotate.data.connectKey} />
+                    <p className="mt-2 text-[12.5px] font-medium text-human">
+                      이 화면을 떠나면 다시 볼 수 없습니다. 지금 복사해 두세요.
+                    </p>
+                  </>
+                ) : confirming ? (
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <span className="text-[13px] font-medium text-forbidden">기존 키는 즉시 무효가 됩니다.</span>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setConfirming(false)}
+                        disabled={rotate.isPending}
+                      >
+                        취소
+                      </Button>
+                      <Button size="sm" onClick={() => rotate.mutate()} disabled={rotate.isPending}>
+                        {rotate.isPending ? "재발급 중…" : "재발급"}
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <Button variant="outline" size="sm" onClick={() => setConfirming(true)}>
-                  <KeyRound size={14} /> 연결 키 재발급
-                </Button>
-              )}
-              {rotate.isError && <p className="mt-2 text-[12.5px] text-forbidden">{errorMessage(rotate.error)}</p>}
-            </div>
+                ) : (
+                  <Button variant="outline" size="sm" onClick={() => setConfirming(true)}>
+                    <KeyRound size={14} /> 연결 키 재발급
+                  </Button>
+                )}
+                {rotate.isError && <p className="mt-2 text-[12.5px] text-forbidden">{errorMessage(rotate.error)}</p>}
+              </div>
+            </details>
           </section>
 
           <section className="mt-6">

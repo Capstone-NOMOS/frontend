@@ -55,7 +55,9 @@ export interface paths {
                          *       }
                          *     }
                          */
-                        "application/json": unknown;
+                        "application/json": {
+                            data: components["schemas"]["SignupResult"];
+                        };
                     };
                 };
                 /** @description 아이디 중복 */
@@ -135,7 +137,7 @@ export interface paths {
                          *     }
                          */
                         "application/json": {
-                            data?: components["schemas"]["LoginResult"];
+                            data: components["schemas"]["LoginResult"];
                         };
                     };
                 };
@@ -193,7 +195,7 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            data?: components["schemas"]["Me"];
+                            data: components["schemas"]["Me"];
                         };
                     };
                 };
@@ -259,7 +261,9 @@ export interface paths {
                          *       }
                          *     }
                          */
-                        "application/json": unknown;
+                        "application/json": {
+                            data: components["schemas"]["ConnectKey"];
+                        };
                     };
                 };
                 401: components["responses"]["Unauthenticated"];
@@ -335,7 +339,9 @@ export interface paths {
                          *       }
                          *     }
                          */
-                        "application/json": unknown;
+                        "application/json": {
+                            data: components["schemas"]["AgentTokens"];
+                        };
                     };
                 };
                 /** @description 연결 키가 틀림 (의도적으로 401이 아니다) */
@@ -349,6 +355,430 @@ export interface paths {
                          *       "error": {
                          *         "code": "INVALID_CONNECT_REQUEST",
                          *         "message": "invalid connect request"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/device/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 브라우저 승인 시작 (인증 없음)
+         * @description `gh auth login`처럼 CLI가 코드를 띄우고 브라우저를 연다. 사용자는 로그인된 웹(`/connect/device`)에서 승인만 누른다(RFC 8628).
+         *     요청 본문은 `/agents/connect`에서 `connectKey`만 뺀 것이다. 연결 키 경로는 브라우저가 없는 환경(SSH)용으로 그대로 있다.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    /**
+                     * @example {
+                     *       "agentName": "benzity-mbp",
+                     *       "harness": "claude-code",
+                     *       "skills": [],
+                     *       "maxConcurrent": 2
+                     *     }
+                     */
+                    "application/json": {
+                        agentName: string;
+                        harness: string;
+                        skills?: string[];
+                        /** @default 2 */
+                        maxConcurrent?: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description 코드 발급. `verificationUriComplete`를 브라우저로 열고 `interval`마다 poll한다 */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "data": {
+                         *         "deviceCode": "x8Q…(43자)",
+                         *         "userCode": "WDJB-MJHT",
+                         *         "verificationUri": "https://frontend.example/connect/device",
+                         *         "verificationUriComplete": "https://frontend.example/connect/device?code=WDJB-MJHT",
+                         *         "expiresIn": 600,
+                         *         "interval": 5
+                         *       }
+                         *     }
+                         */
+                        "application/json": {
+                            data: components["schemas"]["DeviceStart"];
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/device/poll": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 승인 여부 확인 (인증 없음)
+         * @description `interval`마다 부른다. 너무 빨리 부르면 `slow_down`과 늘어난 간격이 온다.
+         *     승인되면 **이 응답에서 한 번만** 토큰이 나오고, 그 뒤로는 `expired`다. `account`(연결된 계정)를 출력할 것.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    /**
+                     * @example {
+                     *       "deviceCode": "x8Q…"
+                     *     }
+                     */
+                    "application/json": {
+                        deviceCode: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 중간 상태 포함 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["DevicePoll"];
+                        };
+                    };
+                };
+                /** @description 모르는 deviceCode */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "INVALID_DEVICE_CODE",
+                         *         "message": "invalid device code"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/device/requests/{userCode}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 승인 화면 정보 (사람)
+         * @description 승인 화면에 코드·에이전트 이름·요청 IP·시각을 보여 주고 **"방금 내 터미널에서 실행한 게 아니면 거부하세요"**라고 경고한다.
+         *     공격자가 자기 CLI로 받은 링크를 보내 승인시키면 공격자의 노트북이 내 이름으로 일하게 된다.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description 대소문자·하이픈 무시(wdjbmjht = WDJB-MJHT) */
+                    userCode: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 요청 정보 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "data": {
+                         *         "userCode": "WDJB-MJHT",
+                         *         "status": "PENDING",
+                         *         "agentName": "benzity-mbp",
+                         *         "harness": "claude-code",
+                         *         "clientIp": "203.0.113.7",
+                         *         "requestedAt": "2026-10-01T10:00:00.000Z",
+                         *         "expiresAt": "2026-10-01T10:10:00.000Z"
+                         *       }
+                         *     }
+                         */
+                        "application/json": {
+                            data: components["schemas"]["DeviceRequest"];
+                        };
+                    };
+                };
+                /** @description 없는 코드 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "DEVICE_REQUEST_NOT_FOUND",
+                         *         "message": "device request not found"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/device/requests/{userCode}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 승인 (사람)
+         * @description 조직이 없어도 승인할 수 있다. 에이전트는 사용자의 현재 조직(없으면 없음)으로 만들어지고, 조직에 들어가면 따라온다.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description 대소문자·하이픈 무시(wdjbmjht = WDJB-MJHT) */
+                    userCode: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 승인됨 — CLI의 다음 poll이 토큰을 받는다 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "data": {
+                         *         "status": "APPROVED"
+                         *       }
+                         *     }
+                         */
+                        "application/json": {
+                            data: {
+                                /** @enum {string} */
+                                status: "APPROVED" | "DENIED";
+                            };
+                        };
+                    };
+                };
+                /** @description 없는 코드 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "DEVICE_REQUEST_NOT_FOUND",
+                         *         "message": "device request not found"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+                /** @description 이미 승인·거부·사용됨 */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "DEVICE_REQUEST_ALREADY_DECIDED",
+                         *         "message": "device request is already approved"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+                /** @description 만료(10분) */
+                410: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "DEVICE_REQUEST_EXPIRED",
+                         *         "message": "device request has expired; run login again"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/device/requests/{userCode}/deny": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 거부 (사람) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description 대소문자·하이픈 무시(wdjbmjht = WDJB-MJHT) */
+                    userCode: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 거부됨 — CLI의 다음 poll이 denied를 받는다 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "data": {
+                         *         "status": "DENIED"
+                         *       }
+                         *     }
+                         */
+                        "application/json": {
+                            data: {
+                                /** @enum {string} */
+                                status: "APPROVED" | "DENIED";
+                            };
+                        };
+                    };
+                };
+                /** @description 없는 코드 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "DEVICE_REQUEST_NOT_FOUND",
+                         *         "message": "device request not found"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+                /** @description 이미 승인·거부·사용됨 */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "DEVICE_REQUEST_ALREADY_DECIDED",
+                         *         "message": "device request is already approved"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+                /** @description 만료(10분) */
+                410: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "DEVICE_REQUEST_EXPIRED",
+                         *         "message": "device request has expired; run login again"
                          *       }
                          *     }
                          */
@@ -415,7 +845,9 @@ export interface paths {
                          *       }
                          *     }
                          */
-                        "application/json": unknown;
+                        "application/json": {
+                            data: components["schemas"]["AgentAccessToken"];
+                        };
                     };
                 };
                 /** @description refresh 토큰이 만료·폐기됨 */
@@ -491,7 +923,9 @@ export interface paths {
                          *       }
                          *     }
                          */
-                        "application/json": unknown;
+                        "application/json": {
+                            data: components["schemas"]["OrgCreated"];
+                        };
                     };
                 };
                 /** @description 이미 조직에 속함 */
@@ -558,7 +992,11 @@ export interface paths {
                          *       }
                          *     }
                          */
-                        "application/json": unknown;
+                        "application/json": {
+                            data: {
+                                repos: components["schemas"]["GithubRepo"][];
+                            };
+                        };
                     };
                 };
                 /** @description 다른 조직 (조직 멤버면 대표가 아니어도 된다) */
@@ -639,8 +1077,8 @@ export interface paths {
                          *     }
                          */
                         "application/json": {
-                            data?: {
-                                members?: components["schemas"]["Member"][];
+                            data: {
+                                members: components["schemas"]["Member"][];
                             };
                         };
                     };
@@ -733,8 +1171,8 @@ export interface paths {
                          *     }
                          */
                         "application/json": {
-                            data?: {
-                                agents?: components["schemas"]["OrgAgent"][];
+                            data: {
+                                agents: components["schemas"]["OrgAgent"][];
                             };
                         };
                     };
@@ -814,8 +1252,8 @@ export interface paths {
                          *     }
                          */
                         "application/json": {
-                            data?: {
-                                repos?: components["schemas"]["RepoListItem"][];
+                            data: {
+                                repos: components["schemas"]["RepoListItem"][];
                             };
                         };
                     };
@@ -899,7 +1337,11 @@ export interface paths {
                          *       }
                          *     }
                          */
-                        "application/json": unknown;
+                        "application/json": {
+                            data: {
+                                repos: components["schemas"]["ConnectedRepo"][];
+                            };
+                        };
                     };
                 };
                 /** @description 이미 연결된 레포 */
@@ -993,7 +1435,11 @@ export interface paths {
                          *       }
                          *     }
                          */
-                        "application/json": unknown;
+                        "application/json": {
+                            data: {
+                                repo: components["schemas"]["RepoSettings"];
+                            };
+                        };
                     };
                 };
                 /** @description 빈 바디, 또는 허용되지 않는 cloneUrl */
@@ -1103,7 +1549,11 @@ export interface paths {
                          *       }
                          *     }
                          */
-                        "application/json": unknown;
+                        "application/json": {
+                            data: {
+                                paths: components["schemas"]["RepoPath"][];
+                            };
+                        };
                     };
                 };
                 /** @description 없는 레포 */
@@ -1184,7 +1634,11 @@ export interface paths {
                          *       }
                          *     }
                          */
-                        "application/json": unknown;
+                        "application/json": {
+                            data: {
+                                path: components["schemas"]["RepoPath"];
+                            };
+                        };
                     };
                 };
                 /** @description 허용하지 않는 glob 문법 */
@@ -1299,7 +1753,11 @@ export interface paths {
                          *       }
                          *     }
                          */
-                        "application/json": unknown;
+                        "application/json": {
+                            data: {
+                                path: components["schemas"]["RepoPath"];
+                            };
+                        };
                     };
                 };
                 /** @description 조직 상한 행은 불변 */
@@ -1378,7 +1836,9 @@ export interface paths {
                          *       }
                          *     }
                          */
-                        "application/json": unknown;
+                        "application/json": {
+                            data: components["schemas"]["InviteCreated"];
+                        };
                     };
                 };
                 /** @description 대표가 아님 */
@@ -1436,7 +1896,7 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            data?: components["schemas"]["InvitePreview"];
+                            data: components["schemas"]["InvitePreview"];
                         };
                     };
                 };
@@ -1490,7 +1950,9 @@ export interface paths {
                          *       }
                          *     }
                          */
-                        "application/json": unknown;
+                        "application/json": {
+                            data: components["schemas"]["InviteAccepted"];
+                        };
                     };
                 };
                 /** @description 이미 다른 조직 소속 */
@@ -1577,7 +2039,9 @@ export interface paths {
                          *       }
                          *     }
                          */
-                        "application/json": unknown;
+                        "application/json": {
+                            data: components["schemas"]["DeviceCode"];
+                        };
                     };
                 };
                 /** @description OAuth 미설정 */
@@ -1648,7 +2112,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": unknown;
+                        "application/json": {
+                            data: components["schemas"]["DeviceFlowStatus"];
+                        };
                     };
                 };
                 /** @description 같은 조직에서 이미 연결된 GitHub 계정 */
@@ -1721,7 +2187,9 @@ export interface paths {
                          *       }
                          *     }
                          */
-                        "application/json": unknown;
+                        "application/json": {
+                            data: components["schemas"]["Task"];
+                        };
                     };
                 };
                 401: components["responses"]["PolicyStale"];
@@ -1819,7 +2287,11 @@ export interface paths {
                          *       }
                          *     }
                          */
-                        "application/json": unknown;
+                        "application/json": {
+                            data: {
+                                artifacts: components["schemas"]["Artifact"][];
+                            };
+                        };
                     };
                 };
             };
@@ -1907,7 +2379,9 @@ export interface paths {
                          *       }
                          *     }
                          */
-                        "application/json": unknown;
+                        "application/json": {
+                            data: components["schemas"]["SubmittedArtifact"];
+                        };
                     };
                 };
                 401: components["responses"]["PolicyStale"];
@@ -2013,7 +2487,9 @@ export interface paths {
                          *       }
                          *     }
                          */
-                        "application/json": unknown;
+                        "application/json": {
+                            data: components["schemas"]["PublishedNote"];
+                        };
                     };
                 };
                 401: components["responses"]["PolicyStale"];
@@ -2139,7 +2615,11 @@ export interface paths {
                          *       }
                          *     }
                          */
-                        "application/json": unknown;
+                        "application/json": {
+                            data: {
+                                notes: components["schemas"]["Note"][];
+                            };
+                        };
                     };
                 };
                 401: components["responses"]["PolicyStale"];
@@ -2224,8 +2704,8 @@ export interface paths {
                          *     }
                          */
                         "application/json": {
-                            data?: {
-                                projects?: components["schemas"]["Project"][];
+                            data: {
+                                projects: components["schemas"]["Project"][];
                             };
                         };
                     };
@@ -2334,7 +2814,9 @@ export interface paths {
                          *       }
                          *     }
                          */
-                        "application/json": unknown;
+                        "application/json": {
+                            data: components["schemas"]["ProjectDetail"];
+                        };
                     };
                 };
                 /** @description 대표가 아니거나 다른 조직 */
@@ -2467,7 +2949,9 @@ export interface paths {
                          *       }
                          *     }
                          */
-                        "application/json": unknown;
+                        "application/json": {
+                            data: components["schemas"]["ProjectDetail"];
+                        };
                     };
                 };
                 /** @description 이 프로젝트의 멤버가 아님 */
@@ -2579,7 +3063,12 @@ export interface paths {
                          *       }
                          *     }
                          */
-                        "application/json": unknown;
+                        "application/json": {
+                            data: {
+                                members: components["schemas"]["ProjectMember"][];
+                                notice: string;
+                            };
+                        };
                     };
                 };
                 /** @description 대표가 아님 · 다른 조직의 에이전트 · G1 이후 */
@@ -2650,7 +3139,11 @@ export interface paths {
                          *       }
                          *     }
                          */
-                        "application/json": unknown;
+                        "application/json": {
+                            data: {
+                                members: components["schemas"]["ProjectMember"][];
+                            };
+                        };
                     };
                 };
                 /** @description 대표가 아니거나 G1 이후 */
@@ -2731,13 +3224,237 @@ export interface paths {
                          *       }
                          *     }
                          */
-                        "application/json": unknown;
+                        "application/json": {
+                            data: components["schemas"]["AgentSelf"];
+                        };
                     };
                 };
             };
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{projectId}/specs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 명세 목록 (시험지 포함)
+         * @description 태스크를 만들 때 명세를 고르는 목록이다. 볼 수 있는 범위는 태스크 목록과 같다 — 사람은 볼 수 있는 프로젝트
+         *     (대표는 전체, 팀원은 배정된 것), 에이전트는 자기 프로젝트. **에이전트 토큰으로 보면 잠긴 시험지만 있다**
+         *     (브리핑과 같은 규칙 — 초안을 보면 "통과하도록 코드를 맞추는" 대상이 된다).
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @example {{PROJECT_ID}} */
+                    projectId: components["parameters"]["ProjectId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description featureKey 순 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "data": {
+                         *         "specs": [
+                         *           {
+                         *             "id": "5d1f0c3e-7a2b-4c1d-9e8f-0a1b2c3d4e5f",
+                         *             "featureKey": "F-05",
+                         *             "title": "스터디 대기열 신청",
+                         *             "content": "WHEN 정원이 찬 스터디에 신청하면 THEN 202와 waitlistPosition을 반환한다",
+                         *             "version": 1,
+                         *             "createdAt": "2026-09-30T02:00:00.000Z",
+                         *             "tests": [
+                         *               {
+                         *                 "id": "6e2a1d4f-8b3c-4d2e-af90-1b2c3d4e5f60",
+                         *                 "criterion": "정원이 찬 신청은 202와 대기 순번",
+                         *                 "testCode": "expect(res.status).toBe(202)",
+                         *                 "lockedAt": "2026-09-30T02:00:00.000Z"
+                         *               }
+                         *             ]
+                         *           }
+                         *         ]
+                         *       }
+                         *     }
+                         */
+                        "application/json": {
+                            data: {
+                                specs: components["schemas"]["Spec"][];
+                            };
+                        };
+                    };
+                };
+                /** @description 볼 수 없는 프로젝트 */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "NOT_PROJECT_MEMBER",
+                         *         "message": "you are not a member of this project"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * 명세 생성 (대표 전용)
+         * @description 명세 1개와 시험지(수용 기준) 여러 개를 만든다. 프로젝트가 `planning`·`active`일 때만.
+         *
+         *     **시험지의 `locked`는 필수이고, 만들 때만 정한다.** 잠근 시험지만 V2의 근거가 된다
+         *     (`locked_at < artifacts.created_at`). 나중에 잠그는 API는 없다 — 이미 제출된 산출물보다 늦게 잠긴 시험지가 생기기 때문이다.
+         *
+         *     **시험지는 V2에서 팀원 노트북에서 실행되는 코드다.**
+         *
+         *     검증 위반은 전부 모아 **422 `PLAN_INVALID`**의 `details`로 돌려준다(같은 featureKey 등).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @example {{PROJECT_ID}} */
+                    projectId: components["parameters"]["ProjectId"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    /**
+                     * @example {
+                     *       "featureKey": "F-05",
+                     *       "title": "스터디 대기열 신청",
+                     *       "content": "WHEN 정원이 찬 스터디에 신청하면 THEN 202와 waitlistPosition을 반환한다",
+                     *       "tests": [
+                     *         {
+                     *           "criterion": "정원이 찬 신청은 202와 대기 순번",
+                     *           "testCode": "expect(res.status).toBe(202)",
+                     *           "locked": true
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": {
+                        featureKey: string;
+                        title: string;
+                        content: string;
+                        tests?: {
+                            criterion: string;
+                            testCode: string;
+                            /** @description 필수. true면 지금 잠긴다(V2 근거) */
+                            locked: boolean;
+                        }[];
+                    };
+                };
+            };
+            responses: {
+                /** @description 만들어진 명세 */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "data": {
+                         *         "id": "5d1f0c3e-7a2b-4c1d-9e8f-0a1b2c3d4e5f",
+                         *         "featureKey": "F-05",
+                         *         "title": "스터디 대기열 신청",
+                         *         "content": "WHEN … THEN …",
+                         *         "version": 1,
+                         *         "createdAt": "2026-09-30T02:00:00.000Z",
+                         *         "tests": []
+                         *       }
+                         *     }
+                         */
+                        "application/json": {
+                            data: components["schemas"]["Spec"];
+                        };
+                    };
+                };
+                /** @description 대표가 아니거나 다른 조직 */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "NOT_REPRESENTATIVE",
+                         *         "message": "this action requires the organization representative"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+                /** @description 끝났거나 멈춘 프로젝트(completed·aborted·halted) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "PROJECT_NOT_OPEN",
+                         *         "message": "project is completed; specs and tasks can be added only while planning or active"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+                /** @description 검증 위반 전부 */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "PLAN_INVALID",
+                         *         "message": "명세·태스크 검증 실패 1건",
+                         *         "details": [
+                         *           {
+                         *             "where": "specs[F-05]",
+                         *             "message": "명세 F-05가 프로젝트에 이미 있다 (다시 보낸 건 아닌가?)"
+                         *           }
+                         *         ]
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -2796,13 +3513,160 @@ export interface paths {
                          *       }
                          *     }
                          */
-                        "application/json": unknown;
+                        "application/json": {
+                            data: {
+                                tasks: components["schemas"]["Task"][];
+                            };
+                        };
                     };
                 };
             };
         };
         put?: never;
-        post?: never;
+        /**
+         * 태스크 생성 (대표 전용)
+         * @description 만들어진 태스크는 `READY`라 배정된 에이전트가 바로 수령할 수 있다. 프로젝트가 `planning`·`active`일 때만.
+         *
+         *     - `repoId` — 이 프로젝트에 연결된 레포만
+         *     - `specId` — **IMPLEMENT는 필수**, INTEGRATION·REWORK는 생략 가능
+         *     - `teamRole` — 필수. `null`은 역할 제한 없음(통합 태스크)
+         *     - `dependsOn` — 이 프로젝트의 기존 태스크 id. 선행이 DONE이 돼야 수령할 수 있다
+         *     - 같은 제목은 거부한다(버튼 두 번 누르기 방지)
+         *
+         *     검증 위반은 전부 모아 **422 `PLAN_INVALID`**의 `details`로 돌려준다.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @example {{PROJECT_ID}} */
+                    projectId: components["parameters"]["ProjectId"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    /**
+                     * @example {
+                     *       "title": "T-052 대기열 신청 버튼",
+                     *       "teamRole": "FRONTEND",
+                     *       "repoId": "{{REPO_API}}",
+                     *       "specId": null,
+                     *       "kind": "INTEGRATION",
+                     *       "dependsOn": []
+                     *     }
+                     */
+                    "application/json": {
+                        title: string;
+                        /** @enum {string|null} */
+                        teamRole: "FRONTEND" | "BACKEND" | null;
+                        /**
+                         * @default IMPLEMENT
+                         * @enum {string}
+                         */
+                        kind?: "IMPLEMENT" | "INTEGRATION" | "REWORK";
+                        /** Format: uuid */
+                        repoId: string;
+                        /** Format: uuid */
+                        specId?: string | null;
+                        dependsOn?: string[];
+                    };
+                };
+            };
+            responses: {
+                /** @description 만들어진 태스크(READY) */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "data": {
+                         *         "id": "7f3b2e5a-9c4d-4e3f-b0a1-2c3d4e5f6071",
+                         *         "projectId": "{{PROJECT_ID}}",
+                         *         "repoId": "{{REPO_API}}",
+                         *         "specId": null,
+                         *         "kind": "INTEGRATION",
+                         *         "title": "T-052 대기열 신청 버튼",
+                         *         "state": "READY",
+                         *         "teamRole": "FRONTEND",
+                         *         "assigneeAgentId": null,
+                         *         "branchName": null,
+                         *         "blockedReason": null,
+                         *         "retryCount": 0
+                         *       }
+                         *     }
+                         */
+                        "application/json": {
+                            data: components["schemas"]["Task"];
+                        };
+                    };
+                };
+                /** @description 대표가 아니거나 다른 조직 */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "NOT_REPRESENTATIVE",
+                         *         "message": "this action requires the organization representative"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+                /** @description 끝났거나 멈춘 프로젝트 */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "PROJECT_NOT_OPEN",
+                         *         "message": "project is halted; specs and tasks can be added only while planning or active"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+                /** @description 검증 위반 전부 */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "PLAN_INVALID",
+                         *         "message": "명세·태스크 검증 실패 2건",
+                         *         "details": [
+                         *           {
+                         *             "where": "tasks[task]",
+                         *             "message": "레포 … 는 이 프로젝트에 연결돼 있지 않다 (연결된 레포: acme/study-api)"
+                         *           },
+                         *           {
+                         *             "where": "tasks[task]",
+                         *             "message": "구현(IMPLEMENT) 태스크에는 명세가 필요하다 (명세 없이 만들 수 있는 건 INTEGRATION·REWORK)"
+                         *           }
+                         *         ]
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -2891,7 +3755,9 @@ export interface paths {
                          *       }
                          *     }
                          */
-                        "application/json": unknown;
+                        "application/json": {
+                            data: components["schemas"]["TaskBriefing"];
+                        };
                     };
                 };
             };
@@ -2962,7 +3828,9 @@ export interface paths {
                          *       }
                          *     }
                          */
-                        "application/json": unknown;
+                        "application/json": {
+                            data: components["schemas"]["Task"];
+                        };
                     };
                 };
             };
@@ -3027,7 +3895,11 @@ export interface paths {
                          *       }
                          *     }
                          */
-                        "application/json": unknown;
+                        "application/json": {
+                            data: {
+                                verifications: components["schemas"]["Verification"][];
+                            };
+                        };
                     };
                 };
             };
@@ -3111,7 +3983,9 @@ export interface paths {
                          *       }
                          *     }
                          */
-                        "application/json": unknown;
+                        "application/json": {
+                            data: components["schemas"]["VerificationSummary"];
+                        };
                     };
                 };
                 /** @description 사유 없는 SKIPPED */
@@ -3302,17 +4176,416 @@ export interface components {
              */
             reason?: "expired" | "used" | "not_found";
         };
+        SignupResult: {
+            /** Format: uuid */
+            userId: string;
+            /** @description 평문은 이 응답에서 한 번만 나온다 */
+            connectKey: string;
+        };
+        ConnectKey: {
+            connectKey: string;
+        };
+        AgentTokens: {
+            accessToken: string;
+            refreshToken: string;
+            /** Format: uuid */
+            agentId: string;
+        };
+        DeviceStart: {
+            /** @description CLI가 poll에 쓰는 비밀. 이 응답에서 한 번만 나온다(서버는 해시만 저장) */
+            deviceCode: string;
+            /** @description 사람이 웹에서 확인하는 코드(예: WDJB-MJHT). 대소문자·하이픈은 무시된다 */
+            userCode: string;
+            /** @description {FRONTEND_BASE_URL}/connect/device */
+            verificationUri: string;
+            /** @description 코드가 채워진 주소 — CLI가 브라우저로 연다 */
+            verificationUriComplete: string;
+            /** @description 초. 10분 */
+            expiresIn: number;
+            /** @description 초. 이 간격으로 poll한다 */
+            interval: number;
+        };
+        /** @description 중간 상태도 200이다. approved는 딱 한 번만 나오고 그 뒤로는 expired */
+        DevicePoll: {
+            /** @enum {string} */
+            status: "pending" | "expired" | "denied";
+        } | {
+            /** @enum {string} */
+            status: "slow_down";
+            /** @description 늘어난 간격(초). 이후 이 간격으로 부른다 */
+            interval: number;
+        } | {
+            /** @enum {string} */
+            status: "approved";
+            accessToken: string;
+            refreshToken: string;
+            /** Format: uuid */
+            agentId: string;
+            /** @description 연결된 계정 — CLI가 출력해 남이 내 코드를 승인한 경우를 드러낸다 */
+            account: {
+                loginId: string | null;
+                nickname: string | null;
+                orgName: string | null;
+            };
+        };
+        DeviceRequest: {
+            userCode: string;
+            /**
+             * @description EXPIRED는 저장하지 않고 만료 시각으로 계산한다
+             * @enum {string}
+             */
+            status: "PENDING" | "APPROVED" | "DENIED" | "CONSUMED" | "EXPIRED";
+            agentName: string;
+            harness: string;
+            /** @description 요청한 CLI의 IP — 내가 아니면 거부하라는 판단 근거 */
+            clientIp: string | null;
+            /** Format: date-time */
+            requestedAt: string;
+            /** Format: date-time */
+            expiresAt: string;
+        };
+        AgentAccessToken: {
+            accessToken: string;
+        };
+        AgentSelf: {
+            /** Format: uuid */
+            agentId: string;
+            name: string;
+            maxConcurrent: number;
+            /** Format: uuid */
+            projectId: string;
+            /** @enum {string|null} */
+            teamRole: "FRONTEND" | "BACKEND" | null;
+        };
+        OrgCreated: {
+            /** Format: uuid */
+            orgId: string;
+            /** Format: uuid */
+            userId: string;
+        };
+        GithubRepo: {
+            fullName: string;
+            githubRepoId: number;
+            defaultBranch: string;
+        };
+        ConnectedRepo: {
+            /** Format: uuid */
+            id: string;
+            fullName: string;
+            seededPathCount: number;
+        };
+        RepoSettings: {
+            /** Format: uuid */
+            id: string;
+            fullName: string;
+            githubRepoId: number | null;
+            defaultBranch: string;
+            devBranch: string;
+            cloneUrl: string | null;
+        };
+        RepoPath: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            repoId: string;
+            pathPattern: string;
+            /**
+             * @description NULL이면 더 낮은 규칙의 소유 역할을 상속한다
+             * @enum {string|null}
+             */
+            ownerRole: "FRONTEND" | "BACKEND" | null;
+            /** @enum {string} */
+            access: "write" | "read" | "denied";
+            actionKey: string | null;
+            priority: number;
+            /** @enum {string} */
+            source: "seed" | "scan" | "manual";
+            /** Format: date-time */
+            createdAt: string;
+        };
+        InviteCreated: {
+            token: string;
+            /** @description {FRONTEND_BASE_URL}/invites/{token} */
+            url: string;
+            /** Format: date-time */
+            expiresAt: string;
+            /** @enum {string|null} */
+            teamRole: "FRONTEND" | "BACKEND" | null;
+        };
+        InviteAccepted: {
+            /** Format: uuid */
+            userId: string;
+            /** Format: uuid */
+            orgId: string;
+        };
+        DeviceCode: {
+            /** @description poll 때 되돌려준다. 서버는 보관하지 않는다 */
+            deviceCode: string;
+            /** @description 사용자가 verificationUri에 입력할 코드 */
+            userCode: string;
+            verificationUri: string;
+            expiresIn: number;
+            /** @description 이 초마다 poll한다 */
+            interval: number;
+        };
+        /** @description 폴링의 중간 상태도 200이다. connected가 되면 멈춘다 */
+        DeviceFlowStatus: {
+            /** @enum {string} */
+            status: "pending" | "expired" | "denied";
+        } | {
+            /** @enum {string} */
+            status: "slow_down";
+            interval: number;
+        } | {
+            /** @enum {string} */
+            status: "connected";
+            githubLogin: string;
+        };
+        ProjectRepo: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            orgId: string;
+            fullName: string;
+        };
+        ProjectMember: {
+            /** Format: uuid */
+            agentId: string;
+            agentName: string;
+            /** @enum {string} */
+            teamRole: "FRONTEND" | "BACKEND";
+            /**
+             * Format: uuid
+             * @description 에이전트 주인
+             */
+            userId: string;
+        };
+        ProjectDetail: {
+            project: components["schemas"]["Project"];
+            repos: components["schemas"]["ProjectRepo"][];
+            members: components["schemas"]["ProjectMember"][];
+        };
+        Task: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            projectId: string;
+            /** Format: uuid */
+            repoId: string;
+            /** Format: uuid */
+            specId: string | null;
+            /** @enum {string} */
+            kind: "IMPLEMENT" | "INTEGRATION" | "REWORK";
+            title: string;
+            /** @enum {string} */
+            state: "READY" | "CLAIMED" | "IN_PROGRESS" | "VERIFYING" | "AWAITING_APPROVAL" | "BLOCKED" | "ESCALATED" | "DONE";
+            /** @enum {string|null} */
+            teamRole: "FRONTEND" | "BACKEND" | null;
+            /** Format: uuid */
+            assigneeAgentId: string | null;
+            branchName: string | null;
+            /**
+             * @description state=BLOCKED일 때만 있다
+             * @enum {string|null}
+             */
+            blockedReason: "DISPUTE" | "DEPENDENCY" | "QUESTION" | null;
+            /** @description FAIL마다 오른다. 3이면 ESCALATED */
+            retryCount: number;
+        };
+        Artifact: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            taskId: string;
+            commitSha: string;
+            changedPaths: string[];
+            triggeredActions: string[];
+            /** @enum {string} */
+            gateMode: "AUTO" | "PM_REVIEW" | "HUMAN" | "FORBIDDEN";
+            attempt: number;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        StageOutcome: {
+            /** @enum {string} */
+            stage: "V1A" | "V1B" | "V2" | "V3" | "V4" | "INTEGRATION";
+            /** @enum {string} */
+            result: "PASS" | "FAIL" | "SKIPPED";
+        };
+        VerificationSummary: {
+            /** Format: uuid */
+            artifactId: string;
+            attempt: number;
+            stages: components["schemas"]["StageOutcome"][];
+            /**
+             * @description PENDING은 아직 보고 안 된 단계가 있음, SETTLED는 이미 결론이 난 뒤에 온 보고
+             * @enum {string}
+             */
+            outcome: "DONE" | "AWAITING_APPROVAL" | "RETRY" | "ESCALATED" | "PENDING" | "SETTLED";
+            /** @enum {string} */
+            taskState: "READY" | "CLAIMED" | "IN_PROGRESS" | "VERIFYING" | "AWAITING_APPROVAL" | "BLOCKED" | "ESCALATED" | "DONE";
+            retryCount: number;
+            /** @description 결론은 났지만 빠져나올 경로가 없을 때의 안내(지금은 AWAITING_APPROVAL). 없으면 생략 */
+            notice?: string;
+        };
+        /** @description Artifact의 필드 전부 + 서버가 동기로 끝낸 검증 요약(verification) */
+        SubmittedArtifact: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            taskId: string;
+            commitSha: string;
+            changedPaths: string[];
+            triggeredActions: string[];
+            /** @enum {string} */
+            gateMode: "AUTO" | "PM_REVIEW" | "HUMAN" | "FORBIDDEN";
+            attempt: number;
+            /** Format: date-time */
+            createdAt: string;
+            verification: components["schemas"]["VerificationSummary"];
+        };
+        Verification: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            artifactId: string;
+            /** @enum {string} */
+            stage: "V1A" | "V1B" | "V2" | "V3" | "V4" | "INTEGRATION";
+            /** @enum {string} */
+            result: "PASS" | "FAIL" | "SKIPPED";
+            /** @enum {string} */
+            executedBy: "server" | "bridge";
+            /** @description 단계마다 다르다. SKIPPED면 reason이 반드시 있다. V3 FAIL이면 denialReason */
+            detail: {
+                [key: string]: unknown;
+            };
+            durationMs: number | null;
+        };
+        Note: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            projectId: string;
+            /** @description 프로젝트 안에서 증가한다. since_seq로 증분 조회 */
+            seq: number;
+            /** Format: uuid */
+            taskId: string | null;
+            /** Format: uuid */
+            specId: string | null;
+            /** Format: uuid */
+            repoId: string | null;
+            /** @enum {string} */
+            kind: "IMPLEMENTED" | "DECIDED" | "GOTCHA" | "DEVIATION";
+            headline: string;
+            keyPoints: string[];
+            affects: string[];
+            /** Format: uuid */
+            authorAgentId: string;
+            onBehalfOf: string;
+            /** Format: uuid */
+            supersedes: string | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        /** @description Note의 필드 전부 + 서버가 조립한 제목(title) */
+        PublishedNote: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            projectId: string;
+            seq: number;
+            /** Format: uuid */
+            taskId: string | null;
+            /** Format: uuid */
+            specId: string | null;
+            /** Format: uuid */
+            repoId: string | null;
+            /** @enum {string} */
+            kind: "IMPLEMENTED" | "DECIDED" | "GOTCHA" | "DEVIATION";
+            headline: string;
+            keyPoints: string[];
+            affects: string[];
+            /** Format: uuid */
+            authorAgentId: string;
+            onBehalfOf: string;
+            /** Format: uuid */
+            supersedes: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            title: string;
+        };
+        TaskSpec: {
+            /** Format: uuid */
+            id: string;
+            featureKey: string;
+            title: string;
+            content: string;
+        };
+        Spec: {
+            /** Format: uuid */
+            id: string;
+            /** @description 프로젝트 안에서 유일(F-05 같은 기능 키) */
+            featureKey: string;
+            title: string;
+            /** @description EARS 문장 — WHEN … THEN … */
+            content: string;
+            version: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** @description 시험지(V2가 팀원 노트북에서 실행하는 코드). 에이전트 토큰으로 보면 잠긴 것만 있다 */
+            tests: components["schemas"]["SpecTest"][];
+        };
+        SpecTest: {
+            /** Format: uuid */
+            id: string;
+            criterion: string;
+            testCode: string;
+            /** Format: date-time */
+            lockedAt: string | null;
+        };
+        BriefingPath: {
+            pathPattern: string;
+            /** @enum {string} */
+            access: "write" | "read" | "denied";
+            /** @enum {string|null} */
+            ownerRole: "FRONTEND" | "BACKEND" | null;
+        };
+        TaskBriefing: {
+            task: components["schemas"]["Task"];
+            repo: {
+                /** Format: uuid */
+                id: string;
+                fullName: string;
+                defaultBranch: string;
+                devBranch: string;
+            };
+            spec: components["schemas"]["TaskSpec"];
+            notes: components["schemas"]["Note"][];
+            notesBlock: string;
+            writablePaths: components["schemas"]["BriefingPath"][];
+            claudeSettings: {
+                permissions: {
+                    deny: string[];
+                };
+            };
+            specTests: components["schemas"]["SpecTest"][];
+            policyHash: string;
+        };
         Error: {
-            error?: {
+            error: {
                 /** @example FORBIDDEN_PATH */
-                code?: string;
+                code: string;
                 /** @example **\/.env* is denied */
-                message?: string;
+                message: string;
                 /**
                  * @description POLICY_STALE에만 실린다. 다른 코드에서는 생략된다.
                  * @example policy_stale
                  */
                 reason?: string;
+                /** @description NOTE_INVALID에만 실린다 — 위반 항목 전부(필드·메시지). 다른 코드에서는 생략된다. */
+                details?: {
+                    [key: string]: unknown;
+                }[];
             };
         };
     };
