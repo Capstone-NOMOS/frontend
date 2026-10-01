@@ -7,13 +7,29 @@ import { ArrowRight, Bot, KeyRound } from "lucide-react";
 import { Badge, Button, CopyField, Logo } from "@/shared/ui";
 import { cn, fmtDateTime } from "@/shared/lib/format";
 import { errorMessage } from "@/shared/api";
-import { useOrgAgents } from "@/entities/agent";
+import { CLI_PACKAGE, useCliPublished, useOrgAgents } from "@/entities/agent";
 import { AccountMenu, useCurrentUser, useRotateConnectKey } from "@/entities/user";
 
 // Executor는 오리진만 받는다 (/api는 스스로 붙인다)
 const API_ORIGIN = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "").replace(/\/api\/?$/, "");
+// CLI connect의 --server 기본값 (backend#7). 다른 서버일 때만 명시한다
+const CLI_DEFAULT_SERVER = "https://nomos-team.duckdns.org";
+const SERVER_FLAG = API_ORIGIN === CLI_DEFAULT_SERVER ? "" : ` --server ${API_ORIGIN}`;
 
-const SETUP_STEPS = [
+const APPROVE_HINT = (
+  <>
+    브라우저가 열리면 터미널에 나온 코드와 같은지 확인하고 <b>승인</b>을 누르세요. 에이전트 이름은 컴퓨터 이름으로
+    정해집니다. 브라우저가 열리지 않으면{" "}
+    <Link href="/connect/device" className="font-medium text-ink-900 underline underline-offset-2">
+      승인 화면
+    </Link>
+    에서 코드를 직접 입력하세요.
+  </>
+);
+const REPOS_HINT = '~/.nomos/repos.json에 {"조직/레포": "로컬 클론 경로"}를 적어 두세요.';
+
+// CLI가 npm에 배포되기 전: 백엔드 레포를 받아 개발 스크립트로 실행한다
+const CLONE_STEPS = [
   {
     title: "백엔드 레포를 받아 설치",
     commands: ["git clone https://github.com/Capstone-NOMOS/backend.git", "cd backend && npm install"],
@@ -22,21 +38,25 @@ const SETUP_STEPS = [
   {
     title: "브라우저에서 승인",
     commands: [`npm run executor login ${API_ORIGIN}`],
-    hint: (
-      <>
-        브라우저가 열리면 터미널에 나온 코드와 같은지 확인하고 <b>승인</b>을 누르세요. 에이전트 이름은 컴퓨터 이름으로
-        정해집니다. 브라우저가 열리지 않으면{" "}
-        <Link href="/connect/device" className="font-medium text-ink-900 underline underline-offset-2">
-          승인 화면
-        </Link>
-        에서 코드를 직접 입력하세요.
-      </>
-    ),
+    hint: APPROVE_HINT,
   },
   {
     title: "프로젝트에 배정된 뒤 실행",
     commands: ["npm run executor refresh", "npm run build && npm run executor start"],
-    hint: '먼저 ~/.nomos/repos.json에 {"조직/레포": "로컬 클론 경로"}를 적어 두세요. 10초마다 태스크를 확인해 Claude Code를 실행합니다.',
+    hint: `먼저 ${REPOS_HINT} 10초마다 태스크를 확인해 Claude Code를 실행합니다.`,
+  },
+];
+
+const NPX_STEPS = [
+  {
+    title: "터미널에서 연결",
+    commands: [`npx ${CLI_PACKAGE} connect${SERVER_FLAG}`],
+    hint: <>Node 22 이상이 필요합니다. {APPROVE_HINT}</>,
+  },
+  {
+    title: "프로젝트에 배정되면 자동 실행",
+    commands: [],
+    hint: `켜 둔 터미널이 배정을 기다렸다가, 10초마다 태스크를 확인해 Claude Code를 실행합니다. 그 전에 ${REPOS_HINT}`,
   },
 ];
 
@@ -53,6 +73,12 @@ export function ConnectAgentView() {
   // 터미널에서 연결을 마치면 새로고침 없이 목록에 나타나게 한다
   const agents = useOrgAgents(me.orgId, { poll: true });
   const myAgents = agents.data?.agents.filter((a) => a.userId === me.userId) ?? [];
+  // CLI가 npm에 올라오면 한 줄 안내로 바뀐다. 확인 전에는 안내가 바뀌며 깜빡이지 않게 숨긴다
+  const cli = useCliPublished();
+  const steps = cli.data ? NPX_STEPS : CLONE_STEPS;
+  const connectKeyCommand = cli.data
+    ? `npx ${CLI_PACKAGE} login ${API_ORIGIN} --connect-key`
+    : `npm run executor -- login ${API_ORIGIN} --connect-key`;
   const rotate = useRotateConnectKey();
   const [confirming, setConfirming] = useState(false);
   const nextHref = me.orgId ? "/projects" : "/onboarding";
@@ -100,8 +126,8 @@ export function ConnectAgentView() {
             <div className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-ink-500">
               2. 터미널에서 연결
             </div>
-            <ol className="space-y-4">
-              {SETUP_STEPS.map((step, i) => (
+            <ol className={cn("space-y-4", cli.isPending && "invisible")}>
+              {steps.map((step, i) => (
                 <li key={step.title}>
                   <div className="mb-1.5 flex items-center gap-2 text-[13.5px] font-medium text-ink-900">
                     <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-ink-100 text-[11px] font-semibold text-ink-600">
@@ -125,7 +151,7 @@ export function ConnectAgentView() {
               </summary>
               {/* npm은 -- 앞의 --플래그를 자기 옵션으로 가져간다 */}
               <div className="mt-3">
-                <CopyField value={`npm run executor -- login ${API_ORIGIN} --connect-key`} />
+                <CopyField value={connectKeyCommand} />
               </div>
               <p className="mt-2 text-[12.5px] text-ink-500">
                 키를 물으면 <b>가입하면서 받은 연결 키</b>를 붙여넣으세요. 키는 서버에 해시로만 저장되어 다시 보여줄 수
