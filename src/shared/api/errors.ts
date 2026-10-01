@@ -40,6 +40,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   ARTIFACT_NOT_FOUND: "산출물을 찾을 수 없습니다.",
   PROJECT_NOT_FOUND: "프로젝트를 찾을 수 없습니다.",
   MEMBER_NOT_FOUND: "멤버를 찾을 수 없습니다.",
+  DEVICE_REQUEST_NOT_FOUND: "연결 요청을 찾을 수 없습니다. 코드를 확인하거나 터미널에서 다시 실행해 주세요.",
 
   // 409
   LOGIN_ID_TAKEN: "이미 사용 중인 아이디입니다.",
@@ -57,10 +58,12 @@ const ERROR_MESSAGES: Record<string, string> = {
   ROLE_ALREADY_ASSIGNED: "이미 배정된 역할입니다.",
   AGENT_ALREADY_ASSIGNED: "이미 배정된 에이전트입니다.",
   AGENT_IN_ANOTHER_PROJECT: "이 에이전트는 다른 진행 중인 프로젝트를 맡고 있습니다.",
+  DEVICE_REQUEST_ALREADY_DECIDED: "이미 승인 또는 거부한 연결 요청입니다.",
 
   // 410
   INVITE_EXPIRED: "만료된 초대입니다.",
   INVITE_ALREADY_USED: "이미 사용된 초대입니다.",
+  DEVICE_REQUEST_EXPIRED: "만료된 연결 요청입니다. 터미널에서 다시 실행해 주세요.",
 
   // 422
   NOTE_INVALID: "인계 노트 형식이 올바르지 않습니다.",

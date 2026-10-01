@@ -11,7 +11,7 @@ const STEPS = [
   {
     n: "01",
     t: "가입 · 키 발급 · 에이전트 연결",
-    d: "npx nomos connect 로 내 Claude Code를 NOMOS에 붙입니다. 프로젝트에 참여하기 전엔 아무 태스크도 받지 않습니다.",
+    d: "터미널에서 로그인 한 번으로 내 Claude Code를 NOMOS에 붙입니다. 프로젝트에 참여하기 전엔 아무 태스크도 받지 않습니다.",
   },
   {
     n: "02",
@@ -97,7 +97,7 @@ export function Landing() {
             </Button>
           </div>
           <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-ink-200 bg-white px-3 py-1.5 font-mono text-[12.5px] text-ink-600">
-            <span className="text-ink-400">$</span> npx nomos connect
+            <span className="text-ink-400">$</span> npm run executor login
           </div>
         </div>
         <div

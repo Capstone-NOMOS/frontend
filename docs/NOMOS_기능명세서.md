@@ -183,7 +183,7 @@
 
 ```bash
 $ npx nomos connect
-  → 로그인 (아이디/비밀번호 또는 토큰)
+  → 로그인 (브라우저 승인. 브라우저를 열 수 없으면 연결 키 → adr/0008)
   → 로컬 Claude Code 감지 (claude --version)
   → 없으면 설치 안내
   → NOMOS MCP 서버를 Claude Code 설정에 자동 등록
