@@ -10,12 +10,6 @@ import { errorMessage } from "@/shared/api";
 import { useOrgAgents } from "@/entities/agent";
 import { AccountMenu, useCurrentUser, useRotateConnectKey } from "@/entities/user";
 
-const CLIS = [
-  { id: "claude", name: "Claude Code", supported: true, note: "v1 지원" },
-  { id: "codex", name: "Codex CLI", supported: false, note: "v2" },
-  { id: "gemini", name: "Gemini CLI", supported: false, note: "v2" },
-];
-
 // Executor는 오리진만 받는다 (/api는 스스로 붙인다)
 const API_ORIGIN = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "").replace(/\/api\/?$/, "");
 
@@ -35,6 +29,12 @@ const SETUP_STEPS = [
     commands: ["npm run executor refresh", "npm run build && npm run executor start"],
     hint: '먼저 ~/.nomos/repos.json에 {"조직/레포": "로컬 클론 경로"}를 적어 두세요. 10초마다 태스크를 확인해 Claude Code를 실행합니다.',
   },
+];
+
+const CLIS = [
+  { id: "claude", name: "Claude Code", supported: true, note: "v1 지원" },
+  { id: "codex", name: "Codex CLI", supported: false, note: "v2" },
+  { id: "gemini", name: "Gemini CLI", supported: false, note: "v2" },
 ];
 
 export function ConnectAgentView() {
