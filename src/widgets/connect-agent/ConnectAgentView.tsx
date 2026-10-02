@@ -7,7 +7,7 @@ import { ArrowRight, Bot, KeyRound } from "lucide-react";
 import { Badge, Button, CopyField, Logo } from "@/shared/ui";
 import { cn, fmtDateTime } from "@/shared/lib/format";
 import { errorMessage } from "@/shared/api";
-import { CLI_PACKAGE, useCliPublished, useOrgAgents } from "@/entities/agent";
+import { CLI_NPX, useOrgAgents } from "@/entities/agent";
 import { AccountMenu, useCurrentUser, useRotateConnectKey } from "@/entities/user";
 
 // Executor는 오리진만 받는다 (/api는 스스로 붙인다)
@@ -15,6 +15,8 @@ const API_ORIGIN = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "").replace(/\/api\/
 // CLI connect의 --server 기본값 (backend#7). 다른 서버일 때만 명시한다
 const CLI_DEFAULT_SERVER = "https://nomos-team.duckdns.org";
 const SERVER_FLAG = API_ORIGIN === CLI_DEFAULT_SERVER ? "" : ` --server ${API_ORIGIN}`;
+
+const CODE = "font-mono text-ink-700";
 
 const APPROVE_HINT = (
   <>
@@ -26,37 +28,29 @@ const APPROVE_HINT = (
     에서 코드를 직접 입력하세요.
   </>
 );
-const REPOS_HINT = '~/.nomos/repos.json에 {"조직/레포": "로컬 클론 경로"}를 적어 두세요.';
 
-// CLI가 npm에 배포되기 전: 백엔드 레포를 받아 개발 스크립트로 실행한다
-const CLONE_STEPS = [
-  {
-    title: "백엔드 레포를 받아 설치",
-    commands: ["git clone https://github.com/Capstone-NOMOS/backend.git", "cd backend && npm install"],
-    hint: "Node 22 이상이 필요합니다.",
-  },
-  {
-    title: "브라우저에서 승인",
-    commands: [`npm run executor login ${API_ORIGIN}`],
-    hint: APPROVE_HINT,
-  },
-  {
-    title: "프로젝트에 배정된 뒤 실행",
-    commands: ["npm run executor refresh", "npm run build && npm run executor start"],
-    hint: `먼저 ${REPOS_HINT} 10초마다 태스크를 확인해 Claude Code를 실행합니다.`,
-  },
-];
-
-const NPX_STEPS = [
+// connect는 시작 전에 git·claude가 실행되는지 확인하고, 없으면 시작하지 않는다
+const STEPS = [
   {
     title: "터미널에서 연결",
-    commands: [`npx ${CLI_PACKAGE} connect${SERVER_FLAG}`],
-    hint: <>Node 22 이상이 필요합니다. {APPROVE_HINT}</>,
+    commands: [`${CLI_NPX} connect${SERVER_FLAG}`],
+    hint: (
+      <>
+        필요한 것: Node.js 22 이상 · git · Claude Code(설치 후 터미널에서 <code className={CODE}>claude</code>를 한 번
+        실행해 로그인). {APPROVE_HINT}
+      </>
+    ),
   },
   {
     title: "프로젝트에 배정되면 자동 실행",
     commands: [],
-    hint: `켜 둔 터미널이 배정을 기다렸다가, 10초마다 태스크를 확인해 Claude Code를 실행합니다. 그 전에 ${REPOS_HINT}`,
+    hint: (
+      <>
+        켜 둔 터미널이 배정을 기다렸다가 자동으로 시작합니다. 태스크의 레포는{" "}
+        <code className={CODE}>~/.nomos/repos/</code>에 자동으로 받습니다 — 비공개 레포면 이 컴퓨터의 git이 GitHub에
+        접근할 수 있어야 합니다(<code className={CODE}>gh auth login</code> 또는 Git Credential Manager).
+      </>
+    ),
   },
 ];
 
@@ -73,12 +67,6 @@ export function ConnectAgentView() {
   // 터미널에서 연결을 마치면 새로고침 없이 목록에 나타나게 한다
   const agents = useOrgAgents(me.orgId, { poll: true });
   const myAgents = agents.data?.agents.filter((a) => a.userId === me.userId) ?? [];
-  // CLI가 npm에 올라오면 한 줄 안내로 바뀐다. 확인 전에는 안내가 바뀌며 깜빡이지 않게 숨긴다
-  const cli = useCliPublished();
-  const steps = cli.data ? NPX_STEPS : CLONE_STEPS;
-  const connectKeyCommand = cli.data
-    ? `npx ${CLI_PACKAGE} login ${API_ORIGIN} --connect-key`
-    : `npm run executor -- login ${API_ORIGIN} --connect-key`;
   const rotate = useRotateConnectKey();
   const [confirming, setConfirming] = useState(false);
   const nextHref = me.orgId ? "/projects" : "/onboarding";
@@ -126,8 +114,8 @@ export function ConnectAgentView() {
             <div className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-ink-500">
               2. 터미널에서 연결
             </div>
-            <ol className={cn("space-y-4", cli.isPending && "invisible")}>
-              {steps.map((step, i) => (
+            <ol className="space-y-4">
+              {STEPS.map((step, i) => (
                 <li key={step.title}>
                   <div className="mb-1.5 flex items-center gap-2 text-[13.5px] font-medium text-ink-900">
                     <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-ink-100 text-[11px] font-semibold text-ink-600">
@@ -144,18 +132,22 @@ export function ConnectAgentView() {
                 </li>
               ))}
             </ol>
+            <p className="mt-4 text-[12.5px] text-ink-500">
+              막히면 <code className={CODE}>{CLI_NPX} doctor</code>로 git·Claude Code·연결 상태를 점검하세요.
+            </p>
 
             <details className="mt-5 rounded-xl border border-ink-200 p-4">
               <summary className="cursor-pointer text-[13.5px] font-medium text-ink-900">
                 브라우저를 열 수 없는 환경(SSH 등)이라면 연결 키로 로그인
               </summary>
-              {/* npm은 -- 앞의 --플래그를 자기 옵션으로 가져간다 */}
+              {/* connect에 --connect-key를 주면 로그인 → 배정 대기 → 실행이 한 번에 된다 */}
               <div className="mt-3">
-                <CopyField value={connectKeyCommand} />
+                <CopyField value={`${CLI_NPX} connect --connect-key${SERVER_FLAG}`} />
               </div>
               <p className="mt-2 text-[12.5px] text-ink-500">
-                키를 물으면 <b>가입하면서 받은 연결 키</b>를 붙여넣으세요. 키는 서버에 해시로만 저장되어 다시 보여줄 수
-                없습니다. 잃어버렸다면 아래에서 재발급하세요.
+                키를 물으면 <b>가입하면서 받은 연결 키</b>를 붙여넣으세요(환경변수{" "}
+                <code className={CODE}>NOMOS_CONNECT_KEY</code>로 줘도 됩니다). 키는 서버에 해시로만 저장되어 다시
+                보여줄 수 없습니다. 잃어버렸다면 아래에서 재발급하세요.
               </p>
 
               <div className="mt-3">
