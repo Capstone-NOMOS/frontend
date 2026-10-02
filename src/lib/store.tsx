@@ -191,7 +191,6 @@ interface Ctx {
     switchUser: (userId: string) => void;
     resetDemo: () => void;
     createProject: (input: { name: string; description: string; level: Level; stack: string }) => Project;
-    joinProject: (token: string) => { project: Project; role: Role } | null;
     connectRepo: (projectId: string, role: "FE" | "BE", url: string, localPath: string) => void;
     sendMessage: (roomId: string, text: string) => void;
     decideSpec: (messageId: string, decision: "approve" | "changes", note?: string) => void;
@@ -413,7 +412,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           pmBudgetTokens: 2_000_000,
           pmSpentTokens: 0,
           createdAt: now(),
-          inviteTokens: { FE: `${uid("inv").slice(-6)}FE`, BE: `${uid("inv").slice(-6)}BE` },
         };
         const room: Room = { id: uid("r"), projectId: project.id, type: "OWNER" };
         update((s) => {
@@ -467,58 +465,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           return n;
         });
         return project;
-      },
-
-      joinProject: (token) => {
-        const s0 = stateRef.current;
-        const project = s0.projects.find((p) => p.inviteTokens.FE === token || p.inviteTokens.BE === token);
-        if (!project || !s0.session) return null;
-        const role: Role = project.inviteTokens.FE === token ? "FE" : "BE";
-        const userId = s0.session.userId;
-        if (memberOf(s0, project.id, role)) return { project, role };
-        const room: Room = { id: uid("r"), projectId: project.id, type: role };
-        update((s) => {
-          let n: AppState = {
-            ...s,
-            members: [...s.members, { projectId: project.id, userId, role, joinedAt: now() }],
-            rooms: [...s.rooms, room],
-          };
-          const me = s.users.find((u) => u.id === userId);
-          n = push(n, {
-            roomId: room.id,
-            authorType: "system",
-            card: {
-              kind: "notice",
-              tone: "info",
-              text: `${me?.nickname} 님이 ${role}로 참여했습니다. Room ${role === "FE" ? 1 : 2}이 생성되고 ${role} 에이전트가 활성화됐습니다.`,
-            },
-          });
-          n = push(n, {
-            roomId: room.id,
-            authorType: "pm",
-            text: `${role} 레포를 연결해주세요. 브릿지는 이 경로 안에서만 에이전트를 실행합니다.`,
-            card: { kind: "repo", role, status: "pending" },
-          });
-          const ownerRoom = roomOf(n, project.id, "OWNER");
-          if (ownerRoom)
-            n = push(n, {
-              roomId: ownerRoom.id,
-              authorType: "system",
-              card: {
-                kind: "notice",
-                tone: "success",
-                text: `${me?.nickname} 님이 ${role}로 참여했습니다. Room ${role === "FE" ? 1 : 2}이 열렸습니다.`,
-              },
-            });
-          n = addEvent(n, {
-            projectId: project.id,
-            type: "member.joined",
-            actor: me?.nickname ?? "",
-            summary: `${role}로 참여 · Room ${role === "FE" ? 1 : 2} 생성`,
-          });
-          return n;
-        });
-        return { project, role };
       },
 
       connectRepo: (projectId, role, url, localPath) =>

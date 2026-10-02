@@ -10,7 +10,6 @@ export interface Project {
   pmBudgetTokens: number;
   pmSpentTokens: number;
   createdAt: string;
-  inviteTokens: { FE: string; BE: string };
 }
 
 export interface Membership {

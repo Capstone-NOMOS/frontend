@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowRight, Bot, KeyRound } from "lucide-react";
 import { Badge, Button, CopyField, Logo } from "@/shared/ui";
 import { cn, fmtDateTime } from "@/shared/lib/format";
@@ -60,7 +60,8 @@ const CLIS = [
   { id: "gemini", name: "Gemini CLI", supported: false, note: "v2" },
 ];
 
-export function ConnectAgentView() {
+/** joined: 초대 수락 직후. 이미 연결한 에이전트가 있으면 안내를 건너뛰고 프로젝트로 보낸다 */
+export function ConnectAgentView({ joined = false }: { joined?: boolean }) {
   const router = useRouter();
   // AuthGate 안에서만 그려지므로 me가 있다
   const me = useCurrentUser().me!;
@@ -70,6 +71,11 @@ export function ConnectAgentView() {
   const rotate = useRotateConnectKey();
   const [confirming, setConfirming] = useState(false);
   const nextHref = me.orgId ? "/projects" : "/onboarding";
+  const skip = joined && myAgents.length > 0;
+
+  useEffect(() => {
+    if (skip) router.replace("/projects");
+  }, [skip, router]);
 
   return (
     <div className="min-h-dvh dots-bg">

@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   Activity,
   BookOpen,
+  Building2,
   ChevronDown,
   Eye,
   FileText,
@@ -411,6 +412,7 @@ function SidebarContent({
             active={is(`${base}/settings`)}
             onNavigate={onNavigate}
           />
+          <NavItem href="/org" icon={<Building2 size={16} />} label="조직" active={false} onNavigate={onNavigate} />
         </div>
       </nav>
 

@@ -693,7 +693,6 @@ export const SEED: AppState = {
       pmBudgetTokens: 2_000_000,
       pmSpentTokens: 780_000,
       createdAt: t("12:30"),
-      inviteTokens: { FE: "Jz7kFE", BE: "Jz7kBE" },
     },
   ],
   members: [

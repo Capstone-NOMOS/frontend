@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, ArrowUp, Check } from "lucide-react";
-import { AgentMark, Badge, Button, CopyField, Logo } from "@/shared/ui";
+import { AgentMark, Badge, Button, Logo } from "@/shared/ui";
 import { cn } from "@/shared/lib/format";
 import type { Level } from "@/shared/model";
 import { LEVELS } from "@/entities/policy";
@@ -94,7 +94,6 @@ export function ProjectNewView() {
 
   if (!hydrated || !me) return null;
 
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
   const stepIndex = ["name", "desc", "level", "stack", "done"].indexOf(step);
 
   return (
@@ -182,12 +181,14 @@ export function ProjectNewView() {
                     <li>✓ 정책표 — {project.level} 열이 프로젝트에 적용됨</li>
                     <li>✓ Room 3 (대표 + PM) 생성 · PM 에이전트 인스턴스 (NOMOS 키)</li>
                     <li>✓ MCP 문서 페이지 — 헌법 / 명세 / 결정기록 / 계약 (빈 상태)</li>
-                    <li>✓ 초대 링크 2개 — 역할이 링크에 박혀 있음</li>
                   </ul>
-                  <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    <CopyField label="FE 초대" value={`${origin}/join/${project.inviteTokens.FE}`} />
-                    <CopyField label="BE 초대" value={`${origin}/join/${project.inviteTokens.BE}`} />
-                  </div>
+                  <p className="mt-3 text-[12.5px] text-ink-500">
+                    팀원 초대는{" "}
+                    <Link href="/org" className="font-medium text-ink-900 hover:underline">
+                      조직
+                    </Link>
+                    에서 합니다.
+                  </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Button onClick={() => router.push(`/p/${project.id}`)}>

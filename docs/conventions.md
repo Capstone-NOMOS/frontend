@@ -40,8 +40,8 @@ src/
 
 **`src/lib/`은 레이어가 아니다.** `store.tsx`와 `mock/seed.ts`만 남아 있고, 해체 예정이라(`architecture.md` §8) 이번 이행에서 일부러 옮기지 않았다. 여기에 새 파일을 추가하지 말 것.
 
-엔티티 슬라이스 12개: `task` `agent` `user` `org` `project` `artifact` `note` `room` `message` `document` `event` `policy`.
-위젯 슬라이스 15개: `room` `dashboard` `inbox` `activity` `docs` `settings` `landing` `join` `app-shell` `auth` `connect-agent` `onboarding` `project-list` `project-new` `task-detail`.
+엔티티 슬라이스 13개: `task` `agent` `user` `org` `invite` `project` `artifact` `note` `room` `message` `document` `event` `policy`.
+위젯 슬라이스 16개: `room` `dashboard` `inbox` `activity` `docs` `settings` `landing` `invite` `org` `app-shell` `auth` `connect-agent` `onboarding` `project-list` `project-new` `task-detail`.
 
 **import는 `app → widgets → entities → shared` 단방향만.** 같은 레이어끼리 import 금지.
 

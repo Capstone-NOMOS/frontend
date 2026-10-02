@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Lock } from "lucide-react";
-import { Badge, Button, CopyField, Input, MockEmpty, SectionTitle } from "@/shared/ui";
+import { Badge, Button, Input, MockEmpty, SectionTitle } from "@/shared/ui";
 import { cn, fmtTokens } from "@/shared/lib/format";
 import type { Level } from "@/shared/model";
 import { DECIDER_META, LEVELS, POLICY_TABLE } from "@/entities/policy";
@@ -14,7 +14,6 @@ export function SettingsView({ projectId }: { projectId: string }) {
   const [budget, setBudget] = useState<string>(project ? String(project.pmBudgetTokens) : "");
   if (!project) return <MockEmpty />;
   const isOwner = myRole === "OWNER";
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
 
   return (
     <div className="h-full overflow-y-auto">
@@ -34,12 +33,6 @@ export function SettingsView({ projectId }: { projectId: string }) {
             <Row k="스택" v={project.stack} />
             <Row k="레포" v="프로젝트당 2개 · 완전 분리 (통합 브랜치 없음)" />
           </dl>
-          {isOwner && (
-            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <CopyField label="FE 초대 링크" value={`${origin}/join/${project.inviteTokens.FE}`} />
-              <CopyField label="BE 초대 링크" value={`${origin}/join/${project.inviteTokens.BE}`} />
-            </div>
-          )}
         </section>
 
         <section className="card mt-6 p-5">

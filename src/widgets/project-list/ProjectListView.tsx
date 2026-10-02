@@ -1,12 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, CalendarDays, Loader2, Plus } from "lucide-react";
 import { ApiError, errorMessage } from "@/shared/api";
-import { Badge, Button, Input, Logo, MockBadge } from "@/shared/ui";
+import { Badge, Button, Logo, MockBadge } from "@/shared/ui";
 import { useOrgAgents } from "@/entities/agent";
 import { LEVELS } from "@/entities/policy";
 import { ProjectStatusBadge, fmtUsd, useProjects } from "@/entities/project";
@@ -17,9 +16,7 @@ export function ProjectListView() {
   const me = useCurrentUser().me!;
   const orgId = me.orgId!;
   const isRep = me.orgRole === "REPRESENTATIVE";
-  const router = useRouter();
   const queryClient = useQueryClient();
-  const [invite, setInvite] = useState("");
 
   const projects = useProjects(orgId, { pollWhileEmpty: !isRep });
   const agents = useOrgAgents(orgId);
@@ -32,11 +29,6 @@ export function ProjectListView() {
       void queryClient.invalidateQueries({ queryKey: userKeys.me() });
     }
   }, [error, queryClient]);
-
-  const join = () => {
-    const token = invite.trim().split("/").pop()?.split("?")[0];
-    if (token) router.push(`/join/${token}`);
-  };
 
   return (
     <div className="min-h-dvh dots-bg">
@@ -59,6 +51,9 @@ export function ProjectListView() {
               </>
             )}
           </span>
+          <Link href="/org" className="text-[13px] font-medium text-ink-600 hover:text-ink-900">
+            조직
+          </Link>
           <AccountMenu />
         </div>
       </header>
@@ -143,24 +138,6 @@ export function ProjectListView() {
             )}
           </ul>
         )}
-
-        <div className="card mt-6 p-5">
-          <div className="flex items-center gap-2 text-[13.5px] font-semibold">
-            초대 링크로 참여 <MockBadge />
-          </div>
-          <p className="mt-0.5 text-[12.5px] text-ink-500">대표가 보낸 링크를 붙여넣으세요.</p>
-          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-            <Input
-              value={invite}
-              onChange={(e) => setInvite(e.target.value)}
-              placeholder="https://nomos.app/join/Jz7kFE"
-              className="h-10"
-            />
-            <Button variant="outline" onClick={join} className="shrink-0">
-              참여
-            </Button>
-          </div>
-        </div>
       </main>
     </div>
   );
