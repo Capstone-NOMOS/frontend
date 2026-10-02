@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { ArrowRight, CircleHelp, ShieldBan, Table2 } from "lucide-react";
 import { AgentMark, Badge, Button, Logo } from "@/shared/ui";
-import { CLI_PACKAGE, useCliPublished } from "@/entities/agent";
+import { CLI_NPX } from "@/entities/agent";
 import { useCurrentUser } from "@/entities/user";
 
 const STEPS = [
@@ -34,7 +34,6 @@ const STEPS = [
 export function Landing() {
   const { status } = useCurrentUser();
   const router = useRouter();
-  const cliPublished = useCliPublished().data === true;
   const primary =
     status === "authenticated"
       ? { href: "/projects", label: "프로젝트로 이동" }
@@ -99,8 +98,7 @@ export function Landing() {
             </Button>
           </div>
           <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-ink-200 bg-white px-3 py-1.5 font-mono text-[12.5px] text-ink-600">
-            <span className="text-ink-400">$</span>{" "}
-            {cliPublished ? `npx ${CLI_PACKAGE} connect` : "npm run executor login"}
+            <span className="text-ink-400">$</span> {CLI_NPX} connect
           </div>
         </div>
         <div

@@ -5,30 +5,10 @@ export const agentKeys = {
   all: ["agent"] as const,
   org: (orgId: string) => [...agentKeys.all, "org", orgId] as const,
   device: (userCode: string) => [...agentKeys.all, "device", userCode] as const,
-  cliPublished: () => [...agentKeys.all, "cli-published"] as const,
 };
 
-export const CLI_PACKAGE = "@capstone-nomos/cli";
-
-/**
- * CLI가 npm에 배포됐는지 (Capstone-NOMOS/backend#7). 배포 전에는 레포를 클론하는 방식으로 안내한다.
- * 레지스트리는 없는 패키지에 CORS 헤더 없는 404를 주므로, 실패는 전부 "아직 없음"으로 본다
- */
-export function useCliPublished() {
-  return useQuery({
-    queryKey: agentKeys.cliPublished(),
-    queryFn: async () => {
-      const res = await fetch(`https://registry.npmjs.org/${encodeURIComponent(CLI_PACKAGE)}`, {
-        headers: { Accept: "application/vnd.npm.install-v1+json" },
-        signal: AbortSignal.timeout(3000),
-      });
-      return res.ok;
-    },
-    staleTime: Infinity,
-    retry: false,
-    refetchOnWindowFocus: false,
-  });
-}
+/** 에이전트 CLI (backend#7). npx가 캐시한 옛 버전이 바뀐 서버 API로 실행되지 않게 @latest를 붙인다 */
+export const CLI_NPX = "npx @capstone-nomos/cli@latest";
 
 /** 조직의 에이전트 목록. 접속 상태(online/offline)는 API가 주지 않는다 — 목록에 있으면 "연결한 적 있음" */
 export function useOrgAgents(orgId: string | null, { poll = false }: { poll?: boolean } = {}) {

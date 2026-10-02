@@ -7,7 +7,7 @@ import { ShieldAlert } from "lucide-react";
 import { Badge, Button, Input, Logo } from "@/shared/ui";
 import { fmtDateTime, fmtTime } from "@/shared/lib/format";
 import { errorMessage, type Schemas } from "@/shared/api";
-import { useApproveDeviceRequest, useDenyDeviceRequest, useDeviceRequest } from "@/entities/agent";
+import { CLI_NPX, useApproveDeviceRequest, useDenyDeviceRequest, useDeviceRequest } from "@/entities/agent";
 import { AccountMenu } from "@/entities/user";
 
 const PATH = "/connect/device";
@@ -67,7 +67,7 @@ function CodeForm({ initial = "" }: { initial?: string }) {
   return (
     <>
       <p className="mt-1 text-[13.5px] text-ink-500">
-        터미널에서 <code className="font-mono text-ink-700">npm run executor login</code>을 실행하면 나오는 8글자 코드를
+        터미널에서 <code className="font-mono text-ink-700">{CLI_NPX} connect</code>를 실행하면 나오는 8글자 코드를
         입력하세요. 사용법은{" "}
         <Link href="/connect" className="font-medium text-ink-900 underline underline-offset-2">
           에이전트 연결
