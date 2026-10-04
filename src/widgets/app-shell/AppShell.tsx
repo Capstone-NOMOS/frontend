@@ -22,16 +22,11 @@ import {
   Users,
   X,
 } from "lucide-react";
+import type { Schemas } from "@/shared/api";
 import { Avatar, Badge, Kbd, Logo, MockBadge } from "@/shared/ui";
 import { cn } from "@/shared/lib/format";
 import { StatusDot } from "@/entities/agent";
-import {
-  ProjectErrorView,
-  ProjectStatusBadge,
-  useProject,
-  useProjects,
-  type ApiProjectDetail,
-} from "@/entities/project";
+import { ProjectErrorView, ProjectStatusBadge, useProject, useProjects } from "@/entities/project";
 import { ROOM_META, type Room } from "@/entities/room";
 import { AccountMenu, RoleBadge, displayName, useCurrentUser } from "@/entities/user";
 import { useApp, useProject as useMockProject } from "@/lib/store";
@@ -182,7 +177,7 @@ function SidebarContent({
   onClose,
 }: {
   projectId: string;
-  detail: ApiProjectDetail;
+  detail: Schemas["ProjectDetail"];
   onSearch: () => void;
   onClose?: () => void;
 }) {

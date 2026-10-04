@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { apiFetch } from "@/shared/api";
-import { sortVerifications, type ApiArtifact, type ApiVerification } from "../model/api";
+import { apiFetch, type Schemas } from "@/shared/api";
+import { sortVerifications } from "../model/api";
 
 export const artifactKeys = {
   all: ["artifact"] as const,
@@ -15,7 +15,7 @@ const POLL = { refetchInterval: 4000, refetchIntervalInBackground: false } as co
 export function useArtifacts(taskId: string) {
   return useQuery({
     queryKey: artifactKeys.list(taskId),
-    queryFn: () => apiFetch<{ artifacts: ApiArtifact[] }>(`/tasks/${taskId}/artifacts`),
+    queryFn: () => apiFetch<{ artifacts: Schemas["Artifact"][] }>(`/tasks/${taskId}/artifacts`),
     select: (data) => data.artifacts,
     ...POLL,
   });
@@ -25,7 +25,7 @@ export function useArtifacts(taskId: string) {
 export function useVerifications(artifactId: string | null) {
   return useQuery({
     queryKey: artifactKeys.verifications(artifactId ?? ""),
-    queryFn: () => apiFetch<{ verifications: ApiVerification[] }>(`/artifacts/${artifactId}/verifications`),
+    queryFn: () => apiFetch<{ verifications: Schemas["Verification"][] }>(`/artifacts/${artifactId}/verifications`),
     select: (data) => sortVerifications(data.verifications),
     enabled: artifactId !== null,
     ...POLL,

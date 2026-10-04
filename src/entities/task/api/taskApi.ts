@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { apiFetch } from "@/shared/api";
-import type { ApiTask, TaskFilters } from "../model/api";
+import { apiFetch, type Schemas } from "@/shared/api";
+import type { TaskFilters } from "../model/api";
 
 export const taskKeys = {
   all: ["task"] as const,
@@ -18,7 +18,7 @@ export function useTasks(projectId: string, filters: TaskFilters = {}) {
       const q = new URLSearchParams({ limit: String(LIMIT) });
       if (filters.state) q.set("state", filters.state);
       if (filters.teamRole) q.set("teamRole", filters.teamRole);
-      return apiFetch<{ tasks: ApiTask[] }>(`/projects/${projectId}/tasks?${q}`);
+      return apiFetch<{ tasks: Schemas["Task"][] }>(`/projects/${projectId}/tasks?${q}`);
     },
     select: (data) => data.tasks,
     refetchInterval: 4000,

@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, apiFetch, type RequestBody, type Schemas } from "@/shared/api";
-import type { ApiCreateOrgResult, ApiInvite } from "../model/api";
 
 export const orgKeys = {
   all: ["org"] as const,
@@ -14,7 +13,8 @@ export const orgKeys = {
 export function useCreateOrg() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (body: RequestBody<"/orgs", "post">) => apiFetch<ApiCreateOrgResult>("/orgs", { method: "POST", body }),
+    mutationFn: (body: RequestBody<"/orgs", "post">) =>
+      apiFetch<Schemas["OrgCreated"]>("/orgs", { method: "POST", body }),
     onSuccess: () => queryClient.invalidateQueries(),
     onError: (error) => {
       // 다른 탭에서 이미 합류한 경우. me를 다시 불러 라우팅에 맡긴다
@@ -36,6 +36,6 @@ export function useOrgMembers(orgId: string) {
 export function useCreateInvite(orgId: string) {
   return useMutation({
     mutationFn: (body: RequestBody<"/orgs/{orgId}/invites", "post">) =>
-      apiFetch<ApiInvite>(`/orgs/${orgId}/invites`, { method: "POST", body }),
+      apiFetch<Schemas["InviteCreated"]>(`/orgs/${orgId}/invites`, { method: "POST", body }),
   });
 }

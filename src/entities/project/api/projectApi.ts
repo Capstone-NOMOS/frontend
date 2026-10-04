@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch, type Schemas } from "@/shared/api";
-import type { ApiProjectDetail } from "../model/api";
 
 export const projectKeys = {
   all: ["project"] as const,
@@ -25,6 +24,6 @@ export function useProjects(orgId: string, { pollWhileEmpty = false } = {}) {
 export function useProject(projectId: string) {
   return useQuery({
     queryKey: projectKeys.detail(projectId),
-    queryFn: () => apiFetch<ApiProjectDetail>(`/projects/${projectId}`),
+    queryFn: () => apiFetch<Schemas["ProjectDetail"]>(`/projects/${projectId}`),
   });
 }

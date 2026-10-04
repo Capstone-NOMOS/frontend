@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { apiFetch, clearSession, setSession, type RequestBody, type Schemas } from "@/shared/api";
-import type { ApiConnectKey, ApiSignupResult } from "../model/api";
 
 export const userKeys = {
   all: ["user"] as const,
@@ -21,7 +20,7 @@ export function useMe(enabled = true) {
 export function useSignup() {
   return useMutation({
     mutationFn: (body: RequestBody<"/auth/signup", "post">) =>
-      apiFetch<ApiSignupResult>("/auth/signup", { method: "POST", body, auth: false }),
+      apiFetch<Schemas["SignupResult"]>("/auth/signup", { method: "POST", body, auth: false }),
   });
 }
 
@@ -40,7 +39,7 @@ export function useLogin() {
 
 export function useRotateConnectKey() {
   return useMutation({
-    mutationFn: () => apiFetch<ApiConnectKey>("/me/connect-key/rotate", { method: "POST" }),
+    mutationFn: () => apiFetch<Schemas["ConnectKey"]>("/me/connect-key/rotate", { method: "POST" }),
   });
 }
 

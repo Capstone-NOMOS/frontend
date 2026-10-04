@@ -10,6 +10,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   ORG_NAME_REQUIRED: "조직 이름을 입력해 주세요.",
   INVALID_GLOB_PATTERN: "허용되지 않는 경로 패턴입니다.",
   INVALID_CONNECT_REQUEST: "연결 키가 올바르지 않습니다.",
+  INVALID_DEVICE_CODE: "연결 코드가 올바르지 않습니다. 터미널에서 다시 실행해 주세요.",
 
   // 401
   UNAUTHENTICATED: "로그인이 만료되었습니다. 다시 로그인해 주세요.",
@@ -40,6 +41,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   ARTIFACT_NOT_FOUND: "산출물을 찾을 수 없습니다.",
   PROJECT_NOT_FOUND: "프로젝트를 찾을 수 없습니다.",
   MEMBER_NOT_FOUND: "멤버를 찾을 수 없습니다.",
+  PLAN_NOT_FOUND: "계획을 찾을 수 없습니다.",
   DEVICE_REQUEST_NOT_FOUND: "연결 요청을 찾을 수 없습니다. 코드를 확인하거나 터미널에서 다시 실행해 주세요.",
 
   // 409
@@ -59,6 +61,13 @@ const ERROR_MESSAGES: Record<string, string> = {
   AGENT_ALREADY_ASSIGNED: "이미 배정된 에이전트입니다.",
   AGENT_IN_ANOTHER_PROJECT: "이 에이전트는 다른 진행 중인 프로젝트를 맡고 있습니다.",
   DEVICE_REQUEST_ALREADY_DECIDED: "이미 승인 또는 거부한 연결 요청입니다.",
+  PROJECT_ALREADY_STARTED: "이미 시작된 프로젝트입니다.",
+  PROJECT_NOT_STARTED: "프로젝트가 아직 시작되지 않았습니다.",
+  PROJECT_NOT_OPEN: "끝났거나 정지된 프로젝트에는 명세·태스크를 추가할 수 없습니다.",
+  NOTES_UNACKNOWLEDGED: "확인하지 않은 새 인계 노트가 있습니다.",
+  PM_PLAN_IN_PROGRESS: "PM이 이미 계획을 작성하고 있습니다. 끝난 뒤 다시 요청해 주세요.",
+  PM_BUDGET_EXCEEDED: "PM 예산을 넘어 요청할 수 없습니다.",
+  PLAN_NOT_APPLICABLE: "검토 대기 중인 초안만 적용·수정 요청·반려할 수 있습니다.",
 
   // 410
   INVITE_EXPIRED: "만료된 초대입니다.",
@@ -69,11 +78,15 @@ const ERROR_MESSAGES: Record<string, string> = {
   NOTE_INVALID: "인계 노트 형식이 올바르지 않습니다.",
   INVALID_AUTONOMY_PRESET: "허용 레벨은 L1~L4 중 하나여야 합니다.",
   REPO_OWNERSHIP_NOT_SET: "경로 소유 역할이 지정되지 않은 레포지토리입니다.",
+  // 아래 둘은 details: [{ where, message }]에 이유가 전부 온다. 화면은 details를 목록으로 함께 보여준다
+  PROJECT_START_INVALID: "프로젝트를 시작할 수 없습니다.",
+  PLAN_INVALID: "명세·태스크 검증을 통과하지 못했습니다.",
 
   // 5xx
   INTERNAL_ERROR: "서버에서 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.",
   GITHUB_UNAVAILABLE: "GitHub에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.",
   DB_UNAVAILABLE: "서버가 일시적으로 응답하지 않습니다. 잠시 후 다시 시도해 주세요.",
+  PM_UNAVAILABLE: "서버에 PM이 설정되지 않았습니다.",
 };
 
 /** 맵에 없는 코드는 서버 message를 그대로 보여준다 */

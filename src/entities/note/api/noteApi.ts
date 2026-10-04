@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiFetch } from "@/shared/api";
-import { mergeNotes, type ApiNote } from "../model/api";
+import { apiFetch, type Schemas } from "@/shared/api";
+import { mergeNotes } from "../model/api";
 
 export const noteKeys = {
   all: ["note"] as const,
@@ -19,10 +19,10 @@ export function useNotes(projectId: string) {
   return useQuery({
     queryKey,
     queryFn: async () => {
-      const prev = queryClient.getQueryData<ApiNote[]>(queryKey);
+      const prev = queryClient.getQueryData<Schemas["Note"][]>(queryKey);
       const q = new URLSearchParams({ limit: String(LIMIT) });
       if (prev?.length) q.set("since_seq", String(prev[0].seq));
-      const { notes } = await apiFetch<{ notes: ApiNote[] }>(`/projects/${projectId}/notes?${q}`);
+      const { notes } = await apiFetch<{ notes: Schemas["Note"][] }>(`/projects/${projectId}/notes?${q}`);
       return prev ? mergeNotes(notes, prev) : notes;
     },
     refetchInterval: 4000,

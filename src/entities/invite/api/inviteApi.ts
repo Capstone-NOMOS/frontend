@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch, type Schemas } from "@/shared/api";
-import type { ApiAcceptInviteResult } from "../model/api";
 
 export const inviteKeys = {
   all: ["invite"] as const,
@@ -24,7 +23,7 @@ export function useAcceptInvite(token: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () =>
-      apiFetch<ApiAcceptInviteResult>(`/invites/${encodeURIComponent(token)}/accept`, { method: "POST" }),
+      apiFetch<Schemas["InviteAccepted"]>(`/invites/${encodeURIComponent(token)}/accept`, { method: "POST" }),
     onSuccess: () => queryClient.invalidateQueries(),
   });
 }
