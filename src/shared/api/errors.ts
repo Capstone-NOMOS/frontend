@@ -94,3 +94,20 @@ export function errorMessage(error: unknown): string {
   if (error instanceof ApiError) return ERROR_MESSAGES[error.code] ?? error.message;
   return "알 수 없는 오류가 발생했습니다.";
 }
+
+export interface ErrorDetail {
+  where: string;
+  message: string;
+}
+
+/**
+ * 422 PROJECT_START_INVALID·PLAN_INVALID의 details: [{ where, message }].
+ * message는 서버가 한국어로 준다 — 그대로 보여준다. 형식이 다르면 빈 배열
+ */
+export function errorDetails(error: unknown): ErrorDetail[] {
+  if (!(error instanceof ApiError) || !Array.isArray(error.details)) return [];
+  return error.details.filter(
+    (d): d is ErrorDetail =>
+      typeof d === "object" && d !== null && typeof d.where === "string" && typeof d.message === "string",
+  );
+}

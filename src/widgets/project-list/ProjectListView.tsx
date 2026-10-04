@@ -5,7 +5,7 @@ import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, CalendarDays, Loader2, Plus } from "lucide-react";
 import { ApiError, errorMessage } from "@/shared/api";
-import { Badge, Button, Logo, MockBadge } from "@/shared/ui";
+import { Badge, Button, Logo } from "@/shared/ui";
 import { useOrgAgents } from "@/entities/agent";
 import { LEVELS } from "@/entities/policy";
 import { ProjectStatusBadge, fmtUsd, useProjects } from "@/entities/project";
@@ -68,7 +68,7 @@ export function ProjectListView() {
           </div>
           {isRep && (
             <Button href="/projects/new" size="md">
-              <Plus size={15} /> 새 프로젝트 <MockBadge />
+              <Plus size={15} /> 새 프로젝트
             </Button>
           )}
         </div>

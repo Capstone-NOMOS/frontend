@@ -64,12 +64,24 @@ export const POLICY_TABLE: PolicyRow[] = [
   row(17, "deploy", "배포", "도구 미존재", ["FORBIDDEN", "FORBIDDEN", "FORBIDDEN", "FORBIDDEN"], true),
 ];
 
-export const LEVELS: { id: Level; title: string; blurb: string; detail: string }[] = [
-  { id: "L1", title: "전부 확인", blurb: "온보딩 첫 주", detail: "제출·패키지·삭제까지 사람이 승인" },
-  { id: "L2", title: "위험한 것만", blurb: "기본값", detail: "계약·DB·CI만 사람, 나머지는 PM 반려 가능" },
-  { id: "L3", title: "경계만", blurb: "익숙한 팀", detail: "계약 변경은 PM 검토, DB·CI는 사람" },
-  { id: "L4", title: "결과만", blurb: "신뢰하는 팀", detail: "main 머지·예산 외에는 자동" },
+export const LEVELS: { id: Level; title: string; blurb: string }[] = [
+  { id: "L1", title: "전부 확인", blurb: "온보딩 첫 주" },
+  { id: "L2", title: "위험한 것만", blurb: "기본값" },
+  { id: "L3", title: "경계만", blurb: "익숙한 팀" },
+  { id: "L4", title: "결과만", blurb: "신뢰하는 팀" },
 ];
+
+/**
+ * 레벨 설명은 손으로 쓰지 않고 정책표에서 만든다 (손 문구가 표와 어긋났던 적이 있다).
+ * 🔒 행은 레벨과 무관하므로 뺀다
+ */
+export function levelGates(level: Level) {
+  const open = POLICY_TABLE.filter((r) => !r.locked);
+  return {
+    human: open.filter((r) => r.deciders[level] === "HUMAN").map((r) => r.label),
+    review: open.filter((r) => r.deciders[level] === "PM_REVIEW").map((r) => r.label),
+  };
+}
 
 export const DECIDER_META: Record<Decider, { label: string; desc: string; cls: string }> = {
   AUTO: { label: "AUTO", desc: "서버 코드가 판정", cls: "bg-auto-bg text-auto" },
