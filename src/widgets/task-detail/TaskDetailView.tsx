@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { ArrowLeft, GitBranch, Loader2 } from "lucide-react";
-import { errorMessage } from "@/shared/api";
+import { errorMessage, type Schemas } from "@/shared/api";
 import { Badge, EmptyState, SectionTitle } from "@/shared/ui";
 import { cn, fmtDateTime } from "@/shared/lib/format";
 import {
@@ -12,7 +12,6 @@ import {
   VerificationBadge,
   useArtifacts,
   useVerifications,
-  type ApiArtifact,
 } from "@/entities/artifact";
 import { NoteItem, useNotes } from "@/entities/note";
 import { ProjectErrorView } from "@/entities/project";
@@ -140,7 +139,7 @@ function Submissions({ taskId }: { taskId: string }) {
   );
 }
 
-function Verifications({ artifact }: { artifact: ApiArtifact }) {
+function Verifications({ artifact }: { artifact: Schemas["Artifact"] }) {
   const verifications = useVerifications(artifact.id);
 
   if (verifications.isPending) return <Spinner />;
@@ -162,7 +161,10 @@ function Verifications({ artifact }: { artifact: ApiArtifact }) {
                 {v.durationMs !== null && ` · ${v.durationMs}ms`}
               </span>
             </div>
-            {v.detail.reason && <p className="mt-1 pl-26 text-[12.5px] text-ink-600">{v.detail.reason}</p>}
+            {/* detail은 단계마다 형식이 다르다. SKIPPED면 reason(문자열)이 반드시 있다 */}
+            {typeof v.detail.reason === "string" && (
+              <p className="mt-1 pl-26 text-[12.5px] text-ink-600">{v.detail.reason}</p>
+            )}
           </li>
         ))}
         {missing.map((stage) => (
@@ -189,6 +191,11 @@ function Verifications({ artifact }: { artifact: ApiArtifact }) {
 function TaskNotes({ projectId, taskId }: { projectId: string; taskId: string }) {
   const notes = useNotes(projectId);
   const mine = notes.data?.filter((n) => n.taskId === taskId) ?? [];
+  // 다른 태스크에서 나온 결정 사항도 이 태스크에 전달된다 (BE #26 §4). 정정된 원본은 뺀다
+  const decided =
+    notes.data?.filter(
+      (n) => n.kind === "DECIDED" && n.taskId !== taskId && !notes.data.some((m) => m.supersedes === n.id),
+    ) ?? [];
 
   return (
     <section className="card mt-6 p-4">
@@ -207,6 +214,20 @@ function TaskNotes({ projectId, taskId }: { projectId: string; taskId: string })
             </li>
           ))}
         </ol>
+      )}
+      {decided.length > 0 && (
+        <>
+          <div className="mb-1 mt-5 text-[12px] font-semibold text-ink-500">
+            프로젝트 결정 사항 · 이 태스크에도 전달됨
+          </div>
+          <ol className="divide-y divide-ink-100">
+            {decided.map((n) => (
+              <li key={n.id} className="py-3">
+                <NoteItem note={n} notes={notes.data!} />
+              </li>
+            ))}
+          </ol>
+        </>
       )}
     </section>
   );

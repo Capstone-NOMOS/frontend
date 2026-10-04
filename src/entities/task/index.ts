@@ -1,6 +1,6 @@
 export type { Task, TaskState } from "./model/types";
 export { TASK_META, TaskBadge } from "./ui/TaskBadge";
-export type { ApiTask, ApiTaskState, TaskFilters } from "./model/api";
+export type { ApiTaskState, TaskFilters } from "./model/api";
 export { TASK_BOARD } from "./model/board";
 export { taskKeys, useTasks } from "./api/taskApi";
 export { API_TASK_META, ApiTaskBadge } from "./ui/ApiTaskBadge";

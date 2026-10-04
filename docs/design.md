@@ -69,7 +69,13 @@ API에 연결된 화면은 서버 상태 8종을 `API_TASK_META` / `ApiTaskBadge
 
 `PASS` → success / `FAIL` → danger / `SKIPPED` → **neutral**. SKIPPED는 "못 돌렸다"이지 통과가 아니다. PASS와 같은 색을 쓰지 말고 `detail.reason`을 함께 보여줄 것.
 
-산출물의 `gateMode`(`AUTO` `PM_REVIEW` `HUMAN`)는 decider 색을 그대로 쓴다 (success / info / warn).
+산출물의 `gateMode`(`AUTO` `PM_REVIEW` `HUMAN` `FORBIDDEN`)는 decider 색을 그대로 쓴다 (success / info / warn / danger).
+
+## 인계 노트
+
+`kind`: `IMPLEMENTED` → success / `DECIDED` → brand / `GOTCHA` → warn / `DEVIATION` → danger.
+
+`DECIDED`(결정 사항)는 프로젝트의 모든 태스크에 전달되므로 행 전체를 brand-50 배경 + brand-500 왼쪽 선으로 강조한다. 다른 kind는 강조하지 않는다.
 
 ## 조직 멤버 배지
 

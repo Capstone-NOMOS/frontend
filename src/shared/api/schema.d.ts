@@ -1303,7 +1303,8 @@ export interface paths {
                      * @example {
                      *       "repos": [
                      *         {
-                     *           "fullName": "acme/extra-repo"
+                     *           "fullName": "acme/extra-repo",
+                     *           "ownerRole": "BACKEND"
                      *         }
                      *       ]
                      *     }
@@ -1313,6 +1314,12 @@ export interface paths {
                             fullName: string;
                             githubRepoId?: number;
                             defaultBranch?: string;
+                            /**
+                             * @description 주면 연결과 함께 `**` 행(레포 전체)의 소유 역할을 지정한다 — `GET …/paths` → `PATCH …/paths/{pathId}`를 대신한다.
+                             *     **대표 전용**: 대표가 아닌데 하나라도 있으면 아무것도 연결하지 않고 403 `NOT_REPRESENTATIVE`.
+                             * @enum {string}
+                             */
+                            ownerRole?: "FRONTEND" | "BACKEND";
                         }[];
                     };
                 };
@@ -1331,7 +1338,8 @@ export interface paths {
                          *           {
                          *             "id": "2ea71bc6-05b8-4725-9fa0-2b2eec9d3674",
                          *             "fullName": "acme/extra-repo",
-                         *             "seededPathCount": 15
+                         *             "seededPathCount": 15,
+                         *             "rootOwnerRole": "BACKEND"
                          *           }
                          *         ]
                          *       }
@@ -2142,6 +2150,62 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/agents/me/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 지금 가져갈 수 있는 태스크 (에이전트)
+         * @description 이 에이전트가 **지금** 가져갈 수 있는 태스크 — 프로젝트가 시작됐고, READY이고, 담당이 없고, 자기 역할(또는 역할 제한 없음)이고,
+         *     선행 태스크가 전부 DONE인 것. `claim`이 거부할 것은 처음부터 빠져 있다.
+         *
+         *     **보통은 웹소켓으로 받는다.** `GET /api/agents/stream`(upgrade)에 연결해 첫 메시지로 `{ "type": "auth", "token": "<에이전트 access token>" }`을 보내면,
+         *     서버가 `{ "type": "ready" }` 뒤에 이 목록과 같은 스냅샷 `{ "type": "tasks", "projectId", "tasks": [...] }`을 연결 직후와
+         *     프로젝트 상태가 바뀔 때마다(시작·적용·수령·검증 결론) 보낸다. 닫는 코드: 4401 인증 실패(재발급 후 다시 연결) · 4403 프로젝트 멤버 아님 · 4400 잘못된 메시지 · 4408 인증 시간 초과.
+         *     이 HTTP 엔드포인트는 연결이 끊겼을 때 같은 목록을 읽는 안전망이다.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 지금 가져갈 수 있는 태스크(생성 순) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "data": {
+                         *         "tasks": []
+                         *       }
+                         *     }
+                         */
+                        "application/json": {
+                            data: {
+                                tasks: components["schemas"]["Task"][];
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tasks/{taskId}/claim": {
         parameters: {
             query?: never;
@@ -2306,6 +2370,11 @@ export interface paths {
          *     나중에 정책표나 경로 규칙이 바뀌어도 "그때 무엇에 걸렸나"가 남아야 리플레이가 성립한다.
          *
          *     `changedPaths`에 `migrations/010_x.sql`을 섞으면 `db:migration`이 걸려 L2에서 `gateMode=HUMAN`이 된다.
+         *
+         *     **인계 노트 확인**: 이 태스크와 관련된 노트(브리핑과 같은 선택 — 같은 기능·선행 전체·`DECIDED`·영향 경로, 자기가 쓴 노트 제외)를
+         *     전부 `acknowledgedNoteIds`에 넣어야 받는다. 브리핑으로 받은 노트는 브릿지가 자동으로 넣으므로, 실제로 반려되는 건 **브리핑 뒤에 새 노트가
+         *     생겼을 때**다 — 409 `NOTES_UNACKNOWLEDGED`, `details`에 노트 전문. 산출물은 만들지 않고 태스크는 그대로라 고쳐서 다시 낸다.
+         *     재시도 횟수는 오르지 않는다(이벤트 `NOTES_ACK_REQUIRED`).
          */
         post: {
             parameters: {
@@ -2322,6 +2391,8 @@ export interface paths {
                     "application/json": {
                         commitSha: string;
                         changedPaths: string[];
+                        /** @description 확인한 인계 노트 id */
+                        acknowledgedNoteIds?: string[];
                     };
                 };
             };
@@ -2397,20 +2468,12 @@ export interface paths {
                         "application/json": unknown;
                     };
                 };
-                /** @description CLAIMED·IN_PROGRESS가 아닌 상태 */
+                /** @description CLAIMED·IN_PROGRESS가 아닌 상태, 또는 확인하지 않은 인계 노트가 있다 */
                 409: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        /**
-                         * @example {
-                         *       "error": {
-                         *         "code": "TASK_STATE_INVALID",
-                         *         "message": "cannot submit while task is VERIFYING"
-                         *       }
-                         *     }
-                         */
                         "application/json": unknown;
                     };
                 };
@@ -2998,6 +3061,118 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{projectId}/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 프로젝트 시작 G1 (대표 전용)
+         * @description **이 순간부터 실행이 시작된다.** 시작 전에는 에이전트가 태스크를 가져갈 수 없고(`claim` → 409 `PROJECT_NOT_STARTED`),
+         *     시작하면 서버가 역할별 담당 에이전트에게 지금 가져갈 수 있는 태스크를 보낸다(웹소켓 `/api/agents/stream`, `GET /agents/me/tasks` 참고).
+         *
+         *     시작할 수 있는가 — 위반은 전부 모아 422 `PROJECT_START_INVALID`(`details: [{ where, message }]`):
+         *     - 태스크가 하나 이상 있다(PM 계획을 적용하거나 태스크를 만든 뒤).
+         *     - 끝나지 않은 태스크가 요구하는 **역할마다 배정된 에이전트가 있다.** 시작 뒤에는 멤버를 바꿀 수 없으므로 여기서 막는다.
+         *
+         *     시작하면: `planning → active`, `startedAt`. 시작 시점의 명세·적용된 계획에 승인 시각(잠김). 멤버 고정(배정·해제 403).
+         *     이미 시작했으면 409 `PROJECT_ALREADY_STARTED`.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @example {{PROJECT_ID}} */
+                    projectId: components["parameters"]["ProjectId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 시작됨 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "data": {
+                         *         "project": {
+                         *           "id": "{{PROJECT_ID}}",
+                         *           "status": "active",
+                         *           "startedAt": "2026-10-02T01:00:00.000Z"
+                         *         },
+                         *         "repos": [],
+                         *         "members": [
+                         *           {
+                         *             "agentId": "3f0e0d6a-8a2b-4c1f-9e7d-2b3c4d5e6f70",
+                         *             "agentName": "be-laptop",
+                         *             "teamRole": "BACKEND",
+                         *             "userId": "6c1d2e3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f"
+                         *           }
+                         *         ]
+                         *       }
+                         *     }
+                         */
+                        "application/json": {
+                            data: components["schemas"]["ProjectDetail"];
+                        };
+                    };
+                };
+                /** @description 이미 시작했다 */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "PROJECT_ALREADY_STARTED",
+                         *         "message": "project started at 2026-10-02T01:00:00.000Z"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+                /** @description 시작할 수 없다(태스크 없음·역할 공백) */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "PROJECT_START_INVALID",
+                         *         "message": "project cannot start: 1 problem(s)",
+                         *         "details": [
+                         *           {
+                         *             "where": "members.FRONTEND",
+                         *             "message": "FRONTEND 역할의 태스크가 있는데 배정된 에이전트가 없다 — 시작하면 멤버를 바꿀 수 없으니 먼저 배정한다"
+                         *           }
+                         *         ]
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{projectId}/members": {
         parameters: {
             query?: never;
@@ -3233,6 +3408,847 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{projectId}/pm/plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** PM 계획 요청 이력 (대표 전용) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @example {{PROJECT_ID}} */
+                    projectId: components["parameters"]["ProjectId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 최근 요청 순 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "data": {
+                         *         "plans": []
+                         *       }
+                         *     }
+                         */
+                        "application/json": {
+                            data: {
+                                plans: components["schemas"]["PmPlan"][];
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * 계획 초안 요청 (대표 전용)
+         * @description 대표의 지시로 PM(NOMOS 내장)이 명세(API·화면 계약 + 수용 기준)와 태스크 DAG(어느 레포·어느 역할이 무엇을 어떤 순서로) 초안을 만든다.
+         *     **202로 바로 답하고 PM은 뒤에서 돈다**(수십 초~수 분). `GET .../pm/plans/{planId}`를 몇 초 간격으로 폴링해 `ready`·`failed`를 본다.
+         *
+         *     - 프로젝트당 진행 중인 요청은 하나(409 `PM_PLAN_IN_PROGRESS`)
+         *     - 호출 전에 "누적 PM 비용 + 이번 호출의 최대치 > PM 예산"이면 409 `PM_BUDGET_EXCEEDED` —
+         *       설계상 예산 초과는 대표 승인 카드가 떠야 하지만 **승인 경로 미구현**이라 거절만 한다
+         *     - 서버에 PM 키가 없으면 503 `PM_UNAVAILABLE`
+         *     - 초안은 명세·태스크 생성과 같은 코드 검증을 거친다. 틀리면 PM이 **한 번만** 고치고, 그래도 틀리면 `failed(invalid)`
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @example {{PROJECT_ID}} */
+                    projectId: components["parameters"]["ProjectId"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    /**
+                     * @example {
+                     *       "instruction": "3주 안에 사내 스터디 관리 웹앱. 회원가입, 스터디 개설, 참여신청, 출석체크. 모바일 대응 필수."
+                     *     }
+                     */
+                    "application/json": {
+                        instruction: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 접수됨(status=pending) */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "data": {
+                         *         "id": "1b2c3d4e-5f60-4a1b-8c2d-3e4f5a6b7c8d",
+                         *         "projectId": "{{PROJECT_ID}}",
+                         *         "status": "pending",
+                         *         "instruction": "3주 안에 …",
+                         *         "feedback": null,
+                         *         "parentPlanId": null,
+                         *         "mode": null,
+                         *         "draft": null,
+                         *         "error": null,
+                         *         "costUsd": 0,
+                         *         "createdAt": "2026-09-30T02:00:00.000Z",
+                         *         "appliedAt": null,
+                         *         "rejectedAt": null,
+                         *         "rejectReason": null,
+                         *         "assignments": []
+                         *       }
+                         *     }
+                         */
+                        "application/json": {
+                            data: components["schemas"]["PmPlan"];
+                        };
+                    };
+                };
+                /** @description 진행 중인 요청 있음 · 예산 초과 · 끝난 프로젝트 */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": unknown;
+                    };
+                };
+                /** @description 서버에 PM 키(ANTHROPIC_API_KEY)가 없다 */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "PM_UNAVAILABLE",
+                         *         "message": "the built-in PM is not configured on this server (ANTHROPIC_API_KEY)"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{projectId}/pm/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * PM 준비 상태 (대표 전용)
+         * @description "계획 받기" 버튼을 켜기 전에 본다. **요청 자체를 막지는 않는다.**
+         *     - `ready: false`, `reason: NO_API_KEY` — API 모드인데 서버에 키가 없다. 요청하면 503.
+         *     - `ready: false`, `reason: WORKER_OFFLINE` — 중계 모드인데 대표 노트북의 pm-worker가 30초 넘게 작업을 확인하지 않았다(꺼져 있다).
+         *       요청하면 받아지지만 아무도 가져가지 않아 `PM_TIMEOUT_MS`(기본 10분) 뒤 `failed(timeout)`이 된다.
+         *       pm-worker는 3초마다 확인하므로 켜면 몇 초 안에 `ready: true`가 된다.
+         *     - `pendingPlanId`가 있으면 작성 중인 계획이 있어 새 요청은 409다.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @example {{PROJECT_ID}} */
+                    projectId: components["parameters"]["ProjectId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 상태 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "data": {
+                         *         "provider": "relay",
+                         *         "ready": false,
+                         *         "reason": "WORKER_OFFLINE",
+                         *         "workerLastSeenAt": null,
+                         *         "budgetUsd": 5,
+                         *         "spentUsd": 0.1077,
+                         *         "pendingPlanId": null
+                         *       }
+                         *     }
+                         */
+                        "application/json": {
+                            data: {
+                                /** @enum {string} */
+                                provider: "api" | "relay";
+                                ready: boolean;
+                                /** @enum {string|null} */
+                                reason: "NO_API_KEY" | "WORKER_OFFLINE" | null;
+                                /**
+                                 * Format: date-time
+                                 * @description 중계 모드에서 pm-worker가 마지막으로 작업을 확인한 시각
+                                 */
+                                workerLastSeenAt: string | null;
+                                budgetUsd: number;
+                                spentUsd: number;
+                                /** Format: uuid */
+                                pendingPlanId: string | null;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{projectId}/pm/plans/{planId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 계획 상태·초안 (대표 전용)
+         * @description `pending`이면 작성 중이다. `ready`면 `draft`를 검토한다 — 명세의 계약과 태스크별 담당 역할·선행 관계.
+         *     `failed`면 `error.reason`으로 이유를 보여준다.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @example {{PROJECT_ID}} */
+                    projectId: components["parameters"]["ProjectId"];
+                    planId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 계획 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "data": {
+                         *         "id": "1b2c3d4e-5f60-4a1b-8c2d-3e4f5a6b7c8d",
+                         *         "projectId": "{{PROJECT_ID}}",
+                         *         "status": "ready",
+                         *         "instruction": "3주 안에 …",
+                         *         "feedback": null,
+                         *         "parentPlanId": null,
+                         *         "mode": "SEQUENTIAL",
+                         *         "draft": {
+                         *           "mode": "SEQUENTIAL",
+                         *           "rationale": "요구사항이 작고 명확하다",
+                         *           "estimate": {
+                         *             "workingDays": 10,
+                         *             "notes": ""
+                         *           },
+                         *           "specs": [],
+                         *           "tasks": []
+                         *         },
+                         *         "error": null,
+                         *         "costUsd": 0.4213,
+                         *         "createdAt": "2026-09-30T02:00:00.000Z",
+                         *         "appliedAt": null,
+                         *         "rejectedAt": null,
+                         *         "rejectReason": null,
+                         *         "assignments": []
+                         *       }
+                         *     }
+                         */
+                        "application/json": {
+                            data: components["schemas"]["PmPlan"];
+                        };
+                    };
+                };
+                /** @description 없는 계획 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "PLAN_NOT_FOUND",
+                         *         "message": "plan not found"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{projectId}/pm/plans/{planId}/revise": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 수정 요청 (대표 전용)
+         * @description `ready`인 초안에 피드백을 붙여 새 초안을 요청한다(이전 초안 + 피드백으로 새로 쓴다). 새 계획이 pending으로 생기고
+         *     이전 초안은 그대로 남는다. 한 수정 체인에서는 하나만 적용할 수 있다.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @example {{PROJECT_ID}} */
+                    projectId: components["parameters"]["ProjectId"];
+                    planId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    /**
+                     * @example {
+                     *       "feedback": "출석체크는 다음 단계로 미루고, 스터디 개설에 정원 설정을 넣어줘"
+                     *     }
+                     */
+                    "application/json": {
+                        feedback: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 새 초안 접수됨(status=pending) */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "data": {
+                         *         "id": "2c3d4e5f-6071-4b2c-9d3e-4f5a6b7c8d9e",
+                         *         "projectId": "{{PROJECT_ID}}",
+                         *         "status": "pending",
+                         *         "instruction": "3주 안에 …",
+                         *         "feedback": "출석체크는 다음 단계로",
+                         *         "parentPlanId": "1b2c3d4e-5f60-4a1b-8c2d-3e4f5a6b7c8d",
+                         *         "mode": null,
+                         *         "draft": null,
+                         *         "error": null,
+                         *         "costUsd": 0,
+                         *         "createdAt": "2026-09-30T02:05:00.000Z",
+                         *         "appliedAt": null,
+                         *         "rejectedAt": null,
+                         *         "rejectReason": null,
+                         *         "assignments": []
+                         *       }
+                         *     }
+                         */
+                        "application/json": {
+                            data: components["schemas"]["PmPlan"];
+                        };
+                    };
+                };
+                /** @description ready가 아닌 초안 */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "PLAN_NOT_APPLICABLE",
+                         *         "message": "only a ready plan can be revised"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{projectId}/pm/plans/{planId}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 초안 적용 (대표 전용)
+         * @description 저장된 초안을 **그대로** 명세·태스크로 만든다(명세·태스크 생성과 같은 검증·잠금, `source: pm`). 시험지는 만들지 않는다.
+         *     태스크는 READY라 배정된 에이전트가 바로 수령할 수 있다. **G1(프로젝트 시작)이 아니다** — 프로젝트 상태는 그대로다.
+         *
+         *     - 두 번 적용하거나 같은 수정 체인의 다른 초안을 적용하면 409 `PLAN_NOT_APPLICABLE`
+         *     - 초안 뒤에 상황이 바뀌어 검증에 걸리면 422 `PLAN_INVALID` — 아무것도 만들지 않고 계획은 `ready`로 남는다. 수정 요청으로 이어가면 된다
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @example {{PROJECT_ID}} */
+                    projectId: components["parameters"]["ProjectId"];
+                    planId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 적용됨(status=applied) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "data": {
+                         *         "id": "1b2c3d4e-5f60-4a1b-8c2d-3e4f5a6b7c8d",
+                         *         "projectId": "{{PROJECT_ID}}",
+                         *         "status": "applied",
+                         *         "instruction": "3주 안에 …",
+                         *         "feedback": null,
+                         *         "parentPlanId": null,
+                         *         "mode": "SEQUENTIAL",
+                         *         "draft": null,
+                         *         "error": null,
+                         *         "costUsd": 0.4213,
+                         *         "createdAt": "2026-09-30T02:00:00.000Z",
+                         *         "appliedAt": "2026-09-30T02:10:00.000Z",
+                         *         "rejectedAt": null,
+                         *         "rejectReason": null,
+                         *         "assignments": []
+                         *       }
+                         *     }
+                         */
+                        "application/json": {
+                            data: components["schemas"]["PmPlan"];
+                        };
+                    };
+                };
+                /** @description 적용할 수 없는 상태 */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "PLAN_NOT_APPLICABLE",
+                         *         "message": "another plan in this revision chain has already been applied"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+                /** @description 초안 이후 상황이 바뀌어 검증 실패(계획은 ready로 남는다) */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "PLAN_INVALID",
+                         *         "message": "명세·태스크 검증 실패 1건",
+                         *         "details": [
+                         *           {
+                         *             "where": "tasks[api]",
+                         *             "message": "태스크 \"T-1\"이 프로젝트에 이미 있다 (다시 보낸 건 아닌가?)"
+                         *           }
+                         *         ]
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pm/jobs/next": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * (중계 모드) 다음 PM 작업 가져가기 — 대표의 pm-worker 전용
+         * @description **서버가 `PM_PROVIDER=relay`일 때만 쓴다.** 결제 전까지 PM의 모델 호출을 대표 노트북의 Claude Code로 대신 돌리는 임시 방식이다 —
+         *     `npm run executor pm-worker`가 몇 초마다 부른다. 사람이 직접 부를 일은 없다.
+         *     API 모드(`PM_PROVIDER=api`, 기본)에서는 409 `PM_RELAY_DISABLED`.
+         *
+         *     조직 **대표 본인의** 에이전트만 가져간다(그 밖은 403 `NOT_REPRESENTATIVE`). 한 번 가져간 작업은 다시 나오지 않고, 없으면 `job: null`.
+         *     아무도 가져가지 않으면 `PM_TIMEOUT_MS` 뒤 계획이 `failed(timeout)`가 된다.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 작업(없으면 null) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "data": {
+                         *         "job": null
+                         *       }
+                         *     }
+                         */
+                        "application/json": {
+                            data: {
+                                job: components["schemas"]["PmRelayJob"];
+                            };
+                        };
+                    };
+                };
+                /** @description 서버가 API 모드다 */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "PM_RELAY_DISABLED",
+                         *         "message": "this server calls the model API directly (PM_PROVIDER=api); no pm-worker is needed"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pm/jobs/{jobId}/result": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * (중계 모드) PM 작업 결과 제출 — 대표의 pm-worker 전용
+         * @description 모델이 낸 텍스트를 **그대로** 돌려준다. 해석·검증·교정·비용 기록은 API 모드와 똑같이 서버가 한다 —
+         *     결과는 `GET /projects/{projectId}/pm/plans/{planId}`의 `draft`로 보인다.
+         *     가져간 에이전트가 아니거나 이미 끝난(시간 제한·재시작) 작업이면 404 `PM_JOB_NOT_FOUND`.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    jobId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @description refusal·max_tokens면 서버가 refused·truncated로 닫는다 */
+                        stopReason: string | null;
+                        servedModel: string | null;
+                        /** @description 모델 출력(JSON 텍스트) 그대로 */
+                        text: string;
+                        usage: {
+                            inputTokens: number;
+                            outputTokens: number;
+                            cacheWriteTokens: number;
+                            cacheReadTokens: number;
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description 받음 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "data": {
+                         *         "accepted": true
+                         *       }
+                         *     }
+                         */
+                        "application/json": components["schemas"]["PmRelayAccepted"];
+                    };
+                };
+                /** @description 없는 작업 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "PM_JOB_NOT_FOUND",
+                         *         "message": "relay job not found (finished, timed out, or the server restarted)"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pm/jobs/{jobId}/failure": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * (중계 모드) PM 작업 실패 보고 — 대표의 pm-worker 전용
+         * @description 노트북에서 claude 실행이 실패했다(로그인 안 됨·실행 오류 등). 시간 제한까지 기다리지 않고 계획을 `failed(api_error)`로 닫는다.
+         *     `message`는 `error.detail.message`에 남는다.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    jobId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        message: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 받음 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "data": {
+                         *         "accepted": true
+                         *       }
+                         *     }
+                         */
+                        "application/json": components["schemas"]["PmRelayAccepted"];
+                    };
+                };
+                /** @description 없는 작업 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "PM_JOB_NOT_FOUND",
+                         *         "message": "relay job not found (finished, timed out, or the server restarted)"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{projectId}/pm/plans/{planId}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 초안 반려 (대표 전용)
+         * @description `ready` 초안을 버린다(`rejected`). **다시 받지 않고 닫는 것**이다 — 고쳐서 다시 받으려면 `revise`(수정 요청)를 쓴다.
+         *     반려한 초안은 적용·수정 요청할 수 없다(409). 본문은 없어도 된다(사유는 선택, 1000자 이하).
+         *     `ready`가 아니면(작성 중·실패·이미 적용·이미 반려) 409 `PLAN_NOT_APPLICABLE`.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @example {{PROJECT_ID}} */
+                    projectId: components["parameters"]["ProjectId"];
+                    planId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    /**
+                     * @example {
+                     *       "reason": "출석은 이번 범위가 아니다"
+                     *     }
+                     */
+                    "application/json": {
+                        reason?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 반려됨(status=rejected) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "data": {
+                         *         "id": "1b2c3d4e-5f60-4a1b-8c2d-3e4f5a6b7c8d",
+                         *         "projectId": "{{PROJECT_ID}}",
+                         *         "status": "rejected",
+                         *         "instruction": "3주 안에 …",
+                         *         "feedback": null,
+                         *         "parentPlanId": null,
+                         *         "mode": "SEQUENTIAL",
+                         *         "draft": null,
+                         *         "error": null,
+                         *         "costUsd": 0.115,
+                         *         "createdAt": "2026-09-30T02:00:00.000Z",
+                         *         "appliedAt": null,
+                         *         "rejectedAt": "2026-09-30T02:10:00.000Z",
+                         *         "rejectReason": "출석은 이번 범위가 아니다",
+                         *         "assignments": []
+                         *       }
+                         *     }
+                         */
+                        "application/json": {
+                            data: components["schemas"]["PmPlan"];
+                        };
+                    };
+                };
+                /** @description ready가 아니다 */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "PLAN_NOT_APPLICABLE",
+                         *         "message": "only a ready plan can be rejected (this one is applied)"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -3719,7 +4735,8 @@ export interface paths {
                          *           "id": "{{REPO_API}}",
                          *           "fullName": "acme/study-api",
                          *           "defaultBranch": "main",
-                         *           "devBranch": "dev"
+                         *           "devBranch": "dev",
+                         *           "cloneUrl": null
                          *         },
                          *         "spec": {
                          *           "featureKey": "F-03",
@@ -4273,6 +5290,11 @@ export interface components {
             id: string;
             fullName: string;
             seededPathCount: number;
+            /**
+             * @description `**` 행의 소유 역할. 연결 때 ownerRole을 주지 않았으면 null(나중에 PATCH로 지정)
+             * @enum {string|null}
+             */
+            rootOwnerRole: "FRONTEND" | "BACKEND" | null;
         };
         RepoSettings: {
             /** Format: uuid */
@@ -4521,6 +5543,145 @@ export interface components {
             title: string;
             content: string;
         };
+        /** @description PM이 낸 계획 초안. 적용하면 이 내용이 그대로 명세·태스크가 된다. PM은 시험지를 쓰지 않는다(명세에 시험지 0개 — V2는 SKIPPED) */
+        PlanDraft: {
+            /**
+             * @description 추천 진행 방식(기록용 — 실행 순서는 dependsOn이 정한다)
+             * @enum {string}
+             */
+            mode: "SEQUENTIAL" | "CONTRACT_PARALLEL" | "HYBRID";
+            rationale: string;
+            estimate: {
+                workingDays: number;
+                notes: string;
+            };
+            specs: {
+                featureKey: string;
+                title: string;
+                /** @description 계약(API: 메서드·경로·상태코드·응답 필드 / 화면: 경로·동작·문구) + EARS 수용 기준 */
+                content: string;
+            }[];
+            tasks: {
+                /** @description 이 초안 안에서만 쓰는 이름(선행 관계용) */
+                ref: string;
+                title: string;
+                /** @description 레포 fullName */
+                repo: string;
+                /** @enum {string|null} */
+                teamRole: "FRONTEND" | "BACKEND" | null;
+                /** @enum {string} */
+                kind: "IMPLEMENT" | "INTEGRATION" | "REWORK";
+                /** @description 명세 featureKey */
+                spec: string | null;
+                /** @description 먼저 끝나야 하는 태스크의 ref */
+                dependsOn: string[];
+            }[];
+        };
+        /** @description 중계 모드에서 pm-worker가 실행할 모델 호출 한 건. 서버가 만든 지침·프롬프트·출력 스키마를 그대로 실행한다 */
+        PmRelayJob: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            orgId: string;
+            /** Format: uuid */
+            planId: string;
+            /**
+             * @description repair면 첫 초안이 검증에 걸려 위반 목록을 붙여 다시 쓰는 호출
+             * @enum {string}
+             */
+            purpose: "draft" | "repair";
+            request: {
+                model: string;
+                effort: string;
+                maxTokens: number;
+                /** @description PM 지침 */
+                system: string;
+                /** @description 프로젝트 맥락·지시(교정이면 위반 목록) */
+                user: string;
+                /** @description 초안 출력 스키마 */
+                jsonSchema: {
+                    [key: string]: unknown;
+                };
+            };
+            /**
+             * Format: uuid
+             * @description 가져간 에이전트
+             */
+            takenBy: string | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        PmRelayAccepted: {
+            data: {
+                /** @enum {boolean} */
+                accepted: true;
+            };
+        };
+        PmPlan: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            projectId: string;
+            /**
+             * @description pending이면 PM이 작성 중 — 몇 초 뒤 다시 조회한다. ready에서 적용하면 applied, 반려하면 rejected
+             * @enum {string}
+             */
+            status: "pending" | "ready" | "failed" | "applied" | "rejected";
+            instruction: string | null;
+            /** @description 수정 요청이면 대표의 피드백 */
+            feedback: string | null;
+            /**
+             * Format: uuid
+             * @description 수정 요청이면 이전 초안
+             */
+            parentPlanId: string | null;
+            mode: string | null;
+            draft: components["schemas"]["PlanDraft"];
+            error: {
+                /**
+                 * @description refused 안전 거절 · truncated 출력 한도 부족 · timeout 시간 제한 · invalid 교정 후에도 검증 실패 · restart 서버 재시작 · budget 예산 · api_error API 오류
+                 * @enum {string}
+                 */
+                reason: "refused" | "truncated" | "timeout" | "invalid" | "restart" | "budget" | "api_error";
+                /** @description 사유별 상세(invalid면 problems 목록) */
+                detail: unknown;
+            } | null;
+            /** @description 이 계획에 든 PM 호출 비용 합계(USD) */
+            costUsd: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            appliedAt: string | null;
+            /** Format: date-time */
+            rejectedAt: string | null;
+            /** @description 반려 사유(선택) */
+            rejectReason: string | null;
+            /**
+             * @description 초안의 태스크마다 **누가 받게 되는가**(draft.tasks와 같은 순서, ref로 대응). PM이 정하지 않고 서버가 조회 시점에 계산한다 —
+             *     프로젝트에서 역할당 에이전트는 하나라 teamRole이면 담당이 정해진다. 초안이 없으면(pending·failed) 빈 배열.
+             *     **agent가 null이면 그 역할에 배정된 에이전트가 없다** — 적용하면 그 태스크는 아무도 가져가지 않으니 적용 전에 경고할 것.
+             *     프로젝트 시작 전에는 멤버가 바뀔 수 있으므로 다시 조회하면 달라질 수 있다.
+             */
+            assignments: {
+                /** @description draft.tasks[].ref */
+                ref: string;
+                /** @enum {string|null} */
+                teamRole: "FRONTEND" | "BACKEND" | null;
+                agent: {
+                    /** Format: uuid */
+                    id: string;
+                    /** @description 에이전트 이름(보통 컴퓨터 이름) */
+                    name: string;
+                    /**
+                     * Format: uuid
+                     * @description 에이전트 주인
+                     */
+                    userId: string;
+                    /** @description 주인의 닉네임 */
+                    nickname: string | null;
+                } | null;
+            }[];
+        };
         Spec: {
             /** Format: uuid */
             id: string;
@@ -4558,6 +5719,8 @@ export interface components {
                 fullName: string;
                 defaultBranch: string;
                 devBranch: string;
+                /** @description CLI가 노트북에 레포가 없으면 여기서 받아 둔다(null이면 https://github.com/{fullName}) */
+                cloneUrl: string | null;
             };
             spec: components["schemas"]["TaskSpec"];
             notes: components["schemas"]["Note"][];
