@@ -352,7 +352,12 @@ function StartSection({
                     </a>
                   )}
                   {d.where === "tasks" && (
-                    <span className="text-[12.5px] text-ink-500">PM 계획을 적용하면 태스크가 생깁니다.</span>
+                    <Link
+                      href={`/p/${projectId}/rooms/owner`}
+                      className="text-[12.5px] font-medium text-ink-900 underline underline-offset-2"
+                    >
+                      Room 3에서 PM 계획 받기
+                    </Link>
                   )}
                 </li>
               ))}

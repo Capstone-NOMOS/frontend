@@ -315,7 +315,17 @@ export function DashboardView({ projectId }: { projectId: string }) {
               ) : tasks.isError ? (
                 <ProjectErrorView error={tasks.error} onRetry={() => void tasks.refetch()} />
               ) : taskList.length === 0 ? (
-                <EmptyState title="아직 태스크가 없습니다" desc="대표가 명세를 승인하면 태스크가 생성됩니다." />
+                <EmptyState
+                  title="아직 태스크가 없습니다"
+                  desc="대표가 Room 3에서 PM의 계획 초안을 승인하면 태스크가 생성됩니다."
+                  action={
+                    isRep && (
+                      <Button href={`/p/${projectId}/rooms/owner`} size="sm">
+                        <MessageSquare size={14} /> PM에게 계획 받기
+                      </Button>
+                    )
+                  }
+                />
               ) : (
                 <div className="-mx-4 overflow-x-auto px-4 no-scrollbar">
                   <div className="grid min-w-[640px] grid-cols-4 gap-3">

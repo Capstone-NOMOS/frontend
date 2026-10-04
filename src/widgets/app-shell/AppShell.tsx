@@ -327,14 +327,28 @@ function SidebarContent({
 
         <div>
           <div className="mb-1 flex items-center justify-between px-2.5 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
-            <span className="flex items-center gap-1.5">
-              Rooms <MockBadge />
-            </span>
+            <span>Rooms</span>
             <Users size={12} />
           </div>
           <div className="space-y-0.5">
-            {visibleRooms.length === 0 && <p className="px-2.5 py-1 text-[12px] text-ink-400">목업 데이터 없음</p>}
+            {/* Room 3(대표 + PM)만 실제 API(내장 PM)로 동작한다. 대표만 들어갈 수 있다 */}
+            {isRep && (
+              <NavItem
+                href={`${base}/rooms/owner`}
+                icon={<MessageSquare size={16} />}
+                label={ROOM_META.OWNER.name}
+                active={startsWith(`${base}/rooms/owner`)}
+                onNavigate={onNavigate}
+              />
+            )}
+            {/* 나머지 Room은 API가 없어 목업 스토어를 읽는다 */}
+            {visibleRooms.length === 0 && (
+              <p className="flex items-center gap-1.5 px-2.5 py-1 text-[12px] text-ink-400">
+                Room 1·2 <MockBadge />
+              </p>
+            )}
             {visibleRooms
+              .filter((room) => !(isRep && room.type === "OWNER"))
               .slice()
               .sort((a, b) => ROOM_META[a.type].no - ROOM_META[b.type].no)
               .map((room) => (
