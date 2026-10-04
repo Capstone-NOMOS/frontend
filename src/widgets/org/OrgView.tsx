@@ -5,11 +5,12 @@ import { useState } from "react";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { errorMessage } from "@/shared/api";
 import type { TeamRole } from "@/shared/model";
-import { Avatar, Button, CopyField, Logo, SectionTitle } from "@/shared/ui";
-import { cn, fmtDateTime } from "@/shared/lib/format";
+import { Avatar, Button, CopyField, Logo, SectionTitle, Segmented } from "@/shared/ui";
+import { fmtDateTime } from "@/shared/lib/format";
 import { CollaboratorBadge, OrgRoleBadge, useCreateInvite, useOrgMembers } from "@/entities/org";
 import { TeamRoleBadge } from "@/entities/task";
 import { AccountMenu, useCurrentUser } from "@/entities/user";
+import { RepoSection } from "./RepoSection";
 
 export function OrgView() {
   // AuthGate 안쪽이므로 me와 orgId가 있다
@@ -38,10 +39,7 @@ export function OrgView() {
         {/* 대표 전용 UI는 팀원에게 렌더하지 않는다. 최종 판정은 API의 403 NOT_REPRESENTATIVE */}
         {isRep && <InvitePanel orgId={orgId} />}
 
-        <section className="card p-5">
-          <SectionTitle>레포지토리</SectionTitle>
-          <p className="text-[13px] text-ink-500">레포 연결은 준비 중입니다.</p>
-        </section>
+        <RepoSection orgId={orgId} isRep={isRep} />
       </main>
     </div>
   );
@@ -142,35 +140,6 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     <div className="flex flex-wrap items-center gap-2">
       <span className="w-10 text-[13px] font-medium text-ink-700">{label}</span>
       {children}
-    </div>
-  );
-}
-
-function Segmented<T>({
-  options,
-  value,
-  onChange,
-}: {
-  options: { value: T; label: string }[];
-  value: T;
-  onChange: (v: T) => void;
-}) {
-  return (
-    <div className="inline-flex rounded-lg bg-ink-100 p-0.5" role="group">
-      {options.map((o) => (
-        <button
-          key={o.label}
-          type="button"
-          onClick={() => onChange(o.value)}
-          aria-pressed={value === o.value}
-          className={cn(
-            "h-7 rounded-md px-3 text-[12.5px] font-medium",
-            value === o.value ? "bg-white shadow-card" : "text-ink-600",
-          )}
-        >
-          {o.label}
-        </button>
-      ))}
     </div>
   );
 }

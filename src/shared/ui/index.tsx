@@ -308,3 +308,37 @@ export function MockEmpty() {
     </div>
   );
 }
+
+// ---------- Segmented ----------
+/** 2~4개 중 하나를 고르는 토글. value는 undefined도 될 수 있다("지정 안 함") */
+export function Segmented<T>({
+  options,
+  value,
+  onChange,
+  disabled = false,
+}: {
+  options: { value: T; label: string }[];
+  value: T;
+  onChange: (v: T) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className={cn("inline-flex rounded-lg bg-ink-100 p-0.5", disabled && "opacity-60")} role="group">
+      {options.map((o) => (
+        <button
+          key={o.label}
+          type="button"
+          onClick={() => onChange(o.value)}
+          disabled={disabled}
+          aria-pressed={value === o.value}
+          className={cn(
+            "h-7 rounded-md px-3 text-[12.5px] font-medium",
+            value === o.value ? "bg-white shadow-card" : "text-ink-600",
+          )}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
