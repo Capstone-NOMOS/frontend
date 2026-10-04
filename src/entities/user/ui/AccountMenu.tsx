@@ -1,11 +1,12 @@
 "use client";
 
-import { LogOut } from "lucide-react";
+import Link from "next/link";
+import { LogOut, Settings } from "lucide-react";
 import { Avatar } from "@/shared/ui";
 import { useLogout } from "../api/userApi";
 import { displayName, useCurrentUser } from "../model/session";
 
-/** 헤더용: 표시 이름 · 조직명 · 로그아웃 */
+/** 헤더용: 표시 이름 · 조직명 · 계정 설정 · 로그아웃 */
 export function AccountMenu() {
   const { me } = useCurrentUser();
   const logout = useLogout();
@@ -19,6 +20,14 @@ export function AccountMenu() {
         <span className="block truncate text-[13px] font-medium text-ink-900">{name}</span>
         {me.orgName && <span className="block truncate text-[11.5px] text-ink-500">{me.orgName}</span>}
       </span>
+      <Link
+        href="/settings/account"
+        aria-label="계정 설정"
+        title="계정 설정"
+        className="rounded-lg p-1.5 text-ink-500 hover:bg-ink-100 hover:text-ink-900"
+      >
+        <Settings size={15} />
+      </Link>
       <button
         type="button"
         onClick={logout}

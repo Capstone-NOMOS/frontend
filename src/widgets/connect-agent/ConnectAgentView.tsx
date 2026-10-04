@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { ArrowRight, Bot, KeyRound } from "lucide-react";
+import { useEffect } from "react";
+import { ArrowRight, Bot } from "lucide-react";
 import { Badge, Button, CopyField, Logo } from "@/shared/ui";
 import { cn, fmtDateTime } from "@/shared/lib/format";
 import { errorMessage } from "@/shared/api";
 import { CLI_NPX, useOrgAgents } from "@/entities/agent";
-import { AccountMenu, useCurrentUser, useRotateConnectKey } from "@/entities/user";
+import { AccountMenu, RotateConnectKey, useCurrentUser } from "@/entities/user";
 
 // Executor는 오리진만 받는다 (/api는 스스로 붙인다)
 const API_ORIGIN = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "").replace(/\/api\/?$/, "");
@@ -68,8 +68,6 @@ export function ConnectAgentView({ joined = false }: { joined?: boolean }) {
   // 터미널에서 연결을 마치면 새로고침 없이 목록에 나타나게 한다
   const agents = useOrgAgents(me.orgId, { poll: true });
   const myAgents = agents.data?.agents.filter((a) => a.userId === me.userId) ?? [];
-  const rotate = useRotateConnectKey();
-  const [confirming, setConfirming] = useState(false);
   const nextHref = me.orgId ? "/projects" : "/onboarding";
   const skip = joined && myAgents.length > 0;
 
@@ -157,36 +155,7 @@ export function ConnectAgentView({ joined = false }: { joined?: boolean }) {
               </p>
 
               <div className="mt-3">
-                {rotate.data ? (
-                  <>
-                    <CopyField label="새 연결 키" value={rotate.data.connectKey} />
-                    <p className="mt-2 text-[12.5px] font-medium text-human">
-                      이 화면을 떠나면 다시 볼 수 없습니다. 지금 복사해 두세요.
-                    </p>
-                  </>
-                ) : confirming ? (
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <span className="text-[13px] font-medium text-forbidden">기존 키는 즉시 무효가 됩니다.</span>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setConfirming(false)}
-                        disabled={rotate.isPending}
-                      >
-                        취소
-                      </Button>
-                      <Button size="sm" onClick={() => rotate.mutate()} disabled={rotate.isPending}>
-                        {rotate.isPending ? "재발급 중…" : "재발급"}
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <Button variant="outline" size="sm" onClick={() => setConfirming(true)}>
-                    <KeyRound size={14} /> 연결 키 재발급
-                  </Button>
-                )}
-                {rotate.isError && <p className="mt-2 text-[12.5px] text-forbidden">{errorMessage(rotate.error)}</p>}
+                <RotateConnectKey />
               </div>
             </details>
           </section>
