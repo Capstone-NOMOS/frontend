@@ -32,12 +32,13 @@ export function useDeviceRequest(userCode: string | null) {
   });
 }
 
-// 승인·거부 응답 본문은 쓰지 않는다. 결과 상태는 invalidate 뒤 조회로 다시 읽는다
+// 승인·거부 응답 본문은 쓰지 않는다. 결과 상태는 invalidate 뒤 조회로 다시 읽는다.
+// 실패(409 이미 처리됨 · 410 만료)도 상태가 바뀐 것이므로 성공·실패 모두 다시 읽는다
 export function useApproveDeviceRequest() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (userCode: string) => apiFetch<unknown>(`${devicePath(userCode)}/approve`, { method: "POST" }),
-    onSuccess: (_, userCode) => queryClient.invalidateQueries({ queryKey: agentKeys.device(userCode) }),
+    onSettled: (_, __, userCode) => queryClient.invalidateQueries({ queryKey: agentKeys.device(userCode) }),
   });
 }
 
@@ -45,6 +46,6 @@ export function useDenyDeviceRequest() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (userCode: string) => apiFetch<unknown>(`${devicePath(userCode)}/deny`, { method: "POST" }),
-    onSuccess: (_, userCode) => queryClient.invalidateQueries({ queryKey: agentKeys.device(userCode) }),
+    onSettled: (_, __, userCode) => queryClient.invalidateQueries({ queryKey: agentKeys.device(userCode) }),
   });
 }

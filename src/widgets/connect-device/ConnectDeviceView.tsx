@@ -133,6 +133,8 @@ function RequestPanel({ userCode }: { userCode: string }) {
           <span className="font-mono text-[13px] text-ink-500">{r.userCode}</span>
         </div>
         <p className="text-[13.5px] text-ink-700">{outcome.text}</p>
+        {/* 다른 곳에서 먼저 처리돼 내 승인·거부가 실패한 경우, 왜 이 결과인지 알려 준다 */}
+        {decideError && <p className="text-[12.5px] text-forbidden">{errorMessage(decideError)}</p>}
         {outcome.tone === "success" ? <Button href="/connect">에이전트 연결 화면으로</Button> : enterAnother}
       </div>
     );
