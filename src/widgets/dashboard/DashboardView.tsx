@@ -11,6 +11,7 @@ import {
   GitBranch,
   Loader2,
   MessageSquare,
+  Play,
 } from "lucide-react";
 import type { TeamRole } from "@/shared/model";
 import { AgentMark, Badge, Button, EmptyState, MockBadge, SectionTitle } from "@/shared/ui";
@@ -19,6 +20,7 @@ import { LEVELS } from "@/entities/policy";
 import { ProjectErrorView, ProjectStatusBadge, fmtUsd, useProject } from "@/entities/project";
 import { ROOM_META } from "@/entities/room";
 import { ApiTaskBadge, TASK_BOARD, TEAM_ROLE_META, TeamRoleBadge, useTasks } from "@/entities/task";
+import { useCurrentUser } from "@/entities/user";
 import { useApp, useProject as useMockProject } from "@/lib/store";
 
 const ROLE_FILTERS: { value: TeamRole | undefined; label: string }[] = [
@@ -31,6 +33,7 @@ export function DashboardView({ projectId }: { projectId: string }) {
   // AppShell이 불러온 뒤에만 그려진다
   const { project, members, repos } = useProject(projectId).data!;
   const [teamRole, setTeamRole] = useState<TeamRole | undefined>();
+  const isRep = useCurrentUser().me?.orgRole === "REPRESENTATIVE";
   // 요약 타일은 전체 기준, 역할 필터는 칸반에만 건다. 한 번 받아 화면에서 거르므로 요청은 하나
   const tasks = useTasks(projectId);
 
@@ -112,6 +115,23 @@ export function DashboardView({ projectId }: { projectId: string }) {
             </Button>
           </div>
         </div>
+
+        {/* G1 전에는 에이전트가 태스크를 가져가지 않는다 (claim → 409 PROJECT_NOT_STARTED) */}
+        {project.startedAt === null && project.status === "planning" && (
+          <div className="mt-5 flex flex-col gap-3 rounded-xl border border-human bg-human-bg px-4 py-3 sm:flex-row sm:items-center">
+            <p className="flex-1 text-[13.5px] text-ink-900">
+              <strong>아직 시작 전입니다.</strong>{" "}
+              {isRep
+                ? "역할을 배정하고 프로젝트를 시작해야 에이전트가 태스크를 받습니다."
+                : "대표가 프로젝트를 시작하면 에이전트가 태스크를 받습니다."}
+            </p>
+            {isRep && (
+              <Button href={`/p/${projectId}/settings#start`} size="sm">
+                <Play size={14} /> 시작하러 가기
+              </Button>
+            )}
+          </div>
+        )}
 
         {/* summary */}
         <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">

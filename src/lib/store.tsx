@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef } from "react";
 import { uid } from "@/shared/lib/format";
-import type { Level, Role } from "@/shared/model";
+import type { Role } from "@/shared/model";
 import type { Agent } from "@/entities/agent";
 import type { Document } from "@/entities/document";
 import type { Event } from "@/entities/event";
@@ -190,14 +190,11 @@ interface Ctx {
     /** 목업 전용: 데모 페르소나 전환. 실제 로그인 사용자는 entities/user의 useCurrentUser */
     switchUser: (userId: string) => void;
     resetDemo: () => void;
-    createProject: (input: { name: string; description: string; level: Level; stack: string }) => Project;
     connectRepo: (projectId: string, role: "FE" | "BE", url: string, localPath: string) => void;
     sendMessage: (roomId: string, text: string) => void;
     decideSpec: (messageId: string, decision: "approve" | "changes", note?: string) => void;
     answerQuestion: (messageId: string, answer: string) => void;
     decideReport: (messageId: string, decision: "approve" | "changes", note?: string) => void;
-    setLevel: (projectId: string, level: Level) => void;
-    setBudget: (projectId: string, tokens: number) => void;
   };
 }
 
@@ -398,74 +395,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           session:
             s.session && SEED.users.some((u) => u.id === s.session!.userId) ? s.session : { userId: SEED.users[0].id },
         })),
-
-      createProject: ({ name, description, level, stack }) => {
-        const s0 = stateRef.current;
-        const ownerId = s0.session!.userId;
-        const project: Project = {
-          id: uid("p"),
-          name,
-          description,
-          level,
-          stack: stack || "PM이 제안 예정",
-          ownerId,
-          pmBudgetTokens: 2_000_000,
-          pmSpentTokens: 0,
-          createdAt: now(),
-        };
-        const room: Room = { id: uid("r"), projectId: project.id, type: "OWNER" };
-        update((s) => {
-          let n: AppState = {
-            ...s,
-            projects: [...s.projects, project],
-            rooms: [...s.rooms, room],
-            members: [
-              ...s.members,
-              { projectId: project.id, userId: ownerId, role: "OWNER", joinedAt: now() } as Membership,
-            ],
-          };
-          n = addDocVersion(
-            n,
-            project.id,
-            "CONSTITUTION",
-            "헌법",
-            `# ${name} 헌법\n\n> 대표만 수정할 수 있습니다.\n\n## 스택\n- ${project.stack}\n\n## 컨벤션\n- (작성 전) PM이 첫 명세와 함께 제안합니다\n\n## 금지사항\n- 다른 역할의 레포를 수정하지 않는다\n- \`.env*\`, \`*.pem\` 파일에 접근하지 않는다\n- main 브랜치에 직접 push 하지 않는다\n`,
-            ownerId,
-            true,
-          );
-          n = addDocVersion(
-            n,
-            project.id,
-            "ADR",
-            "결정기록",
-            "# 결정기록 (ADR)\n\n> 아직 기록된 결정이 없습니다. 에이전트가 사람에게 질문하고 답을 받으면 자동으로 추가됩니다.\n",
-            "system",
-            false,
-          );
-          n = push(n, {
-            roomId: room.id,
-            authorType: "system",
-            card: {
-              kind: "notice",
-              tone: "info",
-              text: `Room 3가 열렸습니다. ${name} 프로젝트의 대표와 PM만 이 방에 있습니다.`,
-            },
-          });
-          n = push(n, {
-            roomId: room.id,
-            authorType: "pm",
-            text: `안녕하세요, ${name}의 PM입니다. FE·BE가 초대 링크로 참여하면 각자의 Room이 생깁니다. 준비되면 첫 요구사항을 한 문장으로 적어주세요 — 제가 명세와 태스크로 정리해 드립니다.`,
-          });
-          n = addEvent(n, {
-            projectId: project.id,
-            type: "project.created",
-            actor: userName(s, ownerId),
-            summary: `프로젝트 ${name} 생성 (${level}, 예산 2.0M 토큰)`,
-          });
-          return n;
-        });
-        return project;
-      },
 
       connectRepo: (projectId, role, url, localPath) =>
         update((s) => {
@@ -862,23 +791,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         });
         runAgentTask(projectId, target.id, 1200, () => postReport(projectId, 600));
       },
-
-      setLevel: (projectId, level) =>
-        update((s) => {
-          let n: AppState = { ...s, projects: s.projects.map((p) => (p.id === projectId ? { ...p, level } : p)) };
-          n = addEvent(n, {
-            projectId,
-            type: "policy.changed",
-            actor: userName(s, s.session?.userId),
-            summary: `허용 레벨 → ${level} (정책표 갱신)`,
-          });
-          return n;
-        }),
-      setBudget: (projectId, tokens) =>
-        update((s) => ({
-          ...s,
-          projects: s.projects.map((p) => (p.id === projectId ? { ...p, pmBudgetTokens: tokens } : p)),
-        })),
     }),
     [update, later, runAgentTask, postReport],
   );

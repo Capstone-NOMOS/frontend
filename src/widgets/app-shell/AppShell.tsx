@@ -277,7 +277,7 @@ function SidebarContent({
                   href="/projects/new"
                   className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-[13px] text-ink-700 hover:bg-ink-100"
                 >
-                  <Plus size={14} /> 새 프로젝트 <MockBadge />
+                  <Plus size={14} /> 새 프로젝트
                 </Link>
               )}
             </div>
