@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { ArrowLeft, Loader2, Lock } from "lucide-react";
-import { errorMessage, type Schemas } from "@/shared/api";
+import { ApiError, errorMessage, type Schemas } from "@/shared/api";
 import type { TeamRole } from "@/shared/model";
 import { Badge, Button, Input, Logo, SectionTitle, Segmented } from "@/shared/ui";
 import { cn } from "@/shared/lib/format";
@@ -73,9 +73,16 @@ export function RepoPathsView({ repoId }: { repoId: string }) {
         ) : paths.isError ? (
           <div className="card p-6 text-center">
             <p className="text-[13px] text-ink-700">{errorMessage(paths.error)}</p>
-            <Button variant="outline" size="sm" className="mt-3" onClick={() => void paths.refetch()}>
-              다시 시도
-            </Button>
+            {/* 403(다른 조직)·404는 다시 시도해도 같다 */}
+            {paths.error instanceof ApiError && (paths.error.status === 403 || paths.error.status === 404) ? (
+              <Button href="/org" variant="outline" size="sm" className="mt-3">
+                조직으로
+              </Button>
+            ) : (
+              <Button variant="outline" size="sm" className="mt-3" onClick={() => void paths.refetch()}>
+                다시 시도
+              </Button>
+            )}
           </div>
         ) : (
           <>

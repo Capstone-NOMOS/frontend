@@ -37,7 +37,7 @@ export function PmRoomView({ projectId }: { projectId: string }) {
       <div className="flex h-full items-center justify-center p-6">
         <EmptyState
           title="403 · 이 Room에 접근할 수 없습니다"
-          desc={`${ROOM_META.OWNER.name}은 ${ROOM_META.OWNER.who}의 공간입니다. FE·BE는 자기 Room만 볼 수 있습니다.`}
+          desc={`${ROOM_META.OWNER.name}는 ${ROOM_META.OWNER.who}의 공간입니다. FE·BE는 자기 Room만 볼 수 있습니다.`}
           action={
             <Button href={`/p/${projectId}`} variant="outline">
               대시보드로
