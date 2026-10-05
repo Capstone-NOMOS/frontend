@@ -42,6 +42,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   PROJECT_NOT_FOUND: "프로젝트를 찾을 수 없습니다.",
   MEMBER_NOT_FOUND: "멤버를 찾을 수 없습니다.",
   PLAN_NOT_FOUND: "계획을 찾을 수 없습니다.",
+  APPROVAL_NOT_FOUND: "승인 요청을 찾을 수 없습니다.",
   DEVICE_REQUEST_NOT_FOUND: "연결 요청을 찾을 수 없습니다. 코드를 확인하거나 터미널에서 다시 실행해 주세요.",
 
   // 409
@@ -68,6 +69,9 @@ const ERROR_MESSAGES: Record<string, string> = {
   PM_PLAN_IN_PROGRESS: "PM이 이미 계획을 작성하고 있습니다. 끝난 뒤 다시 요청해 주세요.",
   PM_BUDGET_EXCEEDED: "PM 예산을 넘어 요청할 수 없습니다.",
   PLAN_NOT_APPLICABLE: "검토 대기 중인 초안만 적용·수정 요청·반려할 수 있습니다.",
+  PLAN_REVISION_LIMIT: "수정 요청 한도를 넘었습니다. 새 계획을 요청해 주세요.",
+  APPROVAL_ALREADY_DECIDED: "이미 승인 또는 반려된 요청입니다.",
+  APPROVAL_STALE: "태스크가 더 이상 승인 대기 상태가 아닙니다.",
 
   // 410
   INVITE_EXPIRED: "만료된 초대입니다.",
