@@ -5,12 +5,13 @@
 ## 1. 시스템 경계
 
 ```
-브라우저 ── HTTP (조회는 폴링) ──▶ Node/TypeScript 백엔드 (별도 레포)
+브라우저 ── HTTP (조회) ──────────▶ Node/TypeScript 백엔드 (별도 레포)
+         ◀─ WebSocket /api/stream ─ (무엇을 다시 읽을지 신호)
 ```
 
 - 백엔드는 Node/TypeScript 하나(DB는 PostgreSQL). **Next.js Route Handler를 BFF로 쓰지 않는다**
 - 백엔드도 TypeScript라 BFF 유혹이 커지지만, 서버를 둘 운영하게 되는 건 마찬가지다
-- **현재 API에는 실시간 채널이 없다. 당분간 폴링으로 갱신한다** (→ adr/0004)
+- **실시간은 웹소켓 신호로 쿼리를 무효화하고, 폴링은 끊긴 동안의 대비용이다** (→ adr/0009)
 - 실시간 채널이 생기더라도 서버는 백엔드 소유. 프론트는 클라이언트로만 붙는다
 - 승인·질의 응답을 Server Action으로 처리하지 않는다. 판정 주체는 서버다
 
@@ -37,24 +38,26 @@
 
 서버 상태는 TanStack Query, UI 상태는 별도 스토어.
 
-### 현재: 폴링 (잠정 — adr/0004)
-
-현재 API에는 WebSocket·SSE가 없다. 조회 API를 주기적으로 다시 부른다.
+### 실시간 신호 + 대비용 폴링 (adr/0009)
 
 ```
-쿼리 훅 ──(refetchInterval)──▶ GET API ──▶ Query 캐시 ──▶ 화면
+/api/stream ──(changed: topics)──▶ useRealtimeSync ──invalidateQueries──▶ 쿼리 훅 ──▶ GET API ──▶ 화면
+쿼리 훅 ──(refetchInterval: livePoll)──▶ GET API   ← 연결 중 30초, 끊기면 원래 주기
 ```
+
+- 연결은 `shared/api/stream.ts` 하나(탭당 연결 하나). `AuthGate`가 조직이 있는 사용자에게만 연다
+- topic → 쿼리 키 매핑은 `widgets/auth/useRealtimeSync.ts` 한 파일. **새 쿼리를 만들면 여기에 넣는다**
+- 프로젝트 신호는 `AppShell`의 `useProjectStream(projectId)` 구독이 있어야 온다
+- 이벤트를 남기지 않는 변화(PM 작업기 접속 등)는 신호가 없다 → 해당 쿼리는 폴링을 유지한다 (adr/0009 "신호가 없는 곳")
 
 1. **데이터 조회는 반드시 쿼리 훅으로 감싼다.** 컴포넌트에서 `fetch`를 직접 부르지 않는다.
    나중에 실시간 채널이 붙으면 훅 내부만 바꾸면 되도록 하기 위해서다
-2. **폴링 주기는 화면별로 정한다.** 대시보드·태스크 목록 3~5초, 문서·설정은 폴링하지 않음
+2. **폴링 주기는 화면별로 정한다.** 실시간 데이터는 `livePoll(4000~5000)`(연결 중 30초), 문서·설정은 폴링하지 않음
 3. **탭이 숨겨지면 멈춘다.** 돌아왔을 때 즉시 한 번 갱신한다 (`refetchIntervalInBackground: false`, `refetchOnWindowFocus: true`)
 4. **증분 조회가 가능한 곳은 증분으로.** 노트는 `since_seq`로 이후 분만 받아 이어 붙인다
-5. **에이전트 오프라인 판정은 서버 신호로.** 프론트 타이머로 추정하지 않는다. 현재는 해당 API가 없으므로 표시하지 않는다
+5. **에이전트 오프라인 판정은 서버 신호로.** 프론트 타이머로 추정하지 않는다. `GET /orgs/{orgId}/agents`의 `online`과 `agents` 신호를 쓴다
 
-### 이후: 실시간 채널이 생기면
-
-전송이 무엇이든(WebSocket / SSE) 다음 원칙은 유지한다.
+### 실시간 원칙
 
 - 수신 이벤트는 **캐시를 갱신하는 입력**이지 상태 저장소가 아니다
 - 이벤트 → 쿼리키 매핑을 한 파일에 모은다
@@ -90,7 +93,7 @@
 | 마크다운 | react-markdown + remark-gfm + rehype-sanitize | 설치됨 · 미적용 (현재는 `components/docs/Markdown.tsx` 자체 파서) |
 | API 타입 | openapi-typescript (계약에서 생성). BE가 TS지만 소스를 직접 import하지 않는다 | 설치됨 · 적용됨 (`pnpm gen:api` → `shared/api/schema.d.ts`) |
 | 목업 | MSW | 설치됨 · 미적용 |
-| 실시간 | **당분간 폴링** (TanStack Query `refetchInterval`). 실시간 채널은 BE 계획 확인 후 결정 (adr/0004) | **설치 금지** |
+| 실시간 | 브라우저 `WebSocket` 직접 사용 (`shared/api/stream.ts`) + 대비용 `refetchInterval` (adr/0009) | 라이브러리 **설치 금지** |
 | UI 부품 | 자체 구현 유지. 모달·팝오버가 필요한 시점에 Radix만 부분 도입 | 미설치 (그 시점에 질문) |
 
 **패키지 추가는 `dep:add` 승인 대상이다. 임의로 설치하지 말 것.**
@@ -120,9 +123,8 @@ FSD 이행(adr/0002)에서 `src/lib/`만 레이어 밖 예외로 남겼다. 지�
 
 ### 미결 사항
 
-- 현재 API에는 실시간 채널이 없고, 노트 API의 `since_seq`는 폴링용으로 설계돼 있다
-- 기능명세서 F-14는 WebSocket을 요구한다. 명세와 API가 어긋나 있으며 BE 계획 확인이 필요하다
-- **결정 전까지 WebSocket·Socket.IO 등 실시간 라이브러리를 설치하지 말 것**
+- 실시간 채널은 `/api/stream`으로 정해졌다 (adr/0009). 신호에는 데이터가 없어 이벤트 payload 타입을 공유할 필요가 없다
+- **WebSocket·Socket.IO 등 실시간 라이브러리를 설치하지 말 것.** Socket.IO는 서버(`ws`)와 프로토콜도 다르다
 
 ## 10. API 연결 규칙
 

@@ -3,10 +3,11 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 import { Loader2 } from "lucide-react";
-import { errorMessage } from "@/shared/api";
+import { errorMessage, getSession } from "@/shared/api";
 import { Button } from "@/shared/ui";
 import { useCurrentUser } from "@/entities/user";
 import { SessionExpiryBanner } from "./SessionExpiryBanner";
+import { useRealtimeSync } from "./useRealtimeSync";
 
 // 조직이 없어도 들어갈 수 있는 보호 경로
 const ORG_OPTIONAL = ["/onboarding", "/connect"];
@@ -19,6 +20,9 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const { status, me, error, retry } = useCurrentUser();
   const pathname = usePathname();
   const router = useRouter();
+
+  // 실시간 신호(adr/0009). 조직이 없으면 서버가 4403으로 닫으므로 조직이 생긴 뒤에 연결한다
+  useRealtimeSync(status === "authenticated" && me?.orgId ? (getSession()?.accessToken ?? null) : null);
 
   let redirect: string | null = null;
   if (status === "anonymous") redirect = "/login";

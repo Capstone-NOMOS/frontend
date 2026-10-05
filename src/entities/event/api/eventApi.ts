@@ -1,5 +1,5 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { apiFetch, type Schemas } from "@/shared/api";
+import { apiFetch, livePoll, type Schemas } from "@/shared/api";
 
 export const eventKeys = {
   all: ["event"] as const,
@@ -25,7 +25,7 @@ export function useProjectEvents(projectId: string) {
     initialPageParam: null as string | null,
     getNextPageParam: (last) => last.nextBefore,
     select: (data) => data.pages.flatMap((p) => p.events),
-    refetchInterval: 5000,
+    refetchInterval: livePoll(5000),
     refetchIntervalInBackground: false,
   });
 }

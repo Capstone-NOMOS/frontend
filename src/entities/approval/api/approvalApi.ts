@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiFetch, type Schemas } from "@/shared/api";
+import { apiFetch, livePoll, type Schemas } from "@/shared/api";
 
 type Approval = Schemas["Approval"];
 type Status = "pending" | "decided" | "all";
@@ -15,7 +15,7 @@ export function useProjectApprovals(projectId: string, status: Status = "pending
     queryKey: approvalKeys.project(projectId, status),
     queryFn: () => apiFetch<{ approvals: Approval[] }>(`/projects/${projectId}/approvals?status=${status}`),
     select: (data) => data.approvals,
-    refetchInterval: 5000,
+    refetchInterval: livePoll(5000),
     refetchIntervalInBackground: false,
   });
 }

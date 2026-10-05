@@ -22,7 +22,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import type { Schemas } from "@/shared/api";
+import { useProjectStream, type Schemas } from "@/shared/api";
 import { Avatar, Badge, Kbd, Logo, MockBadge } from "@/shared/ui";
 import { cn } from "@/shared/lib/format";
 import { StatusDot } from "@/entities/agent";
@@ -34,6 +34,8 @@ import { CommandSearch } from "./CommandSearch";
 
 export function AppShell({ projectId, children }: { projectId: string; children: ReactNode }) {
   const detail = useProject(projectId);
+  // 이 프로젝트 화면에 있는 동안 프로젝트 신호(tasks·notes·…)를 받는다 (adr/0009)
+  useProjectStream(projectId);
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState(false);
 
