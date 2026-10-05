@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useSyncExternalStore } from "react";
 
 /**
@@ -5,6 +7,8 @@ import { useEffect, useSyncExternalStore } from "react";
  * 탭당 연결 하나를 모듈에 두고, 화면은 신호를 받아 기존 쿼리를 무효화한다. 라이브러리 없이 브라우저 WebSocket을 쓴다.
  *
  * 서버 → { ready } · { changed, projectId | null, topics } · { resync } · { subscribed | unsubscribed, projectId } · { error }
+ * 훅을 담고 있어 "use client" — 배럴(@/shared/api)을 통해 서버 컴포넌트(invites/[token]/page.tsx)에도 끌려 들어간다
+ *
  * 닫는 코드: 4401 인증 실패 · 4403 조직 없음 · 4400·4408 첫 메시지 문제 — 다시 연결해도 같으므로 재연결하지 않는다
  */
 
