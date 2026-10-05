@@ -54,6 +54,11 @@ export function RepoSection({ orgId, isRep }: { orgId: string; isRep: boolean })
                   >
                     <span className="font-mono text-[13.5px] font-medium">{r.fullName}</span>
                     <span className="text-[12px] text-ink-500">{r.defaultBranch}</span>
+                    {r.activeProjectName && (
+                      <span className="text-[12px] text-ink-500">
+                        · &lsquo;{r.activeProjectName}&rsquo;에서 사용 중
+                      </span>
+                    )}
                     <span className="ml-auto flex items-center gap-1.5">
                       <OwnershipBadge assigned={r.ownershipAssigned} />
                       <ChevronRight size={15} className="text-ink-400" aria-hidden />

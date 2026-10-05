@@ -2916,7 +2916,10 @@ export interface paths {
                         "application/json": unknown;
                     };
                 };
-                /** @description 활성 프로젝트가 이미 쓰는 레포 */
+                /**
+                 * @description 진행 중(planning·active·halted) 프로젝트가 이미 쓰는 레포가 있다. `details`에 겹치는 레포가 **전부** 온다 —
+                 *     레포 목록(`GET /orgs/{orgId}/repos`)의 `activeProjectId`와 같은 판정이라, 목록에서 미리 거를 수 있다.
+                 */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -2926,7 +2929,15 @@ export interface paths {
                          * @example {
                          *       "error": {
                          *         "code": "REPO_IN_ACTIVE_PROJECT",
-                         *         "message": "repository is already used by another project"
+                         *         "message": "repositories already used by an in-progress project: acme/study-api (스터디 관리 웹앱 v1)",
+                         *         "details": [
+                         *           {
+                         *             "repoId": "26346a01-2db3-4445-a3b2-493e999662f3",
+                         *             "fullName": "acme/study-api",
+                         *             "projectId": "3f273134-c222-411b-9f69-ca5d267e9a6b",
+                         *             "projectName": "스터디 관리 웹앱 v1"
+                         *           }
+                         *         ]
                          *       }
                          *     }
                          */
@@ -3167,6 +3178,424 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/orgs/{orgId}/approvals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 조직 승인 대기열 (대표 전용)
+         * @description 대시보드 "승인 · 결정 대기"와 받은 편지함. 기본은 대기 중(`status=pending`)만 준다.
+         *     지금 생기는 카드는 ACTION 하나다 — 검증은 통과했지만 정책 판정이 HUMAN·PM_REVIEW라 태스크가 `AWAITING_APPROVAL`에 멈춘 산출물.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    status?: "pending" | "decided" | "all";
+                    limit?: number;
+                };
+                header?: never;
+                path: {
+                    /** @example {{ORG_ID}} */
+                    orgId: components["parameters"]["OrgId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 요청 시각 최신순 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "data": {
+                         *         "approvals": [
+                         *           {
+                         *             "id": "7a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d",
+                         *             "projectId": "{{PROJECT_ID}}",
+                         *             "projectName": "스터디 관리 웹앱 v1",
+                         *             "gate": "ACTION",
+                         *             "taskId": "{{TASK_BE}}",
+                         *             "taskTitle": "T-001 참여 신청 API 구현",
+                         *             "taskState": "AWAITING_APPROVAL",
+                         *             "artifactId": "44444444-4444-4444-4444-444444444444",
+                         *             "gateMode": "HUMAN",
+                         *             "payload": {
+                         *               "taskTitle": "T-001 참여 신청 API 구현",
+                         *               "commitSha": "a1b2c3d",
+                         *               "changedPaths": [
+                         *                 "migrations/010_x.sql"
+                         *               ],
+                         *               "triggeredActions": [
+                         *                 "artifact:submit",
+                         *                 "db:migration"
+                         *               ],
+                         *               "gateMode": "HUMAN",
+                         *               "attempt": 1,
+                         *               "stages": [
+                         *                 {
+                         *                   "stage": "V3",
+                         *                   "result": "PASS"
+                         *                 }
+                         *               ]
+                         *             },
+                         *             "decision": null,
+                         *             "decidedBy": null,
+                         *             "reason": null,
+                         *             "requestedAt": "2026-10-05T01:00:00.000Z",
+                         *             "decidedAt": null
+                         *           }
+                         *         ]
+                         *       }
+                         *     }
+                         */
+                        "application/json": {
+                            data: {
+                                approvals: components["schemas"]["Approval"][];
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{projectId}/approvals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 프로젝트 승인 이력
+         * @description 볼 수 있는 범위는 태스크·노트와 같다(대표는 전부, 팀원은 배정된 프로젝트). 결정은 대표만 한다.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    status?: "pending" | "decided" | "all";
+                    limit?: number;
+                };
+                header?: never;
+                path: {
+                    /** @example {{PROJECT_ID}} */
+                    projectId: components["parameters"]["ProjectId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 요청 시각 최신순 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "data": {
+                         *         "approvals": [
+                         *           {
+                         *             "id": "7a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d",
+                         *             "projectId": "{{PROJECT_ID}}",
+                         *             "projectName": "스터디 관리 웹앱 v1",
+                         *             "gate": "ACTION",
+                         *             "taskId": "{{TASK_BE}}",
+                         *             "taskTitle": "T-001 참여 신청 API 구현",
+                         *             "taskState": "AWAITING_APPROVAL",
+                         *             "artifactId": "44444444-4444-4444-4444-444444444444",
+                         *             "gateMode": "HUMAN",
+                         *             "payload": {
+                         *               "taskTitle": "T-001 참여 신청 API 구현",
+                         *               "commitSha": "a1b2c3d",
+                         *               "changedPaths": [
+                         *                 "migrations/010_x.sql"
+                         *               ],
+                         *               "triggeredActions": [
+                         *                 "artifact:submit",
+                         *                 "db:migration"
+                         *               ],
+                         *               "gateMode": "HUMAN",
+                         *               "attempt": 1,
+                         *               "stages": [
+                         *                 {
+                         *                   "stage": "V3",
+                         *                   "result": "PASS"
+                         *                 }
+                         *               ]
+                         *             },
+                         *             "decision": null,
+                         *             "decidedBy": null,
+                         *             "reason": null,
+                         *             "requestedAt": "2026-10-05T01:00:00.000Z",
+                         *             "decidedAt": null
+                         *           }
+                         *         ]
+                         *       }
+                         *     }
+                         */
+                        "application/json": {
+                            data: {
+                                approvals: components["schemas"]["Approval"][];
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/approvals/{approvalId}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 승인 (대표 전용)
+         * @description 태스크가 `DONE`이 된다. 뒤에 걸린 태스크가 풀리면 담당 에이전트에게 바로 간다.
+         *     대표가 자기 에이전트의 산출물을 승인하면 이벤트에 `selfApproval: true`가 남는다(지금은 대표 말고 승인자가 없어 허용).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    approvalId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 승인됨(decision=APPROVE, 태스크 DONE) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["Approval"];
+                        };
+                    };
+                };
+                /** @description 없는 승인 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "APPROVAL_NOT_FOUND",
+                         *         "message": "approval not found"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+                /** @description 이미 결정됨, 또는 태스크가 더 이상 승인 대기가 아님 */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": unknown;
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/approvals/{approvalId}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 반려 (대표 전용, 사유 필수)
+         * @description 태스크가 `READY`로 돌아가고(담당 비움) 재시도 횟수가 1 오른다 — **3회째는 `ESCALATED`**(검증 실패와 같은 횟수를 쓴다).
+         *     같은 역할의 에이전트가 다시 받아 **같은 태스크 브랜치에서 이어서** 고친다. 사유는 그 시도의 브리핑(`lastRejection`)으로 간다.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    approvalId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    /**
+                     * @example {
+                     *       "reason": "마이그레이션에 down이 없다. 되돌릴 수 있게 추가해 달라"
+                     *     }
+                     */
+                    "application/json": {
+                        reason: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 반려됨(decision=REJECT, 태스크 READY 또는 ESCALATED) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["Approval"];
+                        };
+                    };
+                };
+                /** @description 없는 승인 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "APPROVAL_NOT_FOUND",
+                         *         "message": "approval not found"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+                /** @description 이미 결정됨, 또는 태스크가 더 이상 승인 대기가 아님 */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": unknown;
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{projectId}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 이벤트 로그 (최신순)
+         * @description 프로젝트에서 일어난 일을 최신순으로 준다(활동 화면·대시보드 최근 활동). events는 지워지지 않는 기록이라 그대로 읽는다.
+         *     볼 수 있는 범위는 태스크·노트와 같다 — 대표는 전부, 팀원은 자기 에이전트가 배정된 프로젝트.
+         *
+         *     - 페이지: 응답의 `nextBefore`를 다음 요청의 `before`로 넘긴다. null이면 끝이다. 시각이 아니라 id로 넘긴다(같은 순간의 이벤트가 경계에서 빠지지 않게).
+         *     - `types`로 거른다(쉼표로 여러 개). `payload` 모양은 `type`마다 다르다.
+         *     - `onBehalfOf`는 사람(user id)이거나 시스템 주체 문자열(`system:pm`, `system:device-flow` 등)이다.
+         *     - `tokenCost`는 그 행의 비용(USD) — 지금은 PM 호출(`PM_CALL`)에만 있다. 태스크별·사람별 비용 집계는 별도 API로 다룬다.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description 이 id보다 오래된 이벤트만 */
+                    before?: string;
+                    limit?: number;
+                    /** @example TASK_CLAIMED,NOTE_PUBLISHED */
+                    types?: string;
+                };
+                header?: never;
+                path: {
+                    /** @example {{PROJECT_ID}} */
+                    projectId: components["parameters"]["ProjectId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 최신순 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "data": {
+                         *         "events": [
+                         *           {
+                         *             "id": "1042",
+                         *             "type": "NOTE_PUBLISHED",
+                         *             "ts": "2026-10-02T00:58:05.640Z",
+                         *             "onBehalfOf": "e8227252-a58b-4266-839b-8674f99b1e4a",
+                         *             "actorAgentId": "e6c879be-2a69-4f82-a30d-5063ff664262",
+                         *             "payload": {
+                         *               "noteId": "5c457d82-8804-4408-a76e-3f5a355b8484",
+                         *               "kind": "DECIDED"
+                         *             },
+                         *             "tokenCost": null,
+                         *             "pathViolation": null
+                         *           }
+                         *         ],
+                         *         "nextBefore": null
+                         *       }
+                         *     }
+                         */
+                        "application/json": {
+                            data: {
+                                events: components["schemas"]["ProjectEvent"][];
+                                /** @description 다음 페이지의 before. null이면 끝 */
+                                nextBefore: string | null;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -3740,6 +4169,9 @@ export interface paths {
          * 수정 요청 (대표 전용)
          * @description `ready`인 초안에 피드백을 붙여 새 초안을 요청한다(이전 초안 + 피드백으로 새로 쓴다). 새 계획이 pending으로 생기고
          *     이전 초안은 그대로 남는다. 한 수정 체인에서는 하나만 적용할 수 있다.
+         *
+         *     **수정 요청은 한 체인에서 3회까지**(서버 설정 `PM_MAX_REVISIONS`, 기본 3). 원본 요청은 세지 않고, 실패한 수정 요청도 센다.
+         *     넘으면 409 `PLAN_REVISION_LIMIT`, `details: { limit, used }`. 새 계획 요청(`POST …/pm/plans`)은 새 체인이라 0부터 다시 센다.
          */
         post: {
             parameters: {
@@ -3797,20 +4229,12 @@ export interface paths {
                         };
                     };
                 };
-                /** @description ready가 아닌 초안 */
+                /** @description ready가 아닌 초안, 또는 수정 요청 한도 초과 */
                 409: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        /**
-                         * @example {
-                         *       "error": {
-                         *         "code": "PLAN_NOT_APPLICABLE",
-                         *         "message": "only a ready plan can be revised"
-                         *       }
-                         *     }
-                         */
                         "application/json": unknown;
                     };
                 };
@@ -5121,6 +5545,16 @@ export interface components {
              * @description 처음 CLI로 연결한 시각
              */
             connectedAt: string;
+            /**
+             * @description 지금 접속해 있는가 — 태스크 스트림(웹소켓)이 열려 있거나(CLI start·connect가 태스크를 기다리는 중)
+             *     최근 60초 안에 인증된 요청이 있었다(폴링·pm-worker·MCP 도구). 서버 메모리 값이라 서버 재시작 직후에는 잠깐 false다.
+             */
+            online: boolean;
+            /**
+             * Format: date-time
+             * @description 마지막으로 요청·연결이 있었던 시각(서버 재시작 뒤로는 null)
+             */
+            lastSeenAt: string | null;
             /** @description 진행 중(completed·aborted가 아닌) 프로젝트 배정. 에이전트는 한 번에 하나만 맡는다 */
             assignment: {
                 /** Format: uuid */
@@ -5172,6 +5606,82 @@ export interface components {
             cloneUrl: string | null;
             /** @description 소유 역할이 지정된 경로 규칙이 하나라도 있는가. false면 프로젝트 생성에서 422 REPO_OWNERSHIP_NOT_SET */
             ownershipAssigned: boolean;
+            /**
+             * Format: uuid
+             * @description 이 레포를 쓰고 있는 **진행 중 프로젝트**(planning·active·halted — completed·aborted가 아닌 것). null이 아니면 새 프로젝트에 넣을 수 없다
+             *     (프로젝트 생성의 409 REPO_IN_ACTIVE_PROJECT와 같은 판정). halted도 포함한다 — 재개될 수 있어서다.
+             */
+            activeProjectId: string | null;
+            /** @description activeProjectId 프로젝트의 이름 */
+            activeProjectName: string | null;
+        };
+        Approval: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            projectId: string;
+            projectName: string;
+            /**
+             * @description 지금은 ACTION(정책 판정이 HUMAN·PM_REVIEW인 산출물)만 생긴다
+             * @enum {string}
+             */
+            gate: "G1" | "G2" | "G3" | "ACTION";
+            /** Format: uuid */
+            taskId: string;
+            /** @description 지금 태스크 제목(카드의 스냅샷은 payload.taskTitle) */
+            taskTitle: string | null;
+            /** @description 지금 태스크 상태 */
+            taskState: string | null;
+            /** Format: uuid */
+            artifactId: string | null;
+            /**
+             * @description PM_REVIEW는 PM 리뷰가 아직 없어 대표가 대신 처리한다(이벤트에 reviewer: human_fallback)
+             * @enum {string|null}
+             */
+            gateMode: "HUMAN" | "PM_REVIEW" | null;
+            /**
+             * @description 요청 시점의 카드 스냅샷 — taskTitle, artifactId, attempt, commitSha, changedPaths, triggeredActions, gateMode, stages, submittedByAgentId.
+             *     **backfilled: true**면 승인 기능 이전부터 멈춰 있던 태스크라 지금 DB에서 알 수 있는 값만 있다(stages 등 없음) — "정보 일부 없음"을 표시한다.
+             */
+            payload: {
+                [key: string]: unknown;
+            };
+            /**
+             * @description null이면 대기 중
+             * @enum {string|null}
+             */
+            decision: "APPROVE" | "REJECT" | null;
+            /** Format: uuid */
+            decidedBy: string | null;
+            /** @description 반려 사유(반려는 필수) */
+            reason: string | null;
+            /** Format: date-time */
+            requestedAt: string;
+            /** Format: date-time */
+            decidedAt: string | null;
+        };
+        ProjectEvent: {
+            /** @description 이벤트 id(정수를 문자열로). 페이지 커서로 쓴다 */
+            id: string;
+            /** @description TASK_CLAIMED, ARTIFACT_SUBMITTED, NOTE_PUBLISHED, PM_CALL, PROJECT_STARTED … */
+            type: string;
+            /** Format: date-time */
+            ts: string;
+            /** @description 책임 주체 — 사람 user id 또는 system:* 문자열 */
+            onBehalfOf: string;
+            /**
+             * Format: uuid
+             * @description 행동한 에이전트(사람이 직접 한 일이면 null)
+             */
+            actorAgentId: string | null;
+            /** @description type마다 모양이 다르다 */
+            payload: {
+                [key: string]: unknown;
+            };
+            /** @description 이 행의 비용(USD). 지금은 PM_CALL에만 */
+            tokenCost: number | null;
+            /** @description TOOL_DENIED에서 남의 역할 소유 경로를 침범했는가 */
+            pathViolation: boolean | null;
         };
         InvitePreview: {
             /** @description 없는 토큰이면 빈 문자열 */
@@ -5447,8 +5957,11 @@ export interface components {
             /** @enum {string} */
             taskState: "READY" | "CLAIMED" | "IN_PROGRESS" | "VERIFYING" | "AWAITING_APPROVAL" | "BLOCKED" | "ESCALATED" | "DONE";
             retryCount: number;
-            /** @description 결론은 났지만 빠져나올 경로가 없을 때의 안내(지금은 AWAITING_APPROVAL). 없으면 생략 */
-            notice?: string;
+            /**
+             * Format: uuid
+             * @description AWAITING_APPROVAL로 갔으면 그 승인 카드 id(대표가 승인·반려). 없으면 생략
+             */
+            approvalId?: string;
         };
         /** @description Artifact의 필드 전부 + 서버가 동기로 끝낸 검증 요약(verification) */
         SubmittedArtifact: {
@@ -5733,6 +6246,17 @@ export interface components {
             };
             specTests: components["schemas"]["SpecTest"][];
             policyHash: string;
+            /** @description 직전 제출이 대표에게 반려됐으면 그 사유. 반려되면 태스크가 READY로 돌아오고 같은 태스크 브랜치에서 이어서 고친다 */
+            lastRejection: {
+                /** Format: uuid */
+                approvalId: string;
+                reason: string;
+                /** Format: date-time */
+                decidedAt: string;
+                /** Format: uuid */
+                artifactId: string | null;
+                commitSha: string | null;
+            } | null;
         };
         Error: {
             error: {
@@ -5745,10 +6269,16 @@ export interface components {
                  * @example policy_stale
                  */
                 reason?: string;
-                /** @description NOTE_INVALID에만 실린다 — 위반 항목 전부(필드·메시지). 다른 코드에서는 생략된다. */
+                /**
+                 * @description 상세를 공개하는 코드에만 실린다. 배열: NOTE_INVALID·PLAN_INVALID·PROJECT_START_INVALID(위반 전부),
+                 *     NOTES_UNACKNOWLEDGED(노트 전문), REPO_IN_ACTIVE_PROJECT(겹치는 레포 전부). 객체: PLAN_REVISION_LIMIT({ limit, used }).
+                 *     POLICY_STALE만 예외로 상세를 펼쳐 `reason`에 싣는다.
+                 */
                 details?: {
                     [key: string]: unknown;
-                }[];
+                }[] | {
+                    [key: string]: unknown;
+                };
             };
         };
     };

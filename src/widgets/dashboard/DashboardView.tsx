@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
   AlertTriangle,
   ArrowRight,
@@ -15,13 +15,18 @@ import {
 } from "lucide-react";
 import type { TeamRole } from "@/shared/model";
 import { AgentMark, Badge, Button, EmptyState, MockBadge, SectionTitle } from "@/shared/ui";
-import { cn, fmtKrw, fmtTime, fmtTokens, relTime } from "@/shared/lib/format";
+import { errorMessage } from "@/shared/api";
+import { cn, fmtDateTime, fmtKrw, fmtTokens, relTime } from "@/shared/lib/format";
+import { StatusDot, useOrgAgents } from "@/entities/agent";
+import { useProjectApprovals } from "@/entities/approval";
+import { EventRow, makeEventLookup, useProjectEvents } from "@/entities/event";
+import { useOrgMembers } from "@/entities/org";
 import { LEVELS } from "@/entities/policy";
 import { ProjectErrorView, ProjectStatusBadge, fmtUsd, useProject } from "@/entities/project";
 import { ROOM_META } from "@/entities/room";
 import { ApiTaskBadge, TASK_BOARD, TEAM_ROLE_META, TeamRoleBadge, useTasks } from "@/entities/task";
 import { useCurrentUser } from "@/entities/user";
-import { useApp, useProject as useMockProject } from "@/lib/store";
+import { useProject as useMockProject } from "@/lib/store";
 
 const ROLE_FILTERS: { value: TeamRole | undefined; label: string }[] = [
   { value: undefined, label: "전체" },
@@ -33,45 +38,29 @@ export function DashboardView({ projectId }: { projectId: string }) {
   // AppShell이 불러온 뒤에만 그려진다
   const { project, members, repos } = useProject(projectId).data!;
   const [teamRole, setTeamRole] = useState<TeamRole | undefined>();
-  const isRep = useCurrentUser().me?.orgRole === "REPRESENTATIVE";
+  const me = useCurrentUser().me;
+  const isRep = me?.orgRole === "REPRESENTATIVE";
+  // 접속 상태(online)를 보려고 조직 에이전트 목록을 폴링한다
+  const agents = useOrgAgents(me?.orgId ?? null, { poll: true }).data?.agents;
   // 요약 타일은 전체 기준, 역할 필터는 칸반에만 건다. 한 번 받아 화면에서 거르므로 요청은 하나
   const tasks = useTasks(projectId);
+  const approvals = useProjectApprovals(projectId);
+  const events = useProjectEvents(projectId);
+  const orgMembers = useOrgMembers(me?.orgId ?? "").data;
 
   // 아래는 API가 없어 목업 스토어를 읽는 영역. 실제 프로젝트 id는 목업에 없으므로 대개 비어 있다
-  const { state } = useApp();
   const mock = useMockProject(projectId);
-  const { myRole, visibleRooms, docs, events, rooms } = mock;
-
-  const pending = useMemo(() => {
-    const roomIds = new Set(visibleRooms.map((r) => r.id));
-    return state.messages
-      .filter((m) => roomIds.has(m.roomId) && m.card)
-      .filter((m) => {
-        const c = m.card!;
-        const room = visibleRooms.find((r) => r.id === m.roomId)!;
-        const writable = myRole === "OWNER" ? room.type === "OWNER" : room.type === myRole;
-        if (c.kind === "spec" && c.status === "pending") return myRole === "OWNER";
-        if (c.kind === "report" && c.status === "pending") return myRole === "OWNER";
-        if (c.kind === "question" && !c.answer) return true;
-        if (c.kind === "repo" && c.status === "pending") return writable;
-        return false;
-      })
-      .map((m) => ({ m, room: visibleRooms.find((r) => r.id === m.roomId)! }));
-  }, [state.messages, visibleRooms, myRole]);
+  const { myRole, visibleRooms, docs, rooms } = mock;
 
   const level = LEVELS.find((l) => l.id === project.autonomyPreset);
   const mockBudgetPct = mock.project
     ? Math.min(100, Math.round((mock.project.pmSpentTokens / mock.project.pmBudgetTokens) * 100))
     : null;
   const myRoom = visibleRooms.find((r) => r.type === (myRole === "OWNER" ? "OWNER" : myRole));
-  const recent = events
-    .slice()
-    .sort((a, b) => (a.ts < b.ts ? 1 : -1))
-    .slice(0, 8);
   const costs = {
     FE: mock.tasks.filter((t) => t.role === "FE").reduce((a, t) => a + t.costKrw, 0),
     BE: mock.tasks.filter((t) => t.role === "BE").reduce((a, t) => a + t.costKrw, 0),
-    PM: events.filter((e) => e.actor === "PM" && e.costKrw).reduce((a, e) => a + (e.costKrw ?? 0), 0),
+    PM: mock.events.filter((e) => e.actor === "PM" && e.costKrw).reduce((a, e) => a + (e.costKrw ?? 0), 0),
   };
   const costMax = Math.max(1, costs.FE, costs.BE, costs.PM);
   const latestDocs = (["CONSTITUTION", "SPEC", "CONTRACT", "ADR"] as const).map((type) => ({
@@ -83,6 +72,7 @@ export function DashboardView({ projectId }: { projectId: string }) {
 
   const taskList = tasks.data ?? [];
   const boardList = teamRole ? taskList.filter((t) => t.teamRole === teamRole) : taskList;
+  const lookup = makeEventLookup(taskList, agents, orgMembers);
 
   return (
     <div className="h-full overflow-y-auto">
@@ -111,7 +101,7 @@ export function DashboardView({ projectId }: { projectId: string }) {
               </Button>
             )}
             <Button href={`/p/${projectId}/activity`} variant="outline">
-              <FileText size={15} /> 인계 노트
+              <FileText size={15} /> 활동
             </Button>
           </div>
         </div>
@@ -207,6 +197,7 @@ export function DashboardView({ projectId }: { projectId: string }) {
               <ul className="space-y-3">
                 {(["FRONTEND", "BACKEND"] as const).map((role) => {
                   const m = members.find((x) => x.teamRole === role);
+                  const agent = m && agents?.find((a) => a.agentId === m.agentId);
                   const tone = TEAM_ROLE_META[role].tone;
                   return (
                     <li key={role} className="flex items-center gap-2.5">
@@ -218,6 +209,15 @@ export function DashboardView({ projectId }: { projectId: string }) {
                           <span className="text-ink-500">아직 배정되지 않음</span>
                         )}
                       </span>
+                      {agent && (
+                        <span
+                          className="inline-flex items-center gap-1 text-[11.5px] text-ink-500"
+                          title={agent.lastSeenAt ? `마지막 확인 ${fmtDateTime(agent.lastSeenAt)}` : undefined}
+                        >
+                          <StatusDot status={agent.online ? "online" : "offline"} />
+                          {agent.online ? "접속 중" : "오프라인"}
+                        </span>
+                      )}
                       <TeamRoleBadge role={role} />
                     </li>
                   );
@@ -364,72 +364,70 @@ export function DashboardView({ projectId }: { projectId: string }) {
             </section>
 
             <section className="card p-4">
-              <SectionTitle action={<MockBadge />}>승인 · 결정 대기</SectionTitle>
-              {pending.length === 0 ? (
-                <p className="text-[13px] text-ink-500">(없음) — 대기 중인 승인·질의가 없습니다.</p>
+              <SectionTitle
+                action={
+                  <Link
+                    href={`/p/${projectId}/inbox`}
+                    className="text-[12px] font-medium text-ink-500 hover:text-ink-900"
+                  >
+                    받은 편지함
+                  </Link>
+                }
+              >
+                승인 · 결정 대기
+              </SectionTitle>
+              {approvals.isPending ? (
+                <Loader2 size={16} className="animate-spin text-ink-400" aria-label="불러오는 중" />
+              ) : approvals.isError ? (
+                <p className="text-[13px] text-forbidden">{errorMessage(approvals.error)}</p>
+              ) : approvals.data.length === 0 ? (
+                <p className="text-[13px] text-ink-500">(없음) — 대기 중인 승인이 없습니다.</p>
               ) : (
                 <ul className="space-y-2">
-                  {pending.map(({ m, room }) => {
-                    const c = m.card!;
-                    const label =
-                      c.kind === "spec"
-                        ? `명세 v${c.version} 승인 대기 — ${c.title}`
-                        : c.kind === "report"
-                          ? `완료 보고서 확인 — ${c.title}`
-                          : c.kind === "question"
-                            ? `에이전트 질의 · ${c.taskId} — ${c.question}`
-                            : c.kind === "repo"
-                              ? `${c.role} 레포 연결 대기`
-                              : "";
-                    const tone = c.kind === "question" ? "warn" : "brand";
-                    return (
-                      <li key={m.id}>
-                        <Link
-                          href={`/p/${projectId}/rooms/${room.id}#${m.id}`}
-                          className="flex items-center gap-3 rounded-lg border border-ink-200 px-3 py-2.5 hover:bg-ink-50"
-                        >
-                          <Badge tone={tone}>{c.kind === "question" ? "WAITING" : "승인"}</Badge>
-                          <span className="min-w-0 flex-1 truncate text-[13px]">{label}</span>
-                          <span className="hidden text-[11.5px] text-ink-500 sm:inline">
-                            {ROOM_META[room.type].name}
-                          </span>
-                          <ArrowRight size={14} className="text-ink-400" />
-                        </Link>
-                      </li>
-                    );
-                  })}
+                  {approvals.data.map((a) => (
+                    <li key={a.id}>
+                      <Link
+                        href={`/p/${projectId}/inbox#${a.id}`}
+                        className="flex items-center gap-3 rounded-lg border border-ink-200 px-3 py-2.5 hover:bg-ink-50"
+                      >
+                        <Badge tone="warn">승인</Badge>
+                        <span className="min-w-0 flex-1 truncate text-[13px]">{a.taskTitle ?? "태스크"}</span>
+                        <span className="hidden text-[11.5px] text-ink-500 sm:inline">{relTime(a.requestedAt)}</span>
+                        <ArrowRight size={14} className="text-ink-400" />
+                      </Link>
+                    </li>
+                  ))}
                 </ul>
               )}
             </section>
 
             <section className="card p-4">
-              <SectionTitle action={<MockBadge />}>최근 활동</SectionTitle>
-              <ul className="divide-y divide-ink-100">
-                {recent.map((e) => (
-                  <li key={e.id} className="flex items-start gap-3 py-2 text-[13px]">
-                    <span className="w-11 shrink-0 pt-0.5 font-mono text-[11.5px] text-ink-400 tabular-nums">
-                      {fmtTime(e.ts)}
-                    </span>
-                    <span
-                      className={cn(
-                        "mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full",
-                        e.tone === "danger"
-                          ? "bg-forbidden"
-                          : e.tone === "warn"
-                            ? "bg-human"
-                            : e.tone === "success"
-                              ? "bg-auto"
-                              : "bg-ink-300",
-                      )}
-                    />
-                    <span className="min-w-0 flex-1">
-                      <span className="font-medium">{e.actor}</span> <span className="text-ink-600">{e.summary}</span>
-                    </span>
-                    <span className="hidden shrink-0 text-[11.5px] text-ink-400 sm:inline">{relTime(e.ts)}</span>
-                  </li>
-                ))}
-                {recent.length === 0 && <li className="py-2 text-[12.5px] text-ink-400">목업 데이터 없음</li>}
-              </ul>
+              <SectionTitle
+                action={
+                  <Link
+                    href={`/p/${projectId}/activity`}
+                    className="text-[12px] font-medium text-ink-500 hover:text-ink-900"
+                  >
+                    전체 보기
+                  </Link>
+                }
+              >
+                최근 활동
+              </SectionTitle>
+              {events.isPending ? (
+                <Loader2 size={16} className="animate-spin text-ink-400" aria-label="불러오는 중" />
+              ) : events.isError ? (
+                <p className="text-[13px] text-forbidden">{errorMessage(events.error)}</p>
+              ) : (
+                <ul className="divide-y divide-ink-100">
+                  {events.data.slice(0, 8).map((e) => (
+                    <EventRow key={e.id} event={e} lookup={lookup} />
+                  ))}
+                  {events.data.length === 0 && (
+                    <li className="py-2 text-[12.5px] text-ink-400">아직 활동이 없습니다</li>
+                  )}
+                </ul>
+              )}
             </section>
           </div>
         </div>

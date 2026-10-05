@@ -10,7 +10,7 @@ export const agentKeys = {
 /** 에이전트 CLI (backend#7). npx가 캐시한 옛 버전이 바뀐 서버 API로 실행되지 않게 @latest를 붙인다 */
 export const CLI_NPX = "npx @capstone-nomos/cli@latest";
 
-/** 조직의 에이전트 목록. 접속 상태(online/offline)는 API가 주지 않는다 — 목록에 있으면 "연결한 적 있음" */
+/** 조직의 에이전트 목록. online은 서버 메모리 값이라 서버 재시작 직후 잠깐 false다 (최근 60초 안에 요청이 있으면 true) */
 export function useOrgAgents(orgId: string | null, { poll = false }: { poll?: boolean } = {}) {
   return useQuery({
     queryKey: agentKeys.org(orgId ?? ""),

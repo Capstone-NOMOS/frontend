@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ArrowUp, Check, Loader2 } from "lucide-react";
-import { ApiError, errorMessage } from "@/shared/api";
+import { ApiError, errorMessage, type Schemas } from "@/shared/api";
 import { AgentMark, Badge, Button, Input, Logo } from "@/shared/ui";
 import { cn } from "@/shared/lib/format";
 import type { Level } from "@/shared/model";
@@ -49,6 +49,8 @@ export function ProjectNewView() {
   const [typing, setTyping] = useState(false);
   const [input, setInput] = useState("");
   const [form, setForm] = useState({ name: "", repoIds: [] as string[], level: "L2" as Level, pmBudgetUsd: 0 });
+  // 409 REPO_IN_ACTIVE_PROJECT로 레포만 다시 고르는 중. 고르면 레벨·예산을 다시 묻지 않고 마지막 단계로 간다
+  const [returning, setReturning] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -150,7 +152,8 @@ export function ProjectNewView() {
               orgId={orgId}
               onDone={(repos) => {
                 setForm((f) => ({ ...f, repoIds: repos.map((r) => r.id) }));
-                answer(repos.map((r) => r.fullName).join(", "), "level");
+                answer(repos.map((r) => r.fullName).join(", "), returning ? "extras" : "level");
+                setReturning(false);
               }}
             />
           ) : step === "level" ? (
@@ -161,7 +164,16 @@ export function ProjectNewView() {
               }}
             />
           ) : step === "extras" ? (
-            <Extras orgId={orgId} form={form} onCreated={(projectId) => router.push(`/p/${projectId}/settings`)} />
+            <Extras
+              orgId={orgId}
+              form={form}
+              onCreated={(projectId) => router.push(`/p/${projectId}/settings`)}
+              onBackToRepos={() => {
+                setLines((l) => [...l, { from: "nomos", text: PROMPTS.repos }]);
+                setReturning(true);
+                setStep("repos");
+              }}
+            />
           ) : null}
         </div>
       </div>
@@ -223,6 +235,8 @@ function ChatCard({ children }: { children: ReactNode }) {
   return <div className="card ml-0 p-4 animate-rise sm:ml-10">{children}</div>;
 }
 
+const selectable = (r: Schemas["RepoListItem"]) => r.ownershipAssigned && r.activeProjectId === null;
+
 function RepoPicker({ orgId, onDone }: { orgId: string; onDone: (repos: { id: string; fullName: string }[]) => void }) {
   const repos = useRepos(orgId);
   const [picked, setPicked] = useState<Set<string>>(new Set());
@@ -262,13 +276,13 @@ function RepoPicker({ orgId, onDone }: { orgId: string; onDone: (repos: { id: st
             <label
               className={cn(
                 "flex items-center gap-2.5 text-[13.5px]",
-                r.ownershipAssigned ? "cursor-pointer" : "text-ink-400",
+                selectable(r) ? "cursor-pointer" : "text-ink-400",
               )}
             >
-              {/* 소유 역할이 없는 레포는 422 REPO_OWNERSHIP_NOT_SET — 미리 막는다 */}
+              {/* 소유 역할이 없으면 422 REPO_OWNERSHIP_NOT_SET, 진행 중 프로젝트가 쓰면 409 REPO_IN_ACTIVE_PROJECT — 미리 막는다 */}
               <input
                 type="checkbox"
-                disabled={!r.ownershipAssigned}
+                disabled={!selectable(r)}
                 checked={picked.has(r.id)}
                 onChange={() =>
                   setPicked((prev) => {
@@ -284,13 +298,19 @@ function RepoPicker({ orgId, onDone }: { orgId: string; onDone: (repos: { id: st
                 <OwnershipBadge assigned={r.ownershipAssigned} />
               </span>
             </label>
-            {!r.ownershipAssigned && (
+            {r.activeProjectId ? (
               <p className="mt-1 pl-6 text-[12px] text-ink-500">
-                소유 역할을 먼저 지정하세요 ·{" "}
-                <Link href={`/org/repos/${r.id}`} className="font-medium text-ink-900 underline underline-offset-2">
-                  지정하러 가기
-                </Link>
+                &lsquo;{r.activeProjectName}&rsquo; 프로젝트에서 사용 중입니다
               </p>
+            ) : (
+              !r.ownershipAssigned && (
+                <p className="mt-1 pl-6 text-[12px] text-ink-500">
+                  소유 역할을 먼저 지정하세요 ·{" "}
+                  <Link href={`/org/repos/${r.id}`} className="font-medium text-ink-900 underline underline-offset-2">
+                    지정하러 가기
+                  </Link>
+                </p>
+              )
             )}
           </li>
         ))}
@@ -333,10 +353,12 @@ function Extras({
   orgId,
   form,
   onCreated,
+  onBackToRepos,
 }: {
   orgId: string;
   form: { name: string; repoIds: string[]; level: Level; pmBudgetUsd: number };
   onCreated: (projectId: string) => void;
+  onBackToRepos: () => void;
 }) {
   const create = useCreateProject(orgId);
   const [budget, setBudget] = useState("");
@@ -383,6 +405,20 @@ function Extras({
                 조직에서 지정
               </Link>
             </>
+          ) : error instanceof ApiError && error.code === "REPO_IN_ACTIVE_PROJECT" ? (
+            <>
+              {errorMessage(error)}
+              <ul className="mt-1 space-y-0.5 text-ink-700">
+                {inUse(error).map((d) => (
+                  <li key={d.repoId}>
+                    <span className="font-mono">{d.fullName}</span> · &lsquo;{d.projectName}&rsquo;에서 사용 중
+                  </li>
+                ))}
+              </ul>
+              <Button variant="outline" size="sm" className="mt-2" onClick={onBackToRepos}>
+                레포 다시 고르기
+              </Button>
+            </>
           ) : (
             errorMessage(error)
           )}
@@ -392,5 +428,15 @@ function Extras({
         {create.isPending || create.isSuccess ? "만드는 중…" : "프로젝트 만들기"}
       </Button>
     </ChatCard>
+  );
+}
+
+type RepoInUse = { repoId: string; fullName: string; projectId: string; projectName: string };
+
+/** 409 REPO_IN_ACTIVE_PROJECT의 details: 겹치는 레포 전부. 형식이 다르면 빈 배열 */
+function inUse(error: ApiError): RepoInUse[] {
+  if (!Array.isArray(error.details)) return [];
+  return error.details.filter(
+    (d): d is RepoInUse => typeof d === "object" && d !== null && typeof d.fullName === "string",
   );
 }

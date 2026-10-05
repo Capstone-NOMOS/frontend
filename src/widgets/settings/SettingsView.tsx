@@ -32,7 +32,7 @@ export function SettingsView({ projectId }: { projectId: string }) {
   const isRep = me.orgRole === "REPRESENTATIVE";
   const { project, repos, members } = useProject(projectId).data!;
   const started = project.startedAt !== null;
-  // 에이전트 주인 닉네임·배정 후보. 접속 상태는 API가 주지 않는다
+  // 에이전트 주인 닉네임·배정 후보·접속 상태
   const agents = useOrgAgents(me.orgId);
 
   return (
@@ -246,7 +246,7 @@ function AssignPicker({
         <option value="">에이전트 선택</option>
         {agents.map((a) => (
           <option key={a.agentId} value={a.agentId} disabled={unavailable(a)}>
-            {a.agentName} · {a.nickname ?? "이름 없음"}
+            {a.agentName} · {a.nickname ?? "이름 없음"} · {a.online ? "접속 중" : "오프라인"}
             {a.assignment && a.assignment.projectId !== projectId ? " — 다른 프로젝트 진행 중" : ""}
           </option>
         ))}

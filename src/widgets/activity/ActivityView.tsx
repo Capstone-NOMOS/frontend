@@ -3,15 +3,22 @@
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { errorMessage } from "@/shared/api";
-import { Badge, EmptyState, MockBadge, SectionTitle } from "@/shared/ui";
+import { Badge, Button, EmptyState, MockBadge, SectionTitle } from "@/shared/ui";
 import { cn, fmtKrw, fmtTokens } from "@/shared/lib/format";
+import { useOrgAgents } from "@/entities/agent";
+import { EventRow, makeEventLookup, useProjectEvents } from "@/entities/event";
 import { NOTE_KIND, NoteItem, useNotes, type NoteKind } from "@/entities/note";
-import { TaskBadge } from "@/entities/task";
+import { useOrgMembers } from "@/entities/org";
+import { TaskBadge, useTasks } from "@/entities/task";
+import { useCurrentUser } from "@/entities/user";
 import { useProject as useMockProject } from "@/lib/store";
+
+type Tab = "events" | "notes" | "costs";
+const TABS: Record<Tab, string> = { events: "활동", notes: "인계 노트", costs: "비용" };
 
 export function ActivityView({ projectId }: { projectId: string }) {
   const notes = useNotes(projectId);
-  const [tab, setTab] = useState<"notes" | "costs">("notes");
+  const [tab, setTab] = useState<Tab>("events");
   const [kind, setKind] = useState<NoteKind | null>(null);
 
   const list = (notes.data ?? []).filter((n) => !kind || n.kind === kind);
@@ -23,11 +30,12 @@ export function ActivityView({ projectId }: { projectId: string }) {
           <div>
             <h1 className="text-[22px] font-semibold tracking-tight">활동 · 비용</h1>
             <p className="mt-1 text-[14px] text-ink-500">
-              에이전트가 남긴 인계 노트입니다. 노트는 자기 보고이며, 검증 결과는 태스크 상세에서 확인합니다.
+              프로젝트에서 일어난 일과 에이전트가 남긴 인계 노트입니다. 노트는 자기 보고이며, 검증 결과는 태스크
+              상세에서 확인합니다.
             </p>
           </div>
           <div className="inline-flex rounded-lg bg-ink-100 p-0.5">
-            {(["notes", "costs"] as const).map((t) => (
+            {(Object.keys(TABS) as Tab[]).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -36,13 +44,15 @@ export function ActivityView({ projectId }: { projectId: string }) {
                   tab === t ? "bg-white shadow-card" : "text-ink-600",
                 )}
               >
-                {t === "notes" ? "인계 노트" : "비용"}
+                {TABS[t]}
               </button>
             ))}
           </div>
         </div>
 
-        {tab === "notes" ? (
+        {tab === "events" ? (
+          <Events projectId={projectId} />
+        ) : tab === "notes" ? (
           <section className="mt-6">
             <div className="mb-3 flex flex-wrap gap-1.5">
               {([null, ...(Object.keys(NOTE_KIND) as NoteKind[])] as const).map((k) => (
@@ -82,6 +92,50 @@ export function ActivityView({ projectId }: { projectId: string }) {
         )}
       </div>
     </div>
+  );
+}
+
+/** 이벤트 로그 (최신순). 지워지지 않는 기록이라 그대로 보여 준다 */
+function Events({ projectId }: { projectId: string }) {
+  const me = useCurrentUser().me!;
+  const events = useProjectEvents(projectId);
+  const tasks = useTasks(projectId).data;
+  const agents = useOrgAgents(me.orgId).data?.agents;
+  const members = useOrgMembers(me.orgId!).data;
+  const lookup = makeEventLookup(tasks, agents, members);
+
+  if (events.isPending) {
+    return (
+      <div className="flex justify-center py-10 text-ink-400" aria-busy="true">
+        <Loader2 size={20} className="animate-spin" aria-label="불러오는 중" />
+      </div>
+    );
+  }
+  if (events.isError) return <EmptyState title={errorMessage(events.error)} />;
+
+  return (
+    <section className="mt-6">
+      <ol className="card divide-y divide-ink-100 px-4">
+        {events.data.map((e) => (
+          <EventRow key={e.id} event={e} lookup={lookup} />
+        ))}
+        {events.data.length === 0 && (
+          <li className="py-8 text-center text-[13px] text-ink-500">아직 활동이 없습니다</li>
+        )}
+      </ol>
+      {events.hasNextPage && (
+        <div className="mt-3 flex justify-center">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={events.isFetchingNextPage}
+            onClick={() => void events.fetchNextPage()}
+          >
+            {events.isFetchingNextPage ? "불러오는 중…" : "더 보기"}
+          </Button>
+        </div>
+      )}
+    </section>
   );
 }
 
