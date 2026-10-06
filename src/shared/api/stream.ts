@@ -23,6 +23,8 @@ const NO_RETRY_CODES = new Set([4400, 4401, 4403, 4408]);
 
 let ws: WebSocket | null = null;
 let token: string | null = null;
+/** 4401로 거절된 토큰. 같은 토큰으로는 다시 연결하지 않는다 (화면 이동으로 acquire가 다시 불려도) */
+let rejectedToken: string | null = null;
 let users = 0;
 let connected = false;
 let everReady = false;
@@ -82,6 +84,7 @@ function open() {
     setConnected(false);
     // 끊긴 사이의 신호는 다시 오지 않는다. 지금 한 번 다시 읽으면 폴링 주기도 원래 값(livePoll)으로 다시 잡힌다
     if (wasConnected && users > 0) emit({ kind: "resync" });
+    if (e.code === 4401) rejectedToken = token;
     if (users === 0 || NO_RETRY_CODES.has(e.code)) return;
     retryTimer = setTimeout(open, retryDelay);
     retryDelay = Math.min(retryDelay * 2, MAX_RETRY_MS);
@@ -99,6 +102,16 @@ function close() {
   retryDelay = 1_000;
 }
 
+// 네트워크가 돌아오면 백오프(최대 30초)를 기다리지 않고 바로 다시 붙는다
+if (typeof window !== "undefined") {
+  window.addEventListener("online", () => {
+    if (!retryTimer) return; // 재연결을 기다리는 중일 때만
+    clearTimeout(retryTimer);
+    retryDelay = 1_000;
+    open();
+  });
+}
+
 /** 로그인·조직이 있는 동안 연결을 유지한다. 돌려준 함수로 해제한다 (마지막 해제 뒤 잠시 기다렸다 닫는다) */
 function acquire(nextToken: string) {
   users++;
@@ -109,7 +122,7 @@ function acquire(nextToken: string) {
     close();
     token = nextToken;
   }
-  if (!ws && !retryTimer) open();
+  if (!ws && !retryTimer && token !== rejectedToken) open();
   return () => {
     users--;
     if (users > 0) return;
