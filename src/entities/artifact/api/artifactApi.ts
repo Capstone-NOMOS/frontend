@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { apiFetch, type Schemas } from "@/shared/api";
+import { apiFetch, livePoll, type Schemas } from "@/shared/api";
 import { sortVerifications } from "../model/api";
 
 export const artifactKeys = {
@@ -8,8 +8,8 @@ export const artifactKeys = {
   verifications: (artifactId: string) => [...artifactKeys.all, "verifications", artifactId] as const,
 };
 
-// V2·V4는 브릿지가 제출 뒤에 보고하므로 태스크 상세를 보는 동안 계속 갱신한다
-const POLL = { refetchInterval: 4000, refetchIntervalInBackground: false } as const;
+// V2·V4는 브릿지가 제출 뒤에 보고한다. 보고마다 tasks 신호가 오고, 폴링은 끊긴 동안의 대비용 (adr/0009)
+const POLL = { refetchInterval: livePoll(4000), refetchIntervalInBackground: false } as const;
 
 /** attempt 내림차순 (최신 먼저) */
 export function useArtifacts(taskId: string) {

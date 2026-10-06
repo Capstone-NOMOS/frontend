@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiFetch, type RequestBody, type ResponseData, type Schemas } from "@/shared/api";
+import { apiFetch, livePoll, type RequestBody, type ResponseData, type Schemas } from "@/shared/api";
 
 export type PmStatus = ResponseData<"/projects/{projectId}/pm/status", "get">;
 
@@ -12,7 +12,8 @@ export const planKeys = {
 
 /**
  * PM 준비 상태 (대표 전용). 꺼진 pm-worker는 켜면 몇 초 안에 ready가 되고,
- * 작성 중에는 비용(spentUsd)이 바뀌므로 그동안만 5초마다 다시 부른다
+ * 작성 중에는 비용(spentUsd)이 바뀌므로 그동안만 5초마다 다시 부른다.
+ * 작업기 접속은 이벤트가 없어 실시간 신호가 오지 않는다 — 연결과 상관없이 폴링을 유지한다 (adr/0009)
  */
 export function usePmStatus(projectId: string) {
   return useQuery({
@@ -26,16 +27,18 @@ export function usePmStatus(projectId: string) {
   });
 }
 
+const pendingPoll = livePoll(4000);
+
 /**
  * 계획 이력 (최근 요청 순, 대표 전용). 응답마다 assignments를 서버가 그 시점의 멤버로 다시 계산한다.
- * PM은 뒤에서 1~3분 돈다 — pending이 있는 동안만 4초마다 다시 부르고, ready·failed가 되면 멈춘다
+ * PM은 뒤에서 1~3분 돈다 — pending이 있는 동안만 폴링하고(plans 신호가 오면 30초 대비용), ready·failed가 되면 멈춘다
  */
 export function usePlans(projectId: string) {
   return useQuery({
     queryKey: planKeys.list(projectId),
     queryFn: () => apiFetch<{ plans: Schemas["PmPlan"][] }>(`/projects/${projectId}/pm/plans`),
     select: (data) => data.plans,
-    refetchInterval: (query) => (query.state.data?.plans.some((p) => p.status === "pending") ? 4000 : false),
+    refetchInterval: (query) => (query.state.data?.plans.some((p) => p.status === "pending") ? pendingPoll() : false),
     refetchIntervalInBackground: false,
   });
 }

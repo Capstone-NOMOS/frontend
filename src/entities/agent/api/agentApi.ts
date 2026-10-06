@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiFetch, type Schemas } from "@/shared/api";
+import { apiFetch, livePoll, type Schemas } from "@/shared/api";
 
 export const agentKeys = {
   all: ["agent"] as const,
@@ -16,7 +16,7 @@ export function useOrgAgents(orgId: string | null, { poll = false }: { poll?: bo
     queryKey: agentKeys.org(orgId ?? ""),
     queryFn: () => apiFetch<{ agents: Schemas["OrgAgent"][] }>(`/orgs/${orgId}/agents`),
     enabled: orgId !== null,
-    refetchInterval: poll ? 5000 : false,
+    refetchInterval: poll ? livePoll(5000) : false,
     refetchIntervalInBackground: false,
   });
 }
