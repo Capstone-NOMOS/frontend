@@ -1,0 +1,206 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans:
+    var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard Variable", Pretendard,
+    "Noto Sans KR", "Segoe UI", sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --color-brand-50: #eef3fa;
+  --color-brand-100: #dbe5f3;
+  --color-brand-200: #b7cbe6;
+  --color-brand-300: #8aaad3;
+  --color-brand-500: #35569a;
+  --color-brand-600: #1f3864;
+  --color-brand-700: #182c4f;
+  --color-brand-800: #12213b;
+
+  --color-ink-900: #111827;
+  --color-ink-800: #1f2937;
+  --color-ink-700: #374151;
+  --color-ink-600: #4b5563;
+  --color-ink-500: #6b7280;
+  --color-ink-400: #9ca3af;
+  --color-ink-300: #d1d5db;
+  --color-ink-200: #e5e7eb;
+  --color-ink-100: #f3f4f6;
+  --color-ink-50: #f9fafb;
+
+  --color-fe-500: #7c3aed;
+  --color-fe-100: #ede9fe;
+  --color-be-500: #0d9488;
+  --color-be-100: #ccfbf1;
+  --color-pm-500: #1f3864;
+  --color-pm-100: #dbe5f3;
+  --color-pm-chart: #2f5597;
+
+  --color-auto: #059669;
+  --color-auto-bg: #ecfdf5;
+  --color-review: #0284c7;
+  --color-review-bg: #f0f9ff;
+  --color-human: #d97706;
+  --color-human-bg: #fffbeb;
+  --color-forbidden: #dc2626;
+  --color-forbidden-bg: #fef2f2;
+
+  --shadow-card: 0 1px 2px rgba(17, 24, 39, 0.04), 0 1px 3px rgba(17, 24, 39, 0.06);
+  --shadow-pop: 0 10px 30px rgba(17, 24, 39, 0.12), 0 2px 6px rgba(17, 24, 39, 0.06);
+  --radius-xl2: 14px;
+}
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: #ffffff;
+  color: var(--color-ink-900);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--color-brand-100);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-ink-200) transparent;
+}
+
+@utility card {
+  background: #fff;
+  border: 1px solid var(--color-ink-200);
+  border-radius: var(--radius-xl2);
+  box-shadow: var(--shadow-card);
+}
+
+@utility dots-bg {
+  background-image: radial-gradient(var(--color-ink-200) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@utility safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(0.6);
+    opacity: 0.5;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-rise {
+  animation: rise 220ms ease-out both;
+}
+
+.pulse-dot {
+  animation: pulse-dot 1.4s ease-in-out infinite;
+}
+
+.prose-doc h1 {
+  font-size: 1.375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0 0 0.75rem;
+}
+.prose-doc h2 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 1.5rem 0 0.5rem;
+}
+.prose-doc h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 1.1rem 0 0.4rem;
+}
+.prose-doc p {
+  margin: 0.4rem 0;
+  line-height: 1.7;
+}
+.prose-doc ul,
+.prose-doc ol {
+  margin: 0.4rem 0 0.6rem 1.25rem;
+  line-height: 1.7;
+}
+.prose-doc ul {
+  list-style: disc;
+}
+.prose-doc ol {
+  list-style: decimal;
+}
+.prose-doc code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  background: var(--color-ink-100);
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+}
+.prose-doc pre {
+  background: var(--color-ink-50);
+  border: 1px solid var(--color-ink-200);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  overflow-x: auto;
+  margin: 0.6rem 0 0.9rem;
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+.prose-doc pre code {
+  background: transparent;
+  padding: 0;
+  font-size: inherit;
+}
+.prose-doc table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  margin: 0.6rem 0 0.9rem;
+}
+.prose-doc th,
+.prose-doc td {
+  border: 1px solid var(--color-ink-200);
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+  vertical-align: top;
+}
+.prose-doc th {
+  background: var(--color-ink-50);
+  font-weight: 600;
+}
+.prose-doc blockquote {
+  border-left: 3px solid var(--color-brand-200);
+  padding-left: 0.85rem;
+  color: var(--color-ink-700);
+  margin: 0.6rem 0;
+}

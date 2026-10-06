@@ -1,0 +1,53 @@
+{
+  "name": "frontend",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=20.9",
+    "pnpm": ">=10"
+  },
+  "scripts": {
+    "dev": "next dev -p 3001",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "next typegen && tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "gen:api": "openapi-typescript https://raw.githubusercontent.com/Capstone-NOMOS/backend/dev/docs/openapi.yaml -o src/shared/api/schema.d.ts"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.104.0",
+    "@tanstack/react-virtual": "^3.14.13",
+    "lucide-react": "^1.47.0",
+    "next": "16.3.5",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "react-markdown": "^10.1.0",
+    "rehype-sanitize": "^6.0.0",
+    "remark-gfm": "^4.0.1",
+    "zustand": "^5.0.15"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.5",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-boundaries": "^7.2.0",
+    "msw": "^2.15.0",
+    "openapi-typescript": "^7.13.0",
+    "prettier": "^3.9.9",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "msw",
+      "unrs-resolver"
+    ]
+  }
+}
