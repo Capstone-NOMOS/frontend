@@ -12,6 +12,7 @@ import { orgKeys } from "@/entities/org";
 import { planKeys } from "@/entities/plan";
 import { projectKeys } from "@/entities/project";
 import { repoKeys } from "@/entities/repo";
+import { specKeys } from "@/entities/spec";
 import { taskKeys } from "@/entities/task";
 
 // 조직 신호(projectId: null). 구독 없이 같은 조직의 모든 연결에 온다
@@ -35,7 +36,7 @@ const PROJECT_TOPICS: Record<string, (projectId: string) => QueryKey[]> = {
   approvals: (id) => [[...approvalKeys.all, "project", id]],
   notes: (id) => [noteKeys.list(id)],
   events: (id) => [eventKeys.list(id)],
-  // specs: 명세 화면이 아직 목업이라 다시 읽을 쿼리가 없다
+  specs: (id) => [specKeys.list(id)],
 };
 
 /** 웹소켓 연결을 유지하고, 신호를 쿼리 무효화로 바꾼다. 무효화는 화면에 떠 있는 쿼리만 다시 부른다 */

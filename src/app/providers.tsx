@@ -6,7 +6,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { ApiError, clearSession, setOnUnauthorized } from "@/shared/api";
 
 // 다시 보내도 결과가 같은 응답. 재시도하지 않는다.
-const NO_RETRY_STATUS = new Set([401, 403, 404, 409, 410, 422]);
+const NO_RETRY_STATUS = new Set([400, 401, 403, 404, 409, 410, 422]);
 
 export function Providers({ children }: { children: ReactNode }) {
   const router = useRouter();
