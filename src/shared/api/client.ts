@@ -35,10 +35,25 @@ export function setOnUnauthorized(callback: (() => void) | null) {
   onUnauthorized = callback;
 }
 
-export async function apiFetch<T>(
-  path: string,
-  { method = "GET", body, auth = true }: ApiFetchOptions = {},
-): Promise<T> {
+const inflightWrites = new Map<string, Promise<unknown>>();
+
+/**
+ * 같은 쓰기 요청(메서드·경로·본문)이 겹치면 하나만 보내고 결과를 나눠 갖는다.
+ * 버튼의 disabled={isPending}은 다음 렌더에야 걸려서 더블클릭의 두 번째 클릭을 못 막는다 — 중복 제출은 ADR·이벤트 기록을 오염시킨다
+ */
+export function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
+  const method = options.method ?? "GET";
+  if (method === "GET") return request<T>(path, options);
+  const key = `${method} ${path} ${JSON.stringify(options.body ?? null)}`;
+  let pending = inflightWrites.get(key);
+  if (!pending) {
+    pending = request<T>(path, options).finally(() => inflightWrites.delete(key));
+    inflightWrites.set(key, pending);
+  }
+  return pending as Promise<T>;
+}
+
+async function request<T>(path: string, { method = "GET", body, auth = true }: ApiFetchOptions): Promise<T> {
   const headers: Record<string, string> = {};
   if (body !== undefined) headers["Content-Type"] = "application/json";
   if (auth) {
