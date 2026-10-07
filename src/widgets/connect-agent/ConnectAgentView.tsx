@@ -90,6 +90,11 @@ export function ConnectAgentView({ joined = false }: { joined?: boolean }) {
       </header>
       <main className="mx-auto max-w-[720px] px-4 pb-16 pt-4 sm:px-6">
         <div className="card p-6 sm:p-8 animate-rise">
+          {joined && (
+            <p className="mb-4 rounded-xl bg-brand-50 px-4 py-3 text-[13.5px] font-medium text-brand-700">
+              {me.orgName ?? "조직"}에 합류했습니다. 에이전트를 연결하세요.
+            </p>
+          )}
           <h1 className="text-[22px] font-semibold tracking-tight">에이전트 연결</h1>
           <p className="mt-1 text-[13.5px] text-ink-500">
             내 노트북의 코딩 에이전트를 NOMOS에 연결합니다. 프로젝트에 배정되기 전까지 에이전트는 어떤 태스크도 받지
