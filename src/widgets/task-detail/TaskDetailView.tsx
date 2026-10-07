@@ -139,40 +139,50 @@ function Submissions({ taskId }: { taskId: string }) {
   );
 }
 
+function VerificationRow({ v }: { v: Schemas["Verification"] }) {
+  return (
+    <li className="py-2.5">
+      <div className="flex items-center gap-2">
+        <span className="w-24 font-mono text-[12.5px] font-semibold">{v.stage}</span>
+        <VerificationBadge result={v.result} />
+        {v.result === "SKIPPED" && <span className="text-[11.5px] text-ink-500">통과 아님</span>}
+        <span className="ml-auto text-[11.5px] text-ink-400 tabular-nums">
+          {v.executedBy === "server" ? "서버" : "브릿지"}
+          {v.durationMs !== null && ` · ${v.durationMs}ms`}
+        </span>
+      </div>
+      {/* detail은 단계마다 형식이 다르다. SKIPPED면 reason(문자열)이 반드시 있다 */}
+      {typeof v.detail.reason === "string" && (
+        <p className="mt-1 pl-26 text-[12.5px] text-ink-600">{v.detail.reason}</p>
+      )}
+    </li>
+  );
+}
+
 function Verifications({ artifact }: { artifact: Schemas["Artifact"] }) {
   const verifications = useVerifications(artifact.id);
 
   if (verifications.isPending) return <Spinner />;
   if (verifications.isError) return <p className="text-[13px] text-ink-500">{errorMessage(verifications.error)}</p>;
 
-  const missing = EXPECTED_STAGES.filter((s) => !verifications.data.some((v) => v.stage === s));
+  // 보고 안 된 단계도 제자리(V3 → V2 → V4)에 "대기"로 끼운다. INTEGRATION은 결과가 왔을 때만 끝에 붙는다
+  const integration = verifications.data.find((v) => v.stage === "INTEGRATION");
 
   return (
     <>
       <ol className="divide-y divide-ink-100">
-        {verifications.data.map((v) => (
-          <li key={v.id} className="py-2.5">
-            <div className="flex items-center gap-2">
-              <span className="w-24 font-mono text-[12.5px] font-semibold">{v.stage}</span>
-              <VerificationBadge result={v.result} />
-              {v.result === "SKIPPED" && <span className="text-[11.5px] text-ink-500">통과 아님</span>}
-              <span className="ml-auto text-[11.5px] text-ink-400 tabular-nums">
-                {v.executedBy === "server" ? "서버" : "브릿지"}
-                {v.durationMs !== null && ` · ${v.durationMs}ms`}
-              </span>
-            </div>
-            {/* detail은 단계마다 형식이 다르다. SKIPPED면 reason(문자열)이 반드시 있다 */}
-            {typeof v.detail.reason === "string" && (
-              <p className="mt-1 pl-26 text-[12.5px] text-ink-600">{v.detail.reason}</p>
-            )}
-          </li>
-        ))}
-        {missing.map((stage) => (
-          <li key={stage} className="flex items-center gap-2 py-2.5">
-            <span className="w-24 font-mono text-[12.5px] font-semibold text-ink-400">{stage}</span>
-            <span className="text-[12px] text-ink-400">보고 전</span>
-          </li>
-        ))}
+        {EXPECTED_STAGES.map((stage) => {
+          const v = verifications.data.find((x) => x.stage === stage);
+          return v ? (
+            <VerificationRow key={v.id} v={v} />
+          ) : (
+            <li key={stage} className="flex items-center gap-2 py-2.5">
+              <span className="w-24 font-mono text-[12.5px] font-semibold text-ink-400">{stage}</span>
+              <span className="text-[12px] text-ink-400">대기</span>
+            </li>
+          );
+        })}
+        {integration && <VerificationRow v={integration} />}
       </ol>
       {artifact.changedPaths.length > 0 && (
         <details className="mt-3 text-[12.5px]">

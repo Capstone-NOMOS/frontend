@@ -164,7 +164,7 @@ function MembersSection({
                       disabled={busy}
                       onClick={() => {
                         assign.reset();
-                        unassign.mutate(member.agentId, { onSuccess: refreshAgents });
+                        unassign.mutate(member.agentId, { onSettled: refreshAgents });
                       }}
                     >
                       {unassign.isPending && unassign.variables === member.agentId ? "해제 중…" : "해제"}
@@ -181,7 +181,7 @@ function MembersSection({
                   pending={assign.isPending && assign.variables?.teamRole === role}
                   onAssign={(agentId) => {
                     unassign.reset();
-                    assign.mutate({ agentId, teamRole: role }, { onSuccess: refreshAgents });
+                    assign.mutate({ agentId, teamRole: role }, { onSettled: refreshAgents });
                   }}
                 />
               ) : (
