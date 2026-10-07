@@ -25,8 +25,15 @@ function useInvalidateProject(projectId: string) {
     ]);
 }
 
-// 다른 탭에서 이미 시작한 경우 등: 화면이 옛 상태를 보고 있으므로 상세를 다시 부른다
-const STALE_CODES = new Set(["PROJECT_STARTED", "PROJECT_ALREADY_STARTED"]);
+// 다른 탭에서 이미 시작·배정·해제한 경우 등: 화면이 옛 상태를 보고 있으므로 상세를 다시 부른다
+const STALE_CODES = new Set([
+  "PROJECT_STARTED",
+  "PROJECT_ALREADY_STARTED",
+  "ROLE_ALREADY_ASSIGNED",
+  "AGENT_ALREADY_ASSIGNED",
+  "AGENT_IN_ANOTHER_PROJECT",
+  "MEMBER_NOT_FOUND",
+]);
 
 function useRefetchOnStale(projectId: string) {
   const invalidate = useInvalidateProject(projectId);
