@@ -34,13 +34,13 @@ export function ActivityView({ projectId }: { projectId: string }) {
               상세에서 확인합니다.
             </p>
           </div>
-          <div className="inline-flex rounded-lg bg-ink-100 p-0.5">
+          <div className="inline-flex shrink-0 self-start rounded-lg bg-ink-100 p-0.5 sm:self-auto">
             {(Object.keys(TABS) as Tab[]).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
                 className={cn(
-                  "h-8 rounded-md px-3 text-[13px] font-medium",
+                  "h-7 whitespace-nowrap rounded-md px-2.5 text-[12px] font-medium",
                   tab === t ? "bg-white shadow-card" : "text-ink-600",
                 )}
               >

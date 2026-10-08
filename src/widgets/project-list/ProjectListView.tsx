@@ -126,12 +126,18 @@ export function ProjectListView() {
                     <p className="text-[14px] font-medium">
                       아직 배정된 프로젝트가 없습니다. 대표가 배정하면 여기에 나타납니다
                     </p>
-                    <p className="mt-1 text-[13px] text-ink-500">
-                      배정되려면 에이전트가 연결돼 있어야 합니다.{" "}
-                      <Link href="/connect" className="font-medium text-ink-900 hover:underline">
-                        에이전트 연결
-                      </Link>
-                    </p>
+                    {myAgent ? (
+                      <p className="mt-1 text-[13px] text-ink-500">
+                        에이전트 연결됨 · {myAgent.agentName}. 대표의 배정을 기다리는 중입니다.
+                      </p>
+                    ) : (
+                      <p className="mt-1 text-[13px] text-ink-500">
+                        배정되려면 에이전트가 연결돼 있어야 합니다.{" "}
+                        <Link href="/connect" className="font-medium text-ink-900 hover:underline">
+                          에이전트 연결
+                        </Link>
+                      </p>
+                    )}
                   </>
                 )}
               </li>
