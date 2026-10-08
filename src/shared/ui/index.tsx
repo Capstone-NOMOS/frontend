@@ -3,6 +3,7 @@
 import Link from "next/link";
 import {
   forwardRef,
+  useState,
   type ButtonHTMLAttributes,
   type InputHTMLAttributes,
   type ReactNode,
@@ -270,6 +271,19 @@ export function EmptyState({ title, desc, action }: { title: string; desc?: stri
 }
 
 export function CopyField({ value, label }: { value: string; label?: string }) {
+  const [copied, setCopied] = useState<"ok" | "fail" | null>(null);
+  const copy = () => {
+    const flash = (r: "ok" | "fail") => {
+      setCopied(r);
+      setTimeout(() => setCopied(null), 1500);
+    };
+    // clipboard는 https·localhost에서만 있다
+    if (!navigator.clipboard) return flash("fail");
+    navigator.clipboard.writeText(value).then(
+      () => flash("ok"),
+      () => flash("fail"),
+    );
+  };
   return (
     <div className="flex items-center gap-2 rounded-xl border border-ink-200 bg-ink-50 px-3 py-2">
       <div className="min-w-0 flex-1">
@@ -278,10 +292,14 @@ export function CopyField({ value, label }: { value: string; label?: string }) {
       </div>
       <button
         type="button"
-        onClick={() => navigator.clipboard?.writeText(value).catch(() => undefined)}
-        className="shrink-0 rounded-lg border border-ink-200 bg-white px-2.5 py-1 text-xs font-medium text-ink-700 hover:bg-ink-100"
+        onClick={copy}
+        aria-live="polite"
+        className={cn(
+          "shrink-0 whitespace-nowrap rounded-lg border border-ink-200 bg-white px-2.5 py-1 text-xs font-medium hover:bg-ink-100",
+          copied === "ok" ? "text-auto" : copied === "fail" ? "text-forbidden" : "text-ink-700",
+        )}
       >
-        복사
+        {copied === "ok" ? "복사됨 ✓" : copied === "fail" ? "복사 실패" : "복사"}
       </button>
     </div>
   );
