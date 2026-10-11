@@ -5,6 +5,7 @@ export const repoKeys = {
   all: ["repo"] as const,
   list: (orgId: string) => [...repoKeys.all, "list", orgId] as const,
   github: (orgId: string) => [...repoKeys.all, "github", orgId] as const,
+  githubOrgs: (orgId: string) => [...repoKeys.all, "githubOrgs", orgId] as const,
   paths: (repoId: string) => [...repoKeys.all, "paths", repoId] as const,
 };
 
@@ -17,7 +18,7 @@ export function useRepos(orgId: string) {
   });
 }
 
-/** GitHub 앱이 접근할 수 있는 레포. 연동 미설정·조회 실패여도 빈 배열이 온다 */
+/** 대표의 GitHub 연결로 읽은 레포. 대표가 연결하지 않았거나 조회에 실패해도 빈 배열이 온다 */
 export function useGithubRepos(orgId: string, enabled = true) {
   return useQuery({
     queryKey: repoKeys.github(orgId),
@@ -37,6 +38,26 @@ export function useConnectRepos(orgId: string) {
     mutationFn: (body: RequestBody<"/orgs/{orgId}/repos", "post">) =>
       apiFetch<{ repos: Schemas["ConnectedRepo"][] }>(`/orgs/${orgId}/repos`, { method: "POST", body }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: repoKeys.list(orgId) }),
+  });
+}
+
+/** 대표 전용. 레포를 만들 수 있는 GitHub 조직 login 목록. 대표가 GitHub를 연결하지 않았으면 409 GITHUB_NOT_LINKED */
+export function useGithubOrgs(orgId: string) {
+  return useQuery({
+    queryKey: repoKeys.githubOrgs(orgId),
+    queryFn: () => apiFetch<{ orgs: string[] }>(`/orgs/${orgId}/github/orgs`),
+    select: (data) => data.orgs,
+    retry: false,
+  });
+}
+
+/** 대표 전용. GitHub 조직에 비공개 레포를 만들고 곧바로 연결한다. ownerRole이 필수라 바로 프로젝트에 넣을 수 있다 */
+export function useCreateGithubRepo(orgId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: RequestBody<"/orgs/{orgId}/github/repos", "post">) =>
+      apiFetch<{ repo: Schemas["CreatedGithubRepo"] }>(`/orgs/${orgId}/github/repos`, { method: "POST", body }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: repoKeys.all }),
   });
 }
 

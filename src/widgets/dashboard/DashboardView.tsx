@@ -23,8 +23,8 @@ import { EventRow, makeEventLookup, useProjectEvents } from "@/entities/event";
 import { useOrgMembers } from "@/entities/org";
 import { LEVELS } from "@/entities/policy";
 import { ProjectErrorView, ProjectStatusBadge, fmtUsd, useProject } from "@/entities/project";
-import { ROOM_META } from "@/entities/room";
-import { ApiTaskBadge, TASK_BOARD, TEAM_ROLE_META, TeamRoleBadge, useTasks } from "@/entities/task";
+import { ROLE_ROOM, ROOM_META, useRooms } from "@/entities/room";
+import { ApiTaskBadge, BLOCKED_REASON, TASK_BOARD, TEAM_ROLE_META, TeamRoleBadge, useTasks } from "@/entities/task";
 import { useCurrentUser } from "@/entities/user";
 import { useProject as useMockProject } from "@/lib/store";
 
@@ -50,13 +50,21 @@ export function DashboardView({ projectId }: { projectId: string }) {
 
   // 아래는 API가 없어 목업 스토어를 읽는 영역. 실제 프로젝트 id는 목업에 없으므로 대개 비어 있다
   const mock = useMockProject(projectId);
-  const { myRole, visibleRooms, docs, rooms } = mock;
+  const { docs } = mock;
+  const rooms = useRooms(projectId).data ?? [];
+  // 대표는 Room 3(PM), 팀원은 자기 역할 룸
+  const myTeamRole = members.find((m) => m.userId === me?.userId)?.teamRole;
+  const myRoom = isRep
+    ? { href: `/p/${projectId}/rooms/owner`, name: ROOM_META.OWNER.name }
+    : myTeamRole && {
+        href: `/p/${projectId}/rooms/${ROLE_ROOM[myTeamRole].slug}`,
+        name: ROOM_META[ROLE_ROOM[myTeamRole].type].name,
+      };
 
   const level = LEVELS.find((l) => l.id === project.autonomyPreset);
   const mockBudgetPct = mock.project
     ? Math.min(100, Math.round((mock.project.pmSpentTokens / mock.project.pmBudgetTokens) * 100))
     : null;
-  const myRoom = visibleRooms.find((r) => r.type === (myRole === "OWNER" ? "OWNER" : myRole));
   const costs = {
     FE: mock.tasks.filter((t) => t.role === "FE").reduce((a, t) => a + t.costKrw, 0),
     BE: mock.tasks.filter((t) => t.role === "BE").reduce((a, t) => a + t.costKrw, 0),
@@ -96,8 +104,8 @@ export function DashboardView({ projectId }: { projectId: string }) {
           </div>
           <div className="flex flex-wrap gap-2">
             {myRoom && (
-              <Button href={`/p/${projectId}/rooms/${myRoom.id}`} size="md">
-                <MessageSquare size={15} /> {ROOM_META[myRoom.type].name.split(" · ")[0]} 열기
+              <Button href={myRoom.href} size="md">
+                <MessageSquare size={15} /> {myRoom.name.split(" · ")[0]} 열기
               </Button>
             )}
             <Button href={`/p/${projectId}/activity`} variant="outline">
@@ -262,24 +270,23 @@ export function DashboardView({ projectId }: { projectId: string }) {
             </section>
 
             <section className="card p-4">
-              <SectionTitle action={<MockBadge />}>Rooms</SectionTitle>
+              <SectionTitle>Rooms</SectionTitle>
               <ul className="space-y-1">
-                {visibleRooms
-                  .slice()
-                  .sort((a, b) => ROOM_META[a.type].no - ROOM_META[b.type].no)
-                  .map((r) => (
-                    <li key={r.id}>
-                      <Link
-                        href={`/p/${projectId}/rooms/${r.id}`}
-                        className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] hover:bg-ink-50"
-                      >
-                        <MessageSquare size={14} className="text-ink-500" />
-                        <span className="flex-1">{ROOM_META[r.type].name}</span>
-                        <span className="text-[11.5px] text-ink-500">{ROOM_META[r.type].who}</span>
-                      </Link>
-                    </li>
-                  ))}
-                {rooms.length === 0 && <li className="px-2 text-[12.5px] text-ink-400">목업 데이터 없음</li>}
+                {rooms.map((r) => (
+                  <li key={r.role}>
+                    <Link
+                      href={`/p/${projectId}/rooms/${ROLE_ROOM[r.role].slug}`}
+                      className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] hover:bg-ink-50"
+                    >
+                      <MessageSquare size={14} className="text-ink-500" />
+                      <span className="flex-1">{ROOM_META[ROLE_ROOM[r.role].type].name}</span>
+                      <span className="text-[11.5px] text-ink-500">
+                        {r.activeTasks.length > 0 ? `진행 중 ${r.activeTasks.length}` : "진행 중인 태스크 없음"}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+                {rooms.length === 0 && <li className="px-2 text-[12.5px] text-ink-400">볼 수 있는 룸이 없습니다</li>}
               </ul>
             </section>
           </div>
@@ -349,6 +356,16 @@ export function DashboardView({ projectId }: { projectId: string }) {
                                   {t.teamRole && <TeamRoleBadge role={t.teamRole} />}
                                 </div>
                                 <div className="mt-1.5 text-[13px] font-medium leading-snug">{t.title}</div>
+                                {t.state === "BLOCKED" && t.blockedReason && (
+                                  <div className="mt-1 text-[11px] font-medium text-human">
+                                    {BLOCKED_REASON[t.blockedReason]}
+                                  </div>
+                                )}
+                                {(t.state === "CLAIMED" || t.state === "IN_PROGRESS") && t.claimedAt && (
+                                  <div className="mt-1 text-[11px] text-ink-500" title={fmtDateTime(t.claimedAt)}>
+                                    수령 {relTime(t.claimedAt)}
+                                  </div>
+                                )}
                                 {t.retryCount > 0 && (
                                   <div className="mt-1 text-[11px] text-ink-500">재시도 {t.retryCount}회</div>
                                 )}
@@ -390,8 +407,10 @@ export function DashboardView({ projectId }: { projectId: string }) {
                         href={`/p/${projectId}/inbox#${a.id}`}
                         className="flex items-center gap-3 rounded-lg border border-ink-200 px-3 py-2.5 hover:bg-ink-50"
                       >
-                        <Badge tone="warn">승인</Badge>
-                        <span className="min-w-0 flex-1 truncate text-[13px]">{a.taskTitle ?? "태스크"}</span>
+                        <Badge tone="warn">{a.gate === "G3" ? "통합 확인" : "승인"}</Badge>
+                        <span className="min-w-0 flex-1 truncate text-[13px]">
+                          {a.gate === "G3" ? "모든 태스크 완료 · 프로젝트 완료 승인" : (a.taskTitle ?? "태스크")}
+                        </span>
                         <span className="hidden text-[11.5px] text-ink-500 sm:inline">{relTime(a.requestedAt)}</span>
                         <ArrowRight size={14} className="text-ink-400" />
                       </Link>

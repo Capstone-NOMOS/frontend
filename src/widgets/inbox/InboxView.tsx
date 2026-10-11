@@ -8,10 +8,12 @@ import { useOrgAgents } from "@/entities/agent";
 import { ApprovalCard, useProjectApprovals } from "@/entities/approval";
 import { EventRow, describeEvent, makeEventLookup, useProjectEvents } from "@/entities/event";
 import { useOrgMembers } from "@/entities/org";
+import { projectKeys, useProject } from "@/entities/project";
+import { QuestionCard, useProjectQuestions } from "@/entities/question";
 import { taskKeys, useTasks } from "@/entities/task";
 import { displayName, useCurrentUser } from "@/entities/user";
 
-/** 내 결정이 필요한 승인 카드와, 주의가 필요한 최근 일(실패·거부·반려 등) */
+/** 내 결정이 필요한 승인 카드, 에이전트가 물은 질문, 주의가 필요한 최근 일(실패·거부·반려 등) */
 export function InboxView({ projectId }: { projectId: string }) {
   // AuthGate·AppShell 안쪽이므로 me가 있다
   const me = useCurrentUser().me!;
@@ -19,6 +21,11 @@ export function InboxView({ projectId }: { projectId: string }) {
   const queryClient = useQueryClient();
   const approvals = useProjectApprovals(projectId);
   const events = useProjectEvents(projectId);
+  const pending = useProjectQuestions(projectId, "pending");
+  const agentAnswered = useProjectQuestions(projectId, "agent_answered");
+  // 답할 수 있는 사람: 답할 역할의 담당자와 대표 (최종 판정은 403 NOT_QUESTION_TARGET)
+  const myTeamRole = useProject(projectId).data?.members.find((m) => m.userId === me.userId)?.teamRole;
+  const questions = [...(pending.data ?? []), ...(agentAnswered.data ?? [])];
   const tasks = useTasks(projectId).data;
   const agents = useOrgAgents(me.orgId).data?.agents;
   const members = useOrgMembers(me.orgId!).data;
@@ -53,9 +60,41 @@ export function InboxView({ projectId }: { projectId: string }) {
                   <ApprovalCard
                     approval={a}
                     canDecide={isRep}
-                    taskHref={`/p/${projectId}/tasks/${a.taskId}`}
-                    // 승인·반려로 태스크 상태가 바뀐다 (entities끼리 키를 못 쓰므로 위젯에서 무효화)
-                    onDecided={() => void queryClient.invalidateQueries({ queryKey: taskKeys.all })}
+                    taskHref={a.taskId ? `/p/${projectId}/tasks/${a.taskId}` : undefined}
+                    // 승인·반려로 태스크 상태가, G3면 프로젝트 상태가 바뀐다 (entities끼리 키를 못 쓰므로 위젯에서 무효화)
+                    onDecided={() => {
+                      void queryClient.invalidateQueries({ queryKey: taskKeys.all });
+                      void queryClient.invalidateQueries({ queryKey: projectKeys.all });
+                    }}
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section className="mt-8">
+          <SectionTitle>에이전트 질문 · {questions.length}</SectionTitle>
+          {pending.isPending ? (
+            <div className="flex justify-center py-6 text-ink-400" aria-busy="true">
+              <Loader2 size={18} className="animate-spin" aria-label="불러오는 중" />
+            </div>
+          ) : pending.isError ? (
+            <EmptyState title={errorMessage(pending.error)} />
+          ) : questions.length === 0 ? (
+            <EmptyState
+              title="답할 질문이 없습니다"
+              desc="에이전트가 다른 역할이 정해야 할 결정을 물으면 여기에 모입니다. 에이전트가 대신 답한 질문도 확인할 수 있습니다."
+            />
+          ) : (
+            <ul className="space-y-2">
+              {questions.map((q) => (
+                <li key={q.id}>
+                  <QuestionCard
+                    question={q}
+                    canAnswer={isRep || myTeamRole === q.targetRole}
+                    taskHref={`/p/${projectId}/tasks/${q.taskId}`}
+                    taskTitle={tasks?.find((t) => t.id === q.taskId)?.title}
                   />
                 </li>
               ))}

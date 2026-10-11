@@ -226,6 +226,23 @@ function DraftBody({
         <p className="mt-1.5 whitespace-pre-wrap text-[13px] leading-6 text-ink-900">{draft.rationale}</p>
       </section>
 
+      {/* 옛 초안에는 이 필드가 없다. PM은 통합 태스크를 만들지 않고, 대표가 G3 카드에서 이 항목을 확인한다 */}
+      {draft.integrationChecks && draft.integrationChecks.length > 0 && (
+        <section>
+          <h4 className="text-[12px] font-semibold uppercase tracking-wide text-ink-500">
+            통합 확인 항목 {draft.integrationChecks.length}개
+          </h4>
+          <ul className="mt-1.5 list-disc space-y-0.5 pl-5 text-[13px] leading-6 text-ink-900">
+            {draft.integrationChecks.map((c) => (
+              <li key={c}>{c}</li>
+            ))}
+          </ul>
+          <p className="mt-1 text-[12px] text-ink-500">
+            모든 태스크가 끝나면 대표의 승인 대기열에 통합 확인(G3) 카드로 올라옵니다.
+          </p>
+        </section>
+      )}
+
       <section>
         <h4 className="text-[12px] font-semibold uppercase tracking-wide text-ink-500">명세 {draft.specs.length}개</h4>
         <div className="mt-1.5 space-y-1.5">

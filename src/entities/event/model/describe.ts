@@ -31,7 +31,8 @@ const ROLE: Record<string, string> = { FRONTEND: "FE", BACKEND: "BE" };
 /** 누가 했는가. 에이전트가 했으면 에이전트, 아니면 책임 주체(사람 또는 system:*) */
 export function eventActor(e: ProjectEvent, l: EventLookup) {
   // 배정·해제는 actorAgentId에 배정된 에이전트가 들어 있다 — 한 사람은 대표다
-  const byPerson = e.type === "MEMBER_ASSIGNED" || e.type === "MEMBER_UNASSIGNED";
+  const byPerson =
+    e.type === "MEMBER_ASSIGNED" || e.type === "MEMBER_UNASSIGNED" || e.type === "GITHUB_COLLABORATORS_INVITED";
   if (e.actorAgentId && !byPerson) return l.agent(e.actorAgentId) ?? "에이전트";
   if (e.onBehalfOf === "system:pm") return "PM";
   if (e.onBehalfOf.startsWith("system:")) return "시스템";
@@ -107,6 +108,44 @@ export function describeEvent(e: ProjectEvent, l: EventLookup): { text: string; 
     }
     case "PLAN_REJECTED":
       return { text: `계획 반려${str("reason") && ` — ${str("reason")}`}`, tone: "default" };
+    case "TASK_DISPATCHED":
+      return { text: `실행 지시 · ${str("title") || task()}`, tone: "default" };
+    case "AGENT_RUN_STARTED":
+      return { text: `에이전트 실행 시작 · ${task()}`, tone: "default" };
+    case "AGENT_RUN_ENDED":
+      return { text: `에이전트 실행 종료 · ${task()}`, tone: "default" };
+    case "TASK_BLOCKED":
+      return { text: `제출 없이 멈춤 · 대표 확인 필요 · ${task()}`, tone: "warn" };
+    case "TASK_RESUMED":
+      return { text: `재개 · ${task()}${str("note") && ` — ${str("note")}`}`, tone: "default" };
+    case "RELEASE_REQUESTED":
+      return { text: `모든 태스크 완료 · 통합 확인 요청 (확인 항목 ${num("checkCount")}개)`, tone: "warn" };
+    case "RELEASE_DECIDED":
+      return str("decision") === "APPROVE"
+        ? { text: "통합 확인 승인 · 프로젝트 완료", tone: "success" }
+        : { text: `통합 확인 반려${str("reason") && ` — ${str("reason")}`}`, tone: "danger" };
+    case "ACTION_DETECTED":
+      return { text: `행동 감지 · ${str("actionKey")} · ${task()}`, tone: "warn" };
+    case "GITHUB_COLLABORATORS_INVITED": {
+      const results = Array.isArray(p.results) ? (p.results as { status?: unknown }[]) : [];
+      const bad = results.filter((r) => r.status === "skipped" || r.status === "failed").length;
+      return bad > 0
+        ? { text: `GitHub 협업자 초대 · ${results.length}개 레포 중 ${bad}개 보내지 못함 · ${agent()}`, tone: "warn" }
+        : { text: `GitHub 협업자 초대 · 레포 ${results.length}개 · ${agent()}`, tone: "default" };
+    }
+    case "PROJECT_SETTINGS_UPDATED": {
+      const after = p.after as { questionRelay?: unknown } | undefined;
+      return { text: `질문 중계 ${after?.questionRelay === false ? "끔" : "켬"}`, tone: "default" };
+    }
+    case "QUESTION_ASKED":
+      return {
+        text: `${ROLE[str("askerRole")] ?? "에이전트"} → ${ROLE[str("targetRole")] ?? "자기 소관"} 질문 · ${task()}`,
+        tone: "default",
+      };
+    case "QUESTION_ANSWERED":
+      return { text: `질문에 답함 · ${task()}`, tone: "default" };
+    case "QUESTION_EXPIRED":
+      return { text: `질문 만료 · 답이 없음 · ${task()}`, tone: "danger" };
     default:
       return { text: e.type, tone: "default" };
   }

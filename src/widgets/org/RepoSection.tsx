@@ -7,7 +7,7 @@ import { errorMessage, type Schemas } from "@/shared/api";
 import type { TeamRole } from "@/shared/model";
 import { Badge, Button, Input, SectionTitle, Segmented } from "@/shared/ui";
 import { cn } from "@/shared/lib/format";
-import { OwnershipBadge, useConnectRepos, useGithubRepos, useRepos } from "@/entities/repo";
+import { CreateGithubRepo, OwnershipBadge, useConnectRepos, useGithubRepos, useRepos } from "@/entities/repo";
 import { TeamRoleBadge } from "@/entities/task";
 
 /** "나중에"는 ownerRole을 보내지 않는다. undefined는 아직 고르지 않음 */
@@ -91,6 +91,7 @@ function ConnectForm({
   connected: Schemas["RepoListItem"][];
 }) {
   const [open, setOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
   const github = useGithubRepos(orgId, open);
   const connect = useConnectRepos(orgId);
   // 고른 레포 (fullName → 연결 정보)와 대표가 고른 소유 역할
@@ -143,14 +144,29 @@ function ConnectForm({
       },
     );
 
+  if (creating) {
+    return (
+      <div className="mt-4">
+        {/* 만든 레포는 목록 무효화로 위에 나타난다 */}
+        <CreateGithubRepo orgId={orgId} onClose={() => setCreating(false)} onCreated={() => setCreating(false)} />
+      </div>
+    );
+  }
+
   if (!open) {
     return (
       <div className="mt-4 flex flex-col gap-2">
         {connect.data && <ConnectResult repos={connect.data.repos} />}
-        <div>
+        <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
             레포 연결
           </Button>
+          {/* 대표 전용 UI는 팀원에게 렌더하지 않는다 */}
+          {isRep && (
+            <Button variant="outline" size="sm" onClick={() => setCreating(true)}>
+              새 레포 만들기
+            </Button>
+          )}
         </div>
       </div>
     );
@@ -199,7 +215,7 @@ function ConnectForm({
       ) : (
         <div className="space-y-2">
           <p className="text-[12.5px] text-ink-500">
-            GitHub 연동이 설정되지 않았거나 접근 가능한 레포가 없습니다. 레포 이름을 직접 입력하세요.
+            대표가 GitHub를 연결하면 목록이 보입니다. 지금은 레포 이름을 직접 입력하세요.
           </p>
           <div className="flex items-start gap-2">
             <div className="flex-1">
