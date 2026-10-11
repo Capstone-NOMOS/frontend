@@ -29,7 +29,11 @@ const ERROR_MESSAGES: Record<string, string> = {
   TASK_ROLE_MISMATCH: "다른 역할의 태스크입니다.",
   NOT_TASK_ASSIGNEE: "이 태스크의 담당자가 아닙니다.",
   AGENT_NOT_IN_ORG: "이 조직에 속한 에이전트가 아닙니다.",
-  PROJECT_STARTED: "프로젝트가 시작된 뒤에는 멤버를 바꿀 수 없습니다.",
+  PROJECT_STARTED: "프로젝트가 시작된 뒤에는 바꿀 수 없습니다.",
+  GITHUB_FORBIDDEN:
+    "GitHub가 거부했습니다. 그 조직에 레포를 만들 권한이 없거나, 조직이 NOMOS 앱을 승인하지 않았습니다.",
+  ROOM_NOT_VISIBLE: "다른 역할의 룸은 볼 수 없습니다.",
+  NOT_QUESTION_TARGET: "이 질문에 답할 역할의 담당자나 대표만 답할 수 있습니다.",
   VERIFICATION_STAGE_NOT_REPORTABLE: "보고할 수 없는 검증 단계입니다.",
 
   // 404
@@ -43,12 +47,17 @@ const ERROR_MESSAGES: Record<string, string> = {
   MEMBER_NOT_FOUND: "멤버를 찾을 수 없습니다.",
   PLAN_NOT_FOUND: "계획을 찾을 수 없습니다.",
   APPROVAL_NOT_FOUND: "승인 요청을 찾을 수 없습니다.",
+  QUESTION_NOT_FOUND: "질문을 찾을 수 없습니다.",
   DEVICE_REQUEST_NOT_FOUND: "연결 요청을 찾을 수 없습니다. 코드를 확인하거나 터미널에서 다시 실행해 주세요.",
 
   // 409
   LOGIN_ID_TAKEN: "이미 사용 중인 아이디입니다.",
   ALREADY_IN_ORG: "이미 다른 조직에 속해 있습니다.",
   GITHUB_ACCOUNT_TAKEN: "이 GitHub 계정은 다른 사용자에게 연결되어 있습니다.",
+  GITHUB_NOT_LINKED: "대표가 GitHub를 연결하지 않았습니다.",
+  GITHUB_REPO_NAME_TAKEN: "같은 이름의 레포가 이미 있습니다. 다른 이름을 쓰세요.",
+  TASK_NOT_STOPPED: "멈춘 태스크가 아닙니다.",
+  QUESTION_CLOSED: "이미 답했거나 만료된 질문입니다.",
   REPO_ALREADY_CONNECTED: "이미 연결된 레포지토리입니다.",
   PATH_PATTERN_DUPLICATE: "같은 경로 패턴이 이미 있습니다.",
   PATH_PRIORITY_TAKEN: "같은 우선순위의 규칙이 이미 있습니다.",
@@ -82,6 +91,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   NOTE_INVALID: "인계 노트 형식이 올바르지 않습니다.",
   INVALID_AUTONOMY_PRESET: "허용 레벨은 L1~L4 중 하나여야 합니다.",
   REPO_OWNERSHIP_NOT_SET: "경로 소유 역할이 지정되지 않은 레포지토리입니다.",
+  QUESTION_INVALID: "모든 질문에 답해 주세요.",
   // 아래 둘은 details: [{ where, message }]에 이유가 전부 온다. 화면은 details를 목록으로 함께 보여준다
   PROJECT_START_INVALID: "프로젝트를 시작할 수 없습니다.",
   PLAN_INVALID: "명세·태스크 검증을 통과하지 못했습니다.",

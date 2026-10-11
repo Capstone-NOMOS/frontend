@@ -88,7 +88,8 @@ function GithubSection({ githubLogin }: { githubLogin: string | null }) {
     <section className="card p-5">
       <SectionTitle>GitHub</SectionTitle>
       <p className="mb-3 text-[13px] text-ink-500">
-        연동하면 조직 멤버 목록에서 레포 협업자인지 확인되고, 레포를 연결할 때 GitHub 목록에서 고를 수 있습니다.
+        연동해야 프로젝트에 배정될 때 레포 협업자로 자동 초대됩니다. 대표가 연동하면 레포 목록 조회·새 레포
+        만들기·협업자 확인이 대표의 GitHub 연결로 동작합니다.
       </p>
 
       {githubLogin && state.step !== "connected" ? (

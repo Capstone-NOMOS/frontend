@@ -2,13 +2,12 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   Activity,
   BookOpen,
   Building2,
   ChevronDown,
-  Eye,
   FileText,
   Inbox,
   LayoutDashboard,
@@ -26,8 +25,10 @@ import { useProjectStream, type Schemas } from "@/shared/api";
 import { Avatar, Badge, Kbd, Logo, MockBadge } from "@/shared/ui";
 import { cn } from "@/shared/lib/format";
 import { StatusDot } from "@/entities/agent";
+import { useProjectApprovals } from "@/entities/approval";
 import { ProjectErrorView, ProjectStatusBadge, useProject, useProjects } from "@/entities/project";
-import { ROOM_META, type Room } from "@/entities/room";
+import { useMyQuestions } from "@/entities/question";
+import { ROLE_ROOM, ROOM_META, useRooms } from "@/entities/room";
 import { AccountMenu, RoleBadge, displayName, useCurrentUser } from "@/entities/user";
 import { useApp, useProject as useMockProject } from "@/lib/store";
 import { CommandSearch } from "./CommandSearch";
@@ -189,51 +190,22 @@ function SidebarContent({
   const user = useCurrentUser().me!;
   const isRep = user.orgRole === "REPRESENTATIVE";
   const projects = useProjects(project.orgId);
-  // Room·받은 편지함은 아직 API가 없어 목업 스토어를 읽는다. 실제 프로젝트 id는 목업에 없으므로 대개 비어 있다
+  // 데모 역할 전환만 목업 스토어를 읽는다. 실제 프로젝트 id는 목업에 없으므로 대개 비어 있다
   const { state, me, actions } = useApp();
   const mock = useMockProject(projectId);
-  const { myRole, visibleRooms, tasks, agentFor, canWrite } = mock;
+  const rooms = useRooms(projectId).data ?? [];
+  // 내가 답할 수 있는 질문(대표는 전부, 팀원은 자기 역할 대상)과, 대표가 결정할 승인
+  const myQuestions = (useMyQuestions().data ?? []).filter((q) => q.question.projectId === projectId);
+  const approvals = useProjectApprovals(projectId).data ?? [];
+  const inboxCount = myQuestions.length + (isRep ? approvals.length : 0);
   const pathname = usePathname();
   const router = useRouter();
   const [projOpen, setProjOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const inboxCount = useMemo(() => {
-    if (!me || !mock.project) return 0;
-    const roomIds = new Set(visibleRooms.map((r) => r.id));
-    return state.messages.filter((m) => {
-      if (!roomIds.has(m.roomId)) return false;
-      const c = m.card;
-      if (!c) return false;
-      const room = visibleRooms.find((r) => r.id === m.roomId)!;
-      if (c.kind === "spec" && c.status === "pending" && myRole === "OWNER") return true;
-      if (c.kind === "report" && c.status === "pending" && myRole === "OWNER") return true;
-      if (c.kind === "question" && !c.answer && canWrite(room)) return true;
-      if (c.kind === "repo" && c.status === "pending" && canWrite(room)) return true;
-      return false;
-    }).length;
-  }, [state.messages, visibleRooms, myRole, me, mock.project, canWrite]);
-
   const base = `/p/${projectId}`;
   const is = (p: string) => pathname === p;
   const startsWith = (p: string) => pathname.startsWith(p);
-
-  const roomStatus = (room: Room) => {
-    if (room.type === "OWNER") {
-      const pending = state.messages.some(
-        (m) =>
-          m.roomId === room.id &&
-          ((m.card?.kind === "spec" && m.card.status === "pending") ||
-            (m.card?.kind === "report" && m.card.status === "pending")),
-      );
-      return pending ? <span className="h-1.5 w-1.5 rounded-full bg-human" /> : null;
-    }
-    const agent = agentFor(room.type);
-    const waiting = tasks.some((t) => t.role === room.type && t.state === "WAITING_HUMAN");
-    if (waiting) return <span className="h-1.5 w-1.5 rounded-full bg-human" />;
-    if (!agent) return null;
-    return <StatusDot status={agent.status} pulse />;
-  };
 
   const myAgentName = detail.members.find((m) => m.userId === user.userId)?.agentName;
 
@@ -343,32 +315,22 @@ function SidebarContent({
                 onNavigate={onNavigate}
               />
             )}
-            {/* 나머지 Room은 API가 없어 목업 스토어를 읽는다 */}
-            {visibleRooms.length === 0 && (
-              <p className="flex items-center gap-1.5 px-2.5 py-1 text-[12px] text-ink-400">
-                Room 1·2 <MockBadge />
-              </p>
-            )}
-            {visibleRooms
-              .filter((room) => !(isRep && room.type === "OWNER"))
-              .slice()
-              .sort((a, b) => ROOM_META[a.type].no - ROOM_META[b.type].no)
-              .map((room) => (
+            {/* 역할 룸: 팀원은 자기 역할 룸만, 대표는 전부 온다 */}
+            {rooms.map((room) => {
+              const href = `${base}/rooms/${ROLE_ROOM[room.role].slug}`;
+              return (
                 <NavItem
-                  key={room.id}
-                  href={`${base}/rooms/${room.id}`}
+                  key={room.role}
+                  href={href}
                   icon={<MessageSquare size={16} />}
-                  label={ROOM_META[room.type].name}
-                  active={startsWith(`${base}/rooms/${room.id}`)}
+                  label={ROOM_META[ROLE_ROOM[room.role].type].name}
+                  active={startsWith(href)}
                   onNavigate={onNavigate}
-                  trailing={
-                    <span className="flex items-center gap-1.5">
-                      {!canWrite(room) && <Eye size={13} className="text-ink-400" aria-label="읽기 전용" />}
-                      {roomStatus(room)}
-                    </span>
-                  }
+                  badge={myQuestions.filter((q) => q.question.targetRole === room.role).length}
+                  trailing={room.agent && <StatusDot status={room.agent.online ? "online" : "offline"} />}
                 />
-              ))}
+              );
+            })}
           </div>
         </div>
 

@@ -14,9 +14,25 @@ const MAX_REASON = 2000;
 
 const strings = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []);
 
+interface ReleaseTask {
+  taskId: string;
+  title: string;
+  teamRole: string | null;
+  repo: string | null;
+  branchName: string | null;
+  commitSha: string | null;
+}
+
+/** G3 payload.tasks: 대표가 머지하고 실행해 볼 브랜치와 마지막 커밋. 형식이 다른 항목은 버린다 */
+function releaseTasks(v: unknown): ReleaseTask[] {
+  if (!Array.isArray(v)) return [];
+  return v.filter((t): t is ReleaseTask => typeof t === "object" && t !== null && typeof t.title === "string");
+}
+
 /**
- * ACTION 승인 카드. 검증은 통과했지만 정책 판정이 HUMAN·PM_REVIEW라 멈춘 산출물이다.
- * 결정은 대표만(canDecide). 승인하면 태스크 DONE, 반려하면 READY로 돌아가 재시도 +1 (3회째 ESCALATED)
+ * 승인 카드. 결정은 대표만(canDecide).
+ * - ACTION: 검증은 통과했지만 정책 판정이 HUMAN·PM_REVIEW라 멈춘 산출물. 승인하면 태스크 DONE, 반려하면 READY로 돌아가 재시도 +1 (3회째 ESCALATED)
+ * - G3: 통합 확인(프로젝트 전체, taskId 없음). 모든 태스크가 DONE이 되면 생긴다. 승인하면 프로젝트 completed, 반려하면 진행 중 그대로
  */
 export function ApprovalCard({
   approval: a,
@@ -26,7 +42,8 @@ export function ApprovalCard({
 }: {
   approval: Approval;
   canDecide: boolean;
-  taskHref: string;
+  /** G3는 태스크가 없다 */
+  taskHref?: string;
   onDecided?: () => void;
 }) {
   const decide = useDecideApproval();
@@ -38,6 +55,9 @@ export function ApprovalCard({
   const paths = strings(p.changedPaths);
   const commit = typeof p.commitSha === "string" ? p.commitSha : null;
   const attempt = typeof p.attempt === "number" ? p.attempt : null;
+  const release = a.gate === "G3";
+  const checks = strings(p.integrationChecks);
+  const tasks = releaseTasks(p.tasks);
 
   const run = (decision: "approve" | "reject") =>
     decide.mutate(
@@ -48,14 +68,22 @@ export function ApprovalCard({
   return (
     <div id={a.id} className="card scroll-mt-6 p-4">
       <div className="flex flex-wrap items-center gap-2">
-        {a.gateMode === "PM_REVIEW" ? (
+        {release ? (
+          <Badge tone="warn">G3 · 통합 확인</Badge>
+        ) : a.gateMode === "PM_REVIEW" ? (
           <Badge tone="pm">PM 검토 · 대표 대행</Badge>
         ) : (
           <Badge tone="warn">사람 승인</Badge>
         )}
-        <Link href={taskHref} className="min-w-0 flex-1 truncate text-[14px] font-semibold hover:underline">
-          {a.taskTitle ?? "태스크"}
-        </Link>
+        {taskHref ? (
+          <Link href={taskHref} className="min-w-0 flex-1 truncate text-[14px] font-semibold hover:underline">
+            {a.taskTitle ?? "태스크"}
+          </Link>
+        ) : (
+          <span className="min-w-0 flex-1 truncate text-[14px] font-semibold">
+            {release ? "모든 태스크 완료 · 프로젝트 완료 승인" : (a.taskTitle ?? "태스크")}
+          </span>
+        )}
         <span className="text-[11.5px] text-ink-500" title={fmtDateTime(a.requestedAt)}>
           {relTime(a.requestedAt)}
         </span>
@@ -99,6 +127,40 @@ export function ApprovalCard({
           </>
         )}
       </dl>
+      {release && (
+        <div className="mt-3 space-y-3 text-[12.5px]">
+          <p className="text-ink-700">
+            에이전트는 통합을 확인하지 않습니다. 아래 브랜치를 머지해 실행해 보고 확인 항목을 직접 점검하세요.
+          </p>
+          {checks.length > 0 && (
+            <div>
+              <div className="text-ink-500">확인 항목 {checks.length}개</div>
+              <ul className="mt-1 list-disc space-y-0.5 pl-5 text-[13px] text-ink-900">
+                {checks.map((c) => (
+                  <li key={c}>{c}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {tasks.length > 0 && (
+            <details>
+              <summary className="cursor-pointer text-ink-700">브랜치 · 마지막 커밋 {tasks.length}개</summary>
+              <ul className="mt-1 space-y-1">
+                {tasks.map((t) => (
+                  <li key={t.taskId} className="flex flex-wrap items-baseline gap-x-2">
+                    <span className="font-medium">{t.title}</span>
+                    <span className="font-mono text-[11.5px] text-ink-700">
+                      {t.repo}
+                      {t.branchName && ` · ${t.branchName}`}
+                      {t.commitSha && ` @ ${t.commitSha.slice(0, 7)}`}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
+        </div>
+      )}
       {p.backfilled === true && (
         <p className="mt-2 text-[12px] text-ink-500">승인 기능 이전부터 멈춰 있던 태스크라 정보 일부가 없습니다.</p>
       )}
@@ -121,7 +183,11 @@ export function ApprovalCard({
             value={reason}
             maxLength={MAX_REASON}
             onChange={(e) => setReason(e.target.value)}
-            placeholder="반려 사유 (필수) — 에이전트가 다시 고칠 때 이 사유를 받습니다"
+            placeholder={
+              release
+                ? "반려 사유 (필수) — 무엇이 통합되지 않았는지 남깁니다"
+                : "반려 사유 (필수) — 에이전트가 다시 고칠 때 이 사유를 받습니다"
+            }
             aria-label="반려 사유"
             autoFocus
           />
@@ -155,7 +221,11 @@ export function ApprovalCard({
           >
             <X size={14} /> 반려
           </Button>
-          <span className="text-[12px] text-ink-500">반려하면 태스크가 다시 대기로 돌아가 에이전트가 고칩니다.</span>
+          <span className="text-[12px] text-ink-500">
+            {release
+              ? "승인하면 프로젝트가 완료됩니다. 반려하면 진행 중 그대로이고, 고칠 태스크를 만들어 전부 끝나면 새 카드가 생깁니다."
+              : "반려하면 태스크가 다시 대기로 돌아가 에이전트가 고칩니다."}
+          </span>
         </div>
       )}
       {decide.isError && <p className="mt-2 text-[12.5px] text-forbidden">{errorMessage(decide.error)}</p>}
