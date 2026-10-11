@@ -18,7 +18,7 @@ import {
   useStartProject,
   useUnassignMember,
 } from "@/entities/project";
-import { TEAM_ROLE_META, TeamRoleBadge } from "@/entities/task";
+import { TEAM_ROLE_META, TeamRoleBadge, useTasks } from "@/entities/task";
 import { useCurrentUser } from "@/entities/user";
 
 const ROLES: TeamRole[] = ["FRONTEND", "BACKEND"];
@@ -279,6 +279,12 @@ function StartSection({
   const start = useStartProject(projectId);
   const [confirming, setConfirming] = useState(false);
   const details = errorDetails(start.error);
+  // 미리 막아 두는 안내일 뿐 판정은 서버가 한다 (시작 시 400 details가 정본)
+  const tasks = useTasks(projectId).data;
+  const unassigned = ROLES.filter(
+    (role) => tasks?.some((t) => t.teamRole === role) && !members.some((m) => m.teamRole === role),
+  );
+  const noTasks = tasks?.length === 0;
 
   return (
     <section id="start" className="card scroll-mt-6 p-5">
@@ -324,15 +330,37 @@ function StartSection({
               </div>
             </div>
           ) : (
-            <Button
-              className="mt-3"
-              onClick={() => {
-                start.reset();
-                setConfirming(true);
-              }}
-            >
-              <Play size={14} /> 프로젝트 시작
-            </Button>
+            <>
+              {(unassigned.length > 0 || noTasks) && (
+                <p className="mt-3 text-[13px] text-human">
+                  {noTasks ? (
+                    <>
+                      태스크가 없습니다.{" "}
+                      <Link href={`/p/${projectId}/rooms/owner`} className="font-medium underline underline-offset-2">
+                        Room 3에서 PM 계획 받기
+                      </Link>
+                    </>
+                  ) : (
+                    <>
+                      {unassigned.map((r) => TEAM_ROLE_META[r].label).join(", ")} 역할에 배정된 에이전트가 없습니다.{" "}
+                      <a href="#members" className="font-medium underline underline-offset-2">
+                        역할 배정으로
+                      </a>
+                    </>
+                  )}
+                </p>
+              )}
+              <Button
+                className="mt-3"
+                disabled={unassigned.length > 0 || noTasks}
+                onClick={() => {
+                  start.reset();
+                  setConfirming(true);
+                }}
+              >
+                <Play size={14} /> 프로젝트 시작
+              </Button>
+            </>
           )}
         </>
       )}
