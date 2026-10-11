@@ -35,7 +35,7 @@ export function OrgView() {
           <h1 className="mt-2 text-[24px] font-semibold tracking-tight">{me.orgName ?? "조직"}</h1>
         </div>
 
-        <Members orgId={orgId} />
+        <Members orgId={orgId} myUserId={me.userId} />
         {/* 대표 전용 UI는 팀원에게 렌더하지 않는다. 최종 판정은 API의 403 NOT_REPRESENTATIVE */}
         {isRep && <InvitePanel orgId={orgId} />}
 
@@ -45,7 +45,7 @@ export function OrgView() {
   );
 }
 
-function Members({ orgId }: { orgId: string }) {
+function Members({ orgId, myUserId }: { orgId: string; myUserId: string }) {
   const members = useOrgMembers(orgId);
 
   return (
@@ -76,6 +76,18 @@ function Members({ orgId }: { orgId: string }) {
                   </div>
                   <div className="text-[12.5px] text-ink-500">
                     {m.githubLogin ? `@${m.githubLogin}` : "GitHub 미연결"}
+                    {/* 협업자 자동 초대에 GitHub 아이디가 필요하다. 연결은 본인만 할 수 있다 */}
+                    {!m.githubLogin && m.userId === myUserId && (
+                      <>
+                        {" · "}
+                        <Link
+                          href="/settings/account"
+                          className="font-medium text-ink-900 underline underline-offset-2"
+                        >
+                          GitHub 연결
+                        </Link>
+                      </>
+                    )}
                   </div>
                 </div>
                 <span className="flex items-center gap-1.5 text-[12px] text-ink-500">

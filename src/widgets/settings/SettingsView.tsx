@@ -6,7 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Loader2, Lock, Play } from "lucide-react";
 import { errorDetails, errorMessage, type Schemas } from "@/shared/api";
 import type { TeamRole } from "@/shared/model";
-import { Badge, Button, SectionTitle } from "@/shared/ui";
+import { Badge, Button, SectionTitle, Segmented } from "@/shared/ui";
 import { cn, fmtDateTime } from "@/shared/lib/format";
 import { agentKeys, useOrgAgents } from "@/entities/agent";
 import { DECIDER_META, LEVELS, LevelGates, POLICY_TABLE } from "@/entities/policy";
@@ -15,10 +15,12 @@ import {
   fmtUsd,
   useAssignMember,
   useProject,
+  useResendGithubInvite,
   useStartProject,
   useUnassignMember,
+  useUpdateProjectSettings,
 } from "@/entities/project";
-import { TEAM_ROLE_META, TeamRoleBadge } from "@/entities/task";
+import { TEAM_ROLE_META, TeamRoleBadge, useTasks } from "@/entities/task";
 import { useCurrentUser } from "@/entities/user";
 
 const ROLES: TeamRole[] = ["FRONTEND", "BACKEND"];
@@ -84,7 +86,10 @@ export function SettingsView({ projectId }: { projectId: string }) {
           agentsError={agents.error}
           started={started}
           isRep={isRep}
+          myUserId={me.userId}
         />
+
+        <QuestionRelaySection projectId={projectId} project={project} editable={isRep && !started} />
 
         <StartSection projectId={projectId} project={project} members={members} isRep={isRep} />
 
@@ -116,6 +121,7 @@ function MembersSection({
   agentsError,
   started,
   isRep,
+  myUserId,
 }: {
   projectId: string;
   orgId: string;
@@ -124,6 +130,7 @@ function MembersSection({
   agentsError: Error | null;
   started: boolean;
   isRep: boolean;
+  myUserId: string;
 }) {
   const queryClient = useQueryClient();
   const assign = useAssignMember(projectId);
@@ -170,6 +177,12 @@ function MembersSection({
                       {unassign.isPending && unassign.variables === member.agentId ? "해제 중…" : "해제"}
                     </Button>
                   )}
+                  <GithubInvites
+                    projectId={projectId}
+                    member={member}
+                    isRep={isRep}
+                    mine={member.userId === myUserId}
+                  />
                 </>
               ) : editable ? (
                 <AssignPicker
@@ -206,6 +219,115 @@ function MembersSection({
       {assign.data && (
         <p className="mt-2 rounded-lg bg-review-bg px-3 py-2 text-[12.5px] text-review">{assign.data.notice}</p>
       )}
+    </section>
+  );
+}
+
+const INVITE_META: Record<
+  Member["githubInvites"][number]["status"],
+  { label: string; tone: "info" | "warn" | "danger" | "success" }
+> = {
+  invited: { label: "초대 보냄", tone: "info" },
+  already_collaborator: { label: "접근 가능", tone: "success" },
+  skipped: { label: "보내지 못함", tone: "warn" },
+  failed: { label: "초대 실패", tone: "danger" },
+};
+
+/**
+ * 레포별 마지막 GitHub 협업자 초대 결과. 서버가 남긴 값이라 새로고침해도 그대로다.
+ * 이미 접근할 수 있는 레포(already_collaborator)는 할 일이 없어 보여 주지 않는다
+ */
+function GithubInvites({
+  projectId,
+  member,
+  isRep,
+  mine,
+}: {
+  projectId: string;
+  member: Member;
+  isRep: boolean;
+  mine: boolean;
+}) {
+  const resend = useResendGithubInvite(projectId);
+  const invites = member.githubInvites.filter((i) => i.status !== "already_collaborator");
+  if (invites.length === 0) return null;
+  const retryable = invites.some((i) => i.status === "skipped" || i.status === "failed");
+
+  return (
+    <div className="basis-full space-y-1.5 pl-[52px] text-[12.5px] text-ink-700">
+      <ul className="space-y-1">
+        {invites.map((i) => (
+          <li key={i.repoId} className="flex flex-wrap items-center gap-1.5">
+            <span className="font-mono">{i.fullName}</span>
+            <Badge tone={INVITE_META[i.status].tone}>{INVITE_META[i.status].label}</Badge>
+            {i.status === "invited" ? (
+              <span>
+                {mine ? "GitHub 초대 메일을 수락하세요" : "멤버가 GitHub에서 수락해야 클론·push할 수 있습니다"}
+              </span>
+            ) : (
+              i.reason && <span>{i.reason}</span>
+            )}
+            {mine && i.status === "skipped" && (
+              <Link href="/settings/account" className="font-medium text-ink-900 underline underline-offset-2">
+                GitHub 연결
+              </Link>
+            )}
+          </li>
+        ))}
+      </ul>
+      {/* 대표 전용 (시작 뒤에도 된다). 실패해도 200이라 결과는 다시 읽은 githubInvites로 본다 */}
+      {isRep && retryable && (
+        <Button variant="outline" size="sm" disabled={resend.isPending} onClick={() => resend.mutate(member.agentId)}>
+          {resend.isPending ? "초대 보내는 중…" : "다시 초대"}
+        </Button>
+      )}
+      {resend.isError && <p className="text-forbidden">{errorMessage(resend.error)}</p>}
+    </div>
+  );
+}
+
+const RELAY_CHOICES = [
+  { value: true, label: "켜짐" },
+  { value: false, label: "꺼짐" },
+];
+
+function QuestionRelaySection({
+  projectId,
+  project,
+  editable,
+}: {
+  projectId: string;
+  project: Schemas["Project"];
+  editable: boolean;
+}) {
+  const update = useUpdateProjectSettings(projectId);
+
+  return (
+    <section className="card p-5">
+      <SectionTitle
+        action={
+          editable ? (
+            <Segmented
+              options={RELAY_CHOICES}
+              value={project.questionRelay}
+              onChange={(questionRelay) => questionRelay !== project.questionRelay && update.mutate({ questionRelay })}
+              disabled={update.isPending}
+            />
+          ) : (
+            <Badge tone={project.questionRelay ? "success" : "neutral"}>
+              {project.questionRelay ? "켜짐" : "꺼짐"}
+            </Badge>
+          )
+        }
+      >
+        질문 중계
+      </SectionTitle>
+      <p className="text-[13px] text-ink-700">
+        켜면 에이전트가 다른 역할이 정해야 할 결정을 질문하고, 답이 올 때까지 기다립니다. 끄면 에이전트가 묻지 않고
+        가정하고 진행하며, 가정한 내용은 인계 노트(GOTCHA)로 남깁니다(대조군 실험 등).
+      </p>
+      {!editable && <p className="mt-1.5 text-[12.5px] text-ink-500">대표가 프로젝트 시작 전에만 바꿀 수 있습니다.</p>}
+      {update.isError && <p className="mt-2 text-[12.5px] text-forbidden">{errorMessage(update.error)}</p>}
     </section>
   );
 }
@@ -279,6 +401,12 @@ function StartSection({
   const start = useStartProject(projectId);
   const [confirming, setConfirming] = useState(false);
   const details = errorDetails(start.error);
+  // 미리 막아 두는 안내일 뿐 판정은 서버가 한다 (시작 시 400 details가 정본)
+  const tasks = useTasks(projectId).data;
+  const unassigned = ROLES.filter(
+    (role) => tasks?.some((t) => t.teamRole === role) && !members.some((m) => m.teamRole === role),
+  );
+  const noTasks = tasks?.length === 0;
 
   return (
     <section id="start" className="card scroll-mt-6 p-5">
@@ -324,15 +452,37 @@ function StartSection({
               </div>
             </div>
           ) : (
-            <Button
-              className="mt-3"
-              onClick={() => {
-                start.reset();
-                setConfirming(true);
-              }}
-            >
-              <Play size={14} /> 프로젝트 시작
-            </Button>
+            <>
+              {(unassigned.length > 0 || noTasks) && (
+                <p className="mt-3 text-[13px] text-human">
+                  {noTasks ? (
+                    <>
+                      태스크가 없습니다.{" "}
+                      <Link href={`/p/${projectId}/rooms/owner`} className="font-medium underline underline-offset-2">
+                        Room 3에서 PM 계획 받기
+                      </Link>
+                    </>
+                  ) : (
+                    <>
+                      {unassigned.map((r) => TEAM_ROLE_META[r].label).join(", ")} 역할에 배정된 에이전트가 없습니다.{" "}
+                      <a href="#members" className="font-medium underline underline-offset-2">
+                        역할 배정으로
+                      </a>
+                    </>
+                  )}
+                </p>
+              )}
+              <Button
+                className="mt-3"
+                disabled={unassigned.length > 0 || noTasks}
+                onClick={() => {
+                  start.reset();
+                  setConfirming(true);
+                }}
+              >
+                <Play size={14} /> 프로젝트 시작
+              </Button>
+            </>
           )}
         </>
       )}

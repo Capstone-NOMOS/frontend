@@ -42,14 +42,17 @@ function useRefetchOnStale(projectId: string) {
   };
 }
 
-/** 대표 전용. 응답 notice: 배정된 에이전트는 토큰을 재발급해야 태스크·노트 API를 쓸 수 있다 */
+/**
+ * 대표 전용. 응답 notice: 배정된 에이전트는 토큰을 재발급해야 태스크·노트 API를 쓸 수 있다.
+ * 서버가 에이전트 주인을 프로젝트의 GitHub 레포에 협업자로 초대한다 — 결과는 members[].githubInvites에도 남는다
+ */
 export function useAssignMember(projectId: string) {
   return useMutation({
     mutationFn: (body: RequestBody<"/projects/{projectId}/members", "post">) =>
-      apiFetch<{ members: Schemas["ProjectMember"][]; notice: string }>(`/projects/${projectId}/members`, {
-        method: "POST",
-        body,
-      }),
+      apiFetch<{ members: Schemas["ProjectMember"][]; githubInvites: Schemas["GithubInviteResult"][]; notice: string }>(
+        `/projects/${projectId}/members`,
+        { method: "POST", body },
+      ),
     onSuccess: useInvalidateProject(projectId),
     onError: useRefetchOnStale(projectId),
   });
@@ -62,6 +65,29 @@ export function useUnassignMember(projectId: string) {
       apiFetch<{ members: Schemas["ProjectMember"][] }>(`/projects/${projectId}/members/${agentId}`, {
         method: "DELETE",
       }),
+    onSuccess: useInvalidateProject(projectId),
+    onError: useRefetchOnStale(projectId),
+  });
+}
+
+/** 대표 전용. GitHub 협업자 초대 다시 보내기. 시작 뒤에도 된다. 초대가 실패해도 200이고 결과는 githubInvites에 적힌다 */
+export function useResendGithubInvite(projectId: string) {
+  return useMutation({
+    mutationFn: (agentId: string) =>
+      apiFetch<{ githubInvites: Schemas["GithubInviteResult"][] }>(
+        `/projects/${projectId}/members/${agentId}/github-invite`,
+        { method: "POST" },
+      ),
+    onSuccess: useInvalidateProject(projectId),
+    onError: useRefetchOnStale(projectId),
+  });
+}
+
+/** 대표 전용, 시작 전에만 (시작 뒤 403 PROJECT_STARTED). 지금은 질문 중계 스위치뿐이다 */
+export function useUpdateProjectSettings(projectId: string) {
+  return useMutation({
+    mutationFn: (body: RequestBody<"/projects/{projectId}/settings", "patch">) =>
+      apiFetch<Schemas["Project"]>(`/projects/${projectId}/settings`, { method: "PATCH", body }),
     onSuccess: useInvalidateProject(projectId),
     onError: useRefetchOnStale(projectId),
   });

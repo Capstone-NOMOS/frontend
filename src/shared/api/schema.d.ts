@@ -964,7 +964,8 @@ export interface paths {
          * GitHub에서 접근 가능한 레포 목록 (조직 멤버)
          * @description 레포 연결이 조직 멤버 누구나 할 수 있으므로, 그 드롭다운을 채우는 이 목록도 함께 열려 있다.
          *
-         *     `GITHUB_TOKEN`이 없으면 **500이 아니라 빈 배열**을 반환한다.
+         *     **그 조직 대표의 GitHub 토큰으로** 읽는다(서버 공용 토큰은 없다 — 있으면 모든 조직이 그 주인의 레포를 보게 된다).
+         *     대표가 GitHub를 연결하지 않았으면 **500이 아니라 빈 배열**을 반환한다(직접 입력으로 연결할 수 있다).
          *     GitHub 실패가 우리 기능을 멈추게 하지 않는다.
          */
         get: {
@@ -1019,6 +1020,186 @@ export interface paths {
             };
         };
         put?: never;
+        /**
+         * GitHub 조직에 레포 만들고 연결 (대표 전용)
+         * @description 대표의 GitHub 토큰으로 **GitHub 조직에 비공개 레포**를 만들고 곧바로 NOMOS에 연결한다(개인 계정에는 만들지 않는다).
+         *     프로젝트 생성 화면에서 이걸 부른 뒤 받은 `id`를 `repoIds`에 넣으면 된다.
+         *
+         *     - 첫 커밋은 **파일 없는 빈 커밋** 하나다(README 없음). 브랜치가 있어야 에이전트가 분기할 수 있다.
+         *     - `ownerRole`은 필수다 — `**` 행의 소유 역할. 없으면 프로젝트에 넣을 수 없다(422 `REPO_OWNERSHIP_NOT_SET`).
+         *     - `githubRepoId`·`cloneUrl`이 자동으로 채워져 V3(실제 diff 검사)가 처음부터 돈다.
+         *     - GitHub에 레포를 만든 뒤 연결이 실패하면 GitHub에는 레포가 남는다. 그때는 `POST /orgs/{orgId}/repos`로 연결한다.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @example {{ORG_ID}} */
+                    orgId: components["parameters"]["OrgId"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    /**
+                     * @example {
+                     *       "githubOrg": "Capstone-NOMOS",
+                     *       "name": "shop-api",
+                     *       "ownerRole": "BACKEND"
+                     *     }
+                     */
+                    "application/json": {
+                        /** @description GitHub 조직 login (GET /orgs/{orgId}/github/orgs) */
+                        githubOrg: string;
+                        /** @description 영숫자와 . _ - 만, 100자까지 */
+                        name: string;
+                        description?: string;
+                        /** @enum {string} */
+                        ownerRole: "FRONTEND" | "BACKEND";
+                    };
+                };
+            };
+            responses: {
+                /** @description 만들고 연결함 */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "data": {
+                         *         "repo": {
+                         *           "id": "{{REPO_API}}",
+                         *           "fullName": "Capstone-NOMOS/shop-api",
+                         *           "seededPathCount": 15,
+                         *           "rootOwnerRole": "BACKEND",
+                         *           "githubRepoId": 123456,
+                         *           "defaultBranch": "main",
+                         *           "cloneUrl": "https://github.com/Capstone-NOMOS/shop-api"
+                         *         }
+                         *       }
+                         *     }
+                         */
+                        "application/json": {
+                            data: {
+                                repo: components["schemas"]["CreatedGithubRepo"];
+                            };
+                        };
+                    };
+                };
+                /** @description 대표가 아니거나 GitHub가 거부(그 조직에 레포를 만들 권한이 없음, 조직이 NOMOS 앱을 승인하지 않음) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": unknown;
+                    };
+                };
+                /** @description GitHub 미연결 또는 같은 이름의 레포가 이미 있음 */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": unknown;
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/orgs/{orgId}/github/orgs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 레포를 만들 수 있는 GitHub 조직 목록 (대표 전용)
+         * @description 대표 본인의 GitHub 토큰으로 대표가 속한 GitHub 조직을 읽는다. 레포 만들기 화면의 드롭다운을 채운다.
+         *     GitHub를 연결하지 않았으면 409 `GITHUB_NOT_LINKED`.
+         *
+         *     GitHub 조직이 OAuth 앱 접근 제한을 켜 두었으면 NOMOS 앱을 그 조직에서 승인해야 목록·생성이 된다.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @example {{ORG_ID}} */
+                    orgId: components["parameters"]["OrgId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description GitHub 조직 login 목록 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "data": {
+                         *         "orgs": [
+                         *           "Capstone-NOMOS"
+                         *         ]
+                         *       }
+                         *     }
+                         */
+                        "application/json": {
+                            data: {
+                                orgs: string[];
+                            };
+                        };
+                    };
+                };
+                /** @description 대표가 아님 */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "NOT_REPRESENTATIVE",
+                         *         "message": "this action requires the organization representative"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+                /** @description 대표가 GitHub를 연결하지 않음 */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "GITHUB_NOT_LINKED",
+                         *         "message": "GitHub 계정이 연결되어 있지 않습니다"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+            };
+        };
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -1035,7 +1216,7 @@ export interface paths {
         };
         /**
          * 조직 멤버 목록
-         * @description GitHub collaborator 조회가 실패하면 `isCollaborator` 필드를 **생략**한다.
+         * @description 협업자 여부는 그 조직 대표의 GitHub 토큰으로 확인한다. 대표가 GitHub를 연결하지 않았거나 조회가 실패하면 `isCollaborator` 필드를 **생략**한다.
          *     `false`로 채우지 않는다 — "확인 안 됨"과 "권한 없음"은 다르다.
          */
         get: {
@@ -2840,6 +3021,8 @@ export interface paths {
                         /** @example 2026-12-31 */
                         deadline?: string;
                         repoIds: string[];
+                        /** @description 질문 중계. 생략하면 켜짐 */
+                        questionRelay?: boolean;
                     };
                 };
             };
@@ -3017,7 +3200,8 @@ export interface paths {
                          *           {
                          *             "agentId": "{{AGENT_BE}}",
                          *             "agentName": "be-laptop",
-                         *             "teamRole": "BACKEND"
+                         *             "teamRole": "BACKEND",
+                         *             "githubInvites": []
                          *           }
                          *         ]
                          *       }
@@ -3070,6 +3254,79 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/projects/{projectId}/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * 프로젝트 설정 (대표 전용, 시작 전에만)
+         * @description 지금은 질문 중계 스위치(`questionRelay`)뿐이다. **시작(G1) 뒤에는 403 `PROJECT_STARTED`** — 실행 중에 바뀌면 같은 프로젝트 안에서 결과가 섞인다.
+         *     바뀌면 이벤트 `PROJECT_SETTINGS_UPDATED`(before·after). 같은 값이면 그대로 돌려준다.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @example {{PROJECT_ID}} */
+                    projectId: components["parameters"]["ProjectId"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    /**
+                     * @example {
+                     *       "questionRelay": false
+                     *     }
+                     */
+                    "application/json": {
+                        questionRelay: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description 바뀐 프로젝트 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["Project"];
+                        };
+                    };
+                };
+                /** @description 대표가 아니거나 시작한 프로젝트 */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "PROJECT_STARTED",
+                         *         "message": "project has started; settings are frozen"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+            };
+        };
         trace?: never;
     };
     "/projects/{projectId}/start": {
@@ -3520,6 +3777,465 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/tasks/{taskId}/questions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 질문 올리기 (에이전트 — 브릿지가 대신 부른다, 실험)
+         * @description 실행 중인 에이전트가 AskUserQuestion으로 물으면 브릿지의 권한 도구가 여기에 올리고, 답이 오거나 만료될 때까지 기다린다.
+         *     대상 역할은 서버가 정한다(지금은 묻는 쪽의 반대 역할). 그 태스크의 담당 에이전트만 물을 수 있다.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    taskId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    /**
+                     * @example {
+                     *       "questions": [
+                     *         {
+                     *           "question": "GET /api/studies/:id/members 의 응답 본문 형태는 무엇인가요?",
+                     *           "header": "응답 형태",
+                     *           "multiSelect": false,
+                     *           "options": [
+                     *             {
+                     *               "label": "{ members: [...] }"
+                     *             },
+                     *             {
+                     *               "label": "배열 그대로"
+                     *             }
+                     *           ]
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": {
+                        questions: {
+                            [key: string]: unknown;
+                        }[];
+                    };
+                };
+            };
+            responses: {
+                /** @description 올라감(status=pending) */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["AgentQuestion"];
+                        };
+                    };
+                };
+                /** @description 질문 형식 위반(개수·길이·중복 질문) — error.details에 전부 */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tasks/{taskId}/questions/{questionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 질문 상태 (묻은 에이전트 — 브릿지가 답을 기다리며 읽는다, 실험)
+         * @description 만료 시각이 지났으면 이 조회에서 expired로 바뀐다.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    taskId: string;
+                    questionId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 질문 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["AgentQuestion"];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tasks/{taskId}/questions/{questionId}/detach": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 기다림 포기 — 태스크를 내려놓는다 (에이전트 — 브릿지가 부른다, 실험)
+         * @description 브릿지가 정한 시간(기본 3분)만 기다렸는데 답이 없으면 부른다. 태스크가 BLOCKED(QUESTION)가 되고 담당이 비워진다 —
+         *     에이전트 실행은 커밋 없이 끝나고 노트북은 다른 태스크로 간다. 답이 오면 READY로 돌아가 같은 브랜치에서 이어 간다.
+         *     그 사이 답이 왔으면 아무것도 바꾸지 않고 질문을 돌려준다(status로 판단).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    taskId: string;
+                    questionId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 질문(지금 상태) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["AgentQuestion"];
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/me/questions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 상담할 질문 (대상 역할 에이전트의 Executor, 실험)
+         * @description 이 에이전트의 역할을 대상으로 한, 아직 초안이 없는 대기 질문과 상담 실행이 읽을 레포(이 역할이 소유한 경로가 있는 레포).
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 질문·레포 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                questions: components["schemas"]["AgentQuestion"][];
+                                repos: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    fullName: string;
+                                    cloneUrl: string | null;
+                                    defaultBranch: string;
+                                }[];
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/questions/{questionId}/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 상담 초안 올리기 (대상 역할 에이전트, 실험)
+         * @description 읽기 전용 상담 실행이 코드·명세를 보고 만든 답. **질문 전부가 decided=true면 초안이 곧 답이다**(agent_answered — 묻는 쪽에 바로 간다,
+         *     사람은 나중에 확인하거나 뒤집는다). 하나라도 false면 초안은 참고로만 남고 대상 역할의 사람이 답한다. 초안은 한 번만 받는다.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    questionId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        answers: {
+                            [key: string]: string;
+                        };
+                        decided: {
+                            [key: string]: boolean;
+                        };
+                        basis?: {
+                            [key: string]: string[];
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description 저장됨(전부 decided면 status=agent_answered) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["AgentQuestion"];
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/questions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 내가 답할 질문 (조직 전체, 실험)
+         * @description 알림 배지와 "답할 질문" 목록용. **대표는 조직의 모든 질문, 팀원은 자기 에이전트가 맡은 역할을 대상으로 한 질문만**(답할 수 있는 사람과 같은 정의).
+         *     기본은 대기(pending) — 사람이 답해야 하는 것. `agent_answered`는 상대 에이전트가 코드에서 찾아 이미 답한 것(사람이 확인·뒤집기 가능).
+         *     실시간: `/api/stream`의 조직 토픽 `questions`가 오면 다시 읽는다.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    status?: "pending" | "agent_answered" | "answered" | "expired" | "self_owned" | "all";
+                    limit?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 최신순. 질문과 그 프로젝트·태스크 이름 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                questions: {
+                                    question: components["schemas"]["AgentQuestion"];
+                                    projectName: string;
+                                    taskTitle: string;
+                                }[];
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{projectId}/questions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 프로젝트의 에이전트 질문 (실험)
+         * @description 답할 사람이 보는 목록. 볼 수 있는 범위는 태스크와 같다. 실시간 신호 토픽은 questions.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    status?: "pending" | "agent_answered" | "answered" | "expired" | "self_owned" | "all";
+                    limit?: number;
+                };
+                header?: never;
+                path: {
+                    /** @example {{PROJECT_ID}} */
+                    projectId: components["parameters"]["ProjectId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 최신순 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                questions: components["schemas"]["AgentQuestion"][];
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/questions/{questionId}/answer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 질문에 답하기·확인·뒤집기 (대상 역할 담당 또는 대표, 실험)
+         * @description 대기 중(pending)이면 직접 답한다. 에이전트가 이미 답했으면(agent_answered) 같은 답을 보내면 확인, 다른 답이면 뒤집기다
+         *     (뒤집으면 묻는 쪽이 이미 그 답으로 구현했을 수 있다 — 고치는 태스크 자동 생성은 아직 없다).
+         *     키는 질문 문장 **그대로**여야 한다(다르면 에이전트가 "답하지 않음"으로 받는다 — 그래서 422로 막는다).
+         *     값은 선택지 label이거나 자유 문장. 근거를 덧붙이면 에이전트가 그것까지 따른다.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    questionId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    /**
+                     * @example {
+                     *       "answers": {
+                     *         "GET /api/studies/:id/members 의 응답 본문 형태는 무엇인가요?": "{ members: [...] } — 백엔드 공통 목록 형식"
+                     *       }
+                     *     }
+                     */
+                    "application/json": {
+                        answers: {
+                            [key: string]: string;
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description 답함(status=answered). 기다리던 에이전트가 바로 이어서 작업한다 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["AgentQuestion"];
+                        };
+                    };
+                };
+                /** @description 대상 역할 담당도 대표도 아님(NOT_QUESTION_TARGET) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description 이미 답했거나 만료됨(QUESTION_CLOSED) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description 키가 질문과 다르거나 답이 비었음(QUESTION_INVALID) — error.details에 전부 */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{projectId}/events": {
         parameters: {
             query?: never;
@@ -3602,6 +4318,140 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{projectId}/rooms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 내가 볼 수 있는 룸 목록
+         * @description 룸 = 프로젝트 × 역할. **팀원은 자기 에이전트가 배정된 역할 룸만, 대표는 전부** 본다.
+         *     룸마다 담당 에이전트(온라인 여부)와 진행 중 태스크를 준다 — 룸 화면 머리.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @example {{PROJECT_ID}} */
+                    projectId: components["parameters"]["ProjectId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 룸 목록(FRONTEND, BACKEND 순) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                rooms: components["schemas"]["RoomSummary"][];
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{projectId}/rooms/{role}/feed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 룸 피드 (최신부터)
+         * @description 서버(PM)의 지시·판정, Executor의 실행 상태, 에이전트의 도구 사용을 시각순으로 섞은 한 줄씩. **문장(`text`)은 서버가 만든다** — 화면은 그대로 보여 주면 된다.
+         *
+         *     예(오래된 것부터):
+         *     ```
+         *     [pm]    T-3 회원가입 API 실행해 주세요
+         *     [nomos] 에이전트를 실행합니다
+         *     [nomos] 태스크 수령 — T-3 회원가입 API · 구현을 시작합니다
+         *     [agent] src/routes/auth.ts 읽는 중
+         *     [agent] src/routes/auth.ts 수정
+         *     [agent] npm test 실행
+         *     [nomos] 제출했습니다 (커밋 a1b2c3d, 파일 3개)
+         *     [pm]    검증 완료 — V3 통과, V1A·V1B·V2·V4 건너뜀 → 완료되었습니다
+         *     [nomos] 실행을 마쳤습니다 (240초)
+         *     ```
+         *     태스크에 딸린 줄은 그 태스크의 역할 룸에만(역할 제한 없는 태스크는 모든 룸), 프로젝트 단위 PM 알림(시작·계획 적용)은 모든 룸에 나온다.
+         *     응답은 **최신부터**이고, `nextBefore`를 `before`로 넘기면 더 오래된 줄을 읽는다(없으면 null).
+         *     실시간: `/api/stream`에서 그 프로젝트를 구독하면 `room` 토픽이 올 때 다시 읽는다.
+         *     팀원이 다른 역할 룸을 읽으면 403 `ROOM_NOT_VISIBLE`.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description 이전 응답의 nextBefore */
+                    before?: string;
+                    limit?: number;
+                };
+                header?: never;
+                path: {
+                    /** @example {{PROJECT_ID}} */
+                    projectId: components["parameters"]["ProjectId"];
+                    /** @example BACKEND */
+                    role: "FRONTEND" | "BACKEND";
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 피드 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                messages: components["schemas"]["RoomMessage"][];
+                                nextBefore: string | null;
+                            };
+                        };
+                    };
+                };
+                /** @description 자기 역할이 아닌 룸 */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "ROOM_NOT_VISIBLE",
+                         *         "message": "you cannot see the BACKEND room of this project"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{projectId}/members": {
         parameters: {
             query?: never;
@@ -3619,6 +4469,11 @@ export interface paths {
          *
          *     프로젝트당 역할은 **하나씩만** 배정된다(`uq_project_members_role`). 실험 통제를 위해서다.
          *     **G1(`started_at`) 이후에는 멤버를 바꿀 수 없다** — 도중에 바뀌면 통제가 흔들린다.
+         *
+         *     **GitHub 협업자 자동 초대**: 배정과 함께 그 에이전트 주인을 프로젝트의 GitHub 레포(`githubRepoId`가 있는 것)마다
+         *     push 권한 협업자로 초대한다(대표의 GitHub 토큰). 결과는 `githubInvites`(레포마다 한 줄). 초대가 실패해도 배정은 유효하다 —
+         *     멤버가 GitHub를 연결하지 않았으면 `skipped`이고, 연결한 뒤 `POST .../members/{agentId}/github-invite`로 다시 보낸다.
+         *     GitHub 레포가 없는 프로젝트(로컬 데모)는 빈 배열이다.
          */
         post: {
             parameters: {
@@ -3660,7 +4515,15 @@ export interface paths {
                          *           {
                          *             "agentId": "{{AGENT_BE}}",
                          *             "agentName": "be-laptop",
-                         *             "teamRole": "BACKEND"
+                         *             "teamRole": "BACKEND",
+                         *             "githubInvites": []
+                         *           }
+                         *         ],
+                         *         "githubInvites": [
+                         *           {
+                         *             "repoId": "{{REPO_API}}",
+                         *             "fullName": "acme/study-api",
+                         *             "status": "invited"
                          *           }
                          *         ],
                          *         "notice": "배정된 에이전트는 POST /api/agents/token/refresh로 토큰을 재발급해야 태스크·노트 API를 쓸 수 있습니다."
@@ -3670,6 +4533,7 @@ export interface paths {
                         "application/json": {
                             data: {
                                 members: components["schemas"]["ProjectMember"][];
+                                githubInvites: components["schemas"]["GithubInviteResult"][];
                                 notice: string;
                             };
                         };
@@ -3690,6 +4554,103 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
+                        "application/json": unknown;
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{projectId}/members/{agentId}/github-invite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * GitHub 협업자 초대 다시 보내기 (대표 전용)
+         * @description 역할 배정 때 멤버가 GitHub를 연결하지 않았거나 GitHub 호출이 실패했을 때 다시 보낸다.
+         *     멤버 구성을 바꾸는 게 아니라 접근을 주는 일이라 **시작(G1) 뒤에도 된다.** 실패해도 200이고 결과는 `githubInvites`에 적힌다.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @example {{PROJECT_ID}} */
+                    projectId: components["parameters"]["ProjectId"];
+                    /** @example {{AGENT_BE}} */
+                    agentId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 레포마다 초대 결과 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "data": {
+                         *         "githubInvites": [
+                         *           {
+                         *             "repoId": "{{REPO_API}}",
+                         *             "fullName": "acme/study-api",
+                         *             "status": "skipped",
+                         *             "reason": "멤버가 GitHub를 연결하지 않았다"
+                         *           }
+                         *         ]
+                         *       }
+                         *     }
+                         */
+                        "application/json": {
+                            data: {
+                                githubInvites: components["schemas"]["GithubInviteResult"][];
+                            };
+                        };
+                    };
+                };
+                /** @description 대표가 아니거나 다른 조직 */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "NOT_REPRESENTATIVE",
+                         *         "message": "this action requires the organization representative"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+                /** @description 이 프로젝트의 멤버가 아닌 에이전트 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "MEMBER_NOT_FOUND",
+                         *         "message": "agent ... is not a member of this project"
+                         *       }
+                         *     }
+                         */
                         "application/json": unknown;
                     };
                 };
@@ -5035,7 +5996,8 @@ export interface paths {
                          *         "assigneeAgentId": null,
                          *         "branchName": null,
                          *         "blockedReason": null,
-                         *         "retryCount": 0
+                         *         "retryCount": 0,
+                         *         "claimedAt": null
                          *       }
                          *     }
                          */
@@ -5205,6 +6167,358 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tasks/{taskId}/runs/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Claude 실행 시작 보고 (Executor)
+         * @description Executor가 Claude를 띄우기 직전에 부른다. 룸에 "에이전트를 실행합니다"가 남는다(이벤트 `AGENT_RUN_STARTED`).
+         *     태스크를 잡는 것(`claim_task`)은 실행 **안에서** 모델이 하므로, 이 에이전트가 그 태스크를 잡고 있거나(CLAIMED·IN_PROGRESS)
+         *     **지금 잡을 수 있으면**(READY·담당 없음·내 역할 또는 역할 제한 없음) 받는다. 아니면 409 `RUN_NOT_ALLOWED`.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @example {{TASK_BE}} */
+                    taskId: components["parameters"]["TaskId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 시작 기록. attempt는 그때의 재시도 횟수 */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** Format: uuid */
+                                taskId: string;
+                                attempt: number;
+                            };
+                        };
+                    };
+                };
+                /** @description 이 에이전트가 잡고 있지도, 잡을 수도 없는 태스크 */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "RUN_NOT_ALLOWED",
+                         *         "message": "task ... is not held by this agent (state READY)"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tasks/{taskId}/runs/end": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Claude 실행 종료 보고 (Executor)
+         * @description Claude가 끝나면 부른다(이벤트 `AGENT_RUN_ENDED`). **제출 여부는 서버가 태스크 상태로 정한다** — 이 에이전트가 아직 잡고 있으면
+         *     제출하지 않은 것이다. 그때는 같은 트랜잭션에서 태스크가 **BLOCKED(AGENT_STOPPED)**로 바뀌고(이벤트 `TASK_BLOCKED`), 룸에
+         *     "멈췄습니다 — 사유 / 거부된 명령 → 대표 확인 후 재개가 필요합니다"가 남는다. 재시도 횟수는 오르지 않는다.
+         *     Executor가 꺼져 이 보고조차 오지 않으면 서버 감시가 45분 동안 응답이 없는 수령을 같은 방식으로 멈춘다.
+         *     열린 실행(시작하고 아직 안 끝낸 것)이 없으면 409 `RUN_NOT_OPEN`.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @example {{TASK_BE}} */
+                    taskId: components["parameters"]["TaskId"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    /**
+                     * @example {
+                     *       "outcome": "completed",
+                     *       "committed": false,
+                     *       "durationMs": 48000,
+                     *       "exitCode": 0,
+                     *       "lastMessage": "git merge 권한이 없어 통합 확인을 할 수 없습니다",
+                     *       "deniedCommands": [
+                     *         "git fetch --all"
+                     *       ]
+                     *     }
+                     */
+                    "application/json": {
+                        /**
+                         * @description completed=정상 종료, timeout=시간 제한, failed=비정상 종료
+                         * @enum {string}
+                         */
+                        outcome: "completed" | "timeout" | "failed";
+                        /** @description 실행 동안 새 커밋이 생겼나 */
+                        committed: boolean;
+                        durationMs: number;
+                        exitCode: number | null;
+                        /** @description 모델의 마지막 말. 제출하지 않았으면 멈춤 사유로 룸에 보인다 */
+                        lastMessage?: string | null;
+                        /** @description 실행 중 거부된 쉘 명령(Executor가 실행 기록에서 뽑는다) */
+                        deniedCommands?: string[];
+                    };
+                };
+            };
+            responses: {
+                /** @description 종료 기록 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                submitted: boolean;
+                                taskState: string;
+                                /** @description 제출하지 않아 BLOCKED(AGENT_STOPPED)로 멈췄다 */
+                                blocked: boolean;
+                            };
+                        };
+                    };
+                };
+                /** @description 열린 실행이 없음 */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "RUN_NOT_OPEN",
+                         *         "message": "no open run for task ..."
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tasks/{taskId}/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 실행 중 도구 사용 보고 (Executor)
+         * @description Executor가 Claude 출력에서 도구 사용을 뽑아 2초마다 묶어 보낸다(최대 50줄). **도구 종류와 대상(작업공간 기준 경로·명령 첫 줄, 300자)만** 받는다 —
+         *     파일 내용·명령 결과·모델 설명은 받지 않는다(설명은 인계 노트의 몫). 열린 실행에만 붙는다(409 `RUN_NOT_OPEN`).
+         *     이벤트가 아니라 `agent_activity`에 쌓이고, 화면 스트림에는 `room` 토픽으로 알린다.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @example {{TASK_BE}} */
+                    taskId: components["parameters"]["TaskId"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "kind": "read",
+                     *           "target": "src/routes/auth.ts"
+                     *         },
+                     *         {
+                     *           "kind": "edit",
+                     *           "target": "src/routes/auth.ts"
+                     *         },
+                     *         {
+                     *           "kind": "run",
+                     *           "target": "npm test"
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": {
+                        items: {
+                            /** @enum {string} */
+                            kind: "read" | "edit" | "write" | "run" | "search" | "other";
+                            target: string;
+                        }[];
+                    };
+                };
+            };
+            responses: {
+                /** @description 기록함 */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                recorded: number;
+                            };
+                        };
+                    };
+                };
+                /** @description 열린 실행이 없음 */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "RUN_NOT_OPEN",
+                         *         "message": "no open run for task ..."
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tasks/{taskId}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 멈춘 태스크 재개 (대표 전용)
+         * @description 에이전트가 제출 없이 멈춘 태스크(BLOCKED·`AGENT_STOPPED`)를 원인을 해결한 뒤 다시 돌린다. READY로 돌아가고 담당이 비어
+         *     같은 역할의 에이전트가 다시 가져간다(룸에 "다시 실행해 주세요 (재개)"). **재시도 횟수는 그대로다** — 권한·환경 탓은 에이전트 실패가 아니다.
+         *     멈춘 상태가 아니면 409 `TASK_NOT_STOPPED`.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @example {{TASK_BE}} */
+                    taskId: components["parameters"]["TaskId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    /**
+                     * @example {
+                     *       "note": "python 실행을 허용했습니다"
+                     *     }
+                     */
+                    "application/json": {
+                        /** @description 무엇을 해결했는지(룸에 보인다) */
+                        note?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description 재개됨(READY) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["Task"];
+                        };
+                    };
+                };
+                /** @description 대표가 아님 */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "NOT_REPRESENTATIVE",
+                         *         "message": "only the representative can resume a stopped task"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+                /** @description 멈춘 태스크가 아님 */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "TASK_NOT_STOPPED",
+                         *         "message": "task ... is not stopped (state CLAIMED, reason -)"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -5595,6 +6909,11 @@ export interface components {
             createdBy: string;
             /** Format: date-time */
             createdAt: string;
+            /**
+             * @description 질문 중계(에이전트가 다른 역할에게 AskUserQuestion으로 묻기). 기본 켜짐. 끄면 에이전트는 묻지 않고 가정을 GOTCHA 노트("가정함 — <역할> 확인 필요")로 남기고 진행한다.
+             *     대표가 시작(G1) 전까지 `PATCH /projects/{projectId}/settings`로 바꿀 수 있다.
+             */
+            questionRelay: boolean;
         };
         RepoListItem: {
             /** Format: uuid */
@@ -5622,12 +6941,16 @@ export interface components {
             projectId: string;
             projectName: string;
             /**
-             * @description 지금은 ACTION(정책 판정이 HUMAN·PM_REVIEW인 산출물)만 생긴다
+             * @description - ACTION: 검증은 통과했지만 정책 판정이 HUMAN·PM_REVIEW인 산출물(태스크 하나)
+             *     - G3: **통합 확인·완료 승인**(프로젝트 전체). 모든 태스크가 DONE이 되면 생긴다. 승인하면 프로젝트 completed, 반려하면 진행 중 그대로(고칠 태스크를 대표가 만든다)
              * @enum {string}
              */
             gate: "G1" | "G2" | "G3" | "ACTION";
-            /** Format: uuid */
-            taskId: string;
+            /**
+             * Format: uuid
+             * @description ACTION이면 그 태스크, G3면 null(프로젝트 전체)
+             */
+            taskId: string | null;
             /** @description 지금 태스크 제목(카드의 스냅샷은 payload.taskTitle) */
             taskTitle: string | null;
             /** @description 지금 태스크 상태 */
@@ -5640,7 +6963,9 @@ export interface components {
              */
             gateMode: "HUMAN" | "PM_REVIEW" | null;
             /**
-             * @description 요청 시점의 카드 스냅샷 — taskTitle, artifactId, attempt, commitSha, changedPaths, triggeredActions, gateMode, stages, submittedByAgentId.
+             * @description 요청 시점의 카드 스냅샷.
+             *     - ACTION: taskTitle, artifactId, attempt, commitSha, changedPaths, triggeredActions, gateMode, stages, submittedByAgentId.
+             *     - G3: integrationChecks(PM이 쓴 확인 항목 문자열 목록), tasks([{ taskId, title, teamRole, repo, branchName, commitSha }] — 머지·실행해 볼 브랜치와 마지막 커밋).
              *     **backfilled: true**면 승인 기능 이전부터 멈춰 있던 태스크라 지금 DB에서 알 수 있는 값만 있다(stages 등 없음) — "정보 일부 없음"을 표시한다.
              */
             payload: {
@@ -5659,6 +6984,88 @@ export interface components {
             requestedAt: string;
             /** Format: date-time */
             decidedAt: string | null;
+        };
+        AgentQuestion: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            projectId: string;
+            /** Format: uuid */
+            taskId: string;
+            /** Format: uuid */
+            askedByAgentId: string;
+            /** @enum {string} */
+            askerRole: "FRONTEND" | "BACKEND";
+            /**
+             * @description 답할 역할. 서버가 정한다(routedBy에 근거)
+             * @enum {string}
+             */
+            targetRole: "FRONTEND" | "BACKEND";
+            /** @description 대상 역할을 정한 라우터 구현(이름·버전). 기본 'role_rule:opposite'(묻는 쪽의 반대 역할) */
+            routedBy: string;
+            /** @description 라우터 판정 상세 — 라우터 구현을 바꿔 가며 비교하는 근거 */
+            routing: {
+                /** @description 0~1. 규칙 라우터는 null */
+                confidence: number | null;
+                reason: string | null;
+                latencyMs: number;
+                /** @description 라우터가 실패·시간 초과로 규칙 라우터로 대체됐으면 그 사유 */
+                fallback: string | null;
+            };
+            /** @description Claude Code AskUserQuestion 형식 그대로 */
+            questions: ({
+                question: string;
+                header?: string;
+                multiSelect?: boolean;
+                options: ({
+                    label: string;
+                    description?: string;
+                } & {
+                    [key: string]: unknown;
+                })[];
+            } & {
+                [key: string]: unknown;
+            })[];
+            /**
+             * @description pending — 답을 기다림 · agent_answered — 대상 역할 에이전트의 상담 실행이 코드·명세에서 찾은 답(사람 미확인, 묻는 쪽에 이미 감)
+             *     answered — 사람이 답함(직접·확인·뒤집기) · expired — 기간 안에 답이 없음(그 질문으로 멈춘 태스크는 ESCALATED)
+             *     self_owned — 라우터가 묻는 쪽 자기 소관이라고 판정해 넘기지 않음(targetRole = askerRole)
+             * @enum {string}
+             */
+            status: "pending" | "agent_answered" | "answered" | "expired" | "self_owned";
+            /** @description 상담 실행의 초안. decided[질문]이 false인 것은 코드에 없는 결정 — 사람이 정해야 한다(화면에서 강조) */
+            draft: {
+                answers: {
+                    [key: string]: string;
+                };
+                decided: {
+                    [key: string]: boolean;
+                };
+                basis: {
+                    [key: string]: string[];
+                };
+            } | null;
+            /** Format: uuid */
+            draftedByAgentId: string | null;
+            /** Format: date-time */
+            draftedAt: string | null;
+            /**
+             * @description agent(에이전트가 찾음, 사람 미확인) · human · agent_confirmed(같은 답으로 확인) · human_override(다른 답으로 뒤집음 — 고치는 태스크 자동 생성은 미구현)
+             * @enum {string|null}
+             */
+            answerSource: "agent" | "human" | "agent_confirmed" | "human_override" | null;
+            /** @description 키는 질문 문장 그대로. 값은 선택지 label이거나 자유 문장(근거를 덧붙여도 된다) */
+            answers: {
+                [key: string]: string;
+            } | null;
+            /** Format: uuid */
+            answeredBy: string | null;
+            /** Format: date-time */
+            answeredAt: string | null;
+            /** Format: date-time */
+            expiresAt: string;
+            /** Format: date-time */
+            createdAt: string;
         };
         ProjectEvent: {
             /** @description 이벤트 id(정수를 문자열로). 페이지 커서로 쓴다 */
@@ -5806,6 +7213,75 @@ export interface components {
              */
             rootOwnerRole: "FRONTEND" | "BACKEND" | null;
         };
+        CreatedGithubRepo: {
+            /** Format: uuid */
+            id: string;
+            fullName: string;
+            seededPathCount: number;
+            /** @enum {string} */
+            rootOwnerRole: "FRONTEND" | "BACKEND";
+            githubRepoId: number;
+            /** @description GitHub 조직의 기본 브랜치 설정을 따른다(보통 main) */
+            defaultBranch: string;
+            /** @description V3가 커밋을 읽을 곳. 자동으로 채워진다 */
+            cloneUrl: string;
+        };
+        GithubInviteResult: {
+            /** Format: uuid */
+            repoId: string;
+            fullName: string;
+            /**
+             * @description - invited: 초대장을 보냈다. **멤버가 GitHub에서 수락해야** 클론·push할 수 있다
+             *     - already_collaborator: 이미 접근할 수 있다
+             *     - skipped: 멤버나 대표가 GitHub를 연결하지 않아 보내지 못했다(reason)
+             *     - failed: GitHub가 거부·실패했다(reason)
+             * @enum {string}
+             */
+            status: "invited" | "already_collaborator" | "skipped" | "failed";
+            reason?: string;
+        };
+        RoomMessage: {
+            /** @description 피드 커서로도 쓴다(before) */
+            id: string;
+            /** Format: date-time */
+            ts: string;
+            /**
+             * @description - pm: 서버가 지시·판정을 알림(실행해 주세요, 검증 결과, 승인)
+             *     - nomos: Executor가 보고한 실행 상태(수령, 구현 시작, 제출, 실행 종료)
+             *     - agent: 에이전트가 쓴 도구(읽기·수정·실행) · 인계 노트
+             * @enum {string}
+             */
+            speaker: "pm" | "nomos" | "agent";
+            /** @description 원본 이벤트 타입(TASK_DISPATCHED 등) 또는 ACTIVITY_READ·ACTIVITY_EDIT·ACTIVITY_WRITE·ACTIVITY_RUN·ACTIVITY_SEARCH·ACTIVITY_OTHER. 아이콘용 */
+            type: string;
+            /** Format: uuid */
+            taskId: string | null;
+            taskTitle: string | null;
+            /** @description 화면에 그대로 보여 줄 문장(서버가 만든다) */
+            text: string;
+        };
+        RoomSummary: {
+            /** @enum {string} */
+            role: "FRONTEND" | "BACKEND";
+            /** @description 이 역할에 배정된 에이전트. 없으면 null */
+            agent: {
+                /** Format: uuid */
+                agentId: string;
+                agentName: string;
+                online: boolean;
+                /** Format: date-time */
+                lastSeenAt: string | null;
+            } | null;
+            /** @description 진행 중(CLAIMED·IN_PROGRESS·VERIFYING·AWAITING_APPROVAL) 태스크 */
+            activeTasks: {
+                /** Format: uuid */
+                id: string;
+                title: string;
+                state: string;
+                /** @enum {string|null} */
+                teamRole: "FRONTEND" | "BACKEND" | null;
+            }[];
+        };
         RepoSettings: {
             /** Format: uuid */
             id: string;
@@ -5891,6 +7367,23 @@ export interface components {
              * @description 에이전트 주인
              */
             userId: string;
+            /**
+             * @description 레포별 **마지막** GitHub 협업자 초대 결과(배정·다시 초대 때 남은 이벤트에서 읽는다 — 새로고침해도 남는다). 초대한 적 없으면 빈 목록
+             *     (GitHub 레포가 없는 프로젝트 등). invited는 초대장을 보냈다는 뜻이고 수락 여부는 GET /orgs/{orgId}/members의 isCollaborator로 본다.
+             */
+            githubInvites: {
+                /** Format: uuid */
+                repoId: string;
+                fullName: string;
+                /** @enum {string} */
+                status: "invited" | "already_collaborator" | "skipped" | "failed";
+                reason?: string;
+                /**
+                 * Format: date-time
+                 * @description 그 초대를 시도한 시각
+                 */
+                at: string;
+            }[];
         };
         ProjectDetail: {
             project: components["schemas"]["Project"];
@@ -5917,10 +7410,16 @@ export interface components {
             assigneeAgentId: string | null;
             branchName: string | null;
             /**
-             * @description state=BLOCKED일 때만 있다
+             * @description state=BLOCKED일 때만 있다.
+             *     AGENT_STOPPED = 에이전트가 제출 없이 멈췄다(권한·환경·응답 끊김). 사유는 이벤트 TASK_BLOCKED(룸 피드)에 있고, 대표가 `POST /tasks/{taskId}/resume`으로 재개한다. 재시도 횟수는 오르지 않는다
              * @enum {string|null}
              */
-            blockedReason: "DISPUTE" | "DEPENDENCY" | "QUESTION" | null;
+            blockedReason: "DISPUTE" | "DEPENDENCY" | "QUESTION" | "AGENT_STOPPED" | null;
+            /**
+             * Format: date-time
+             * @description 마지막 수령 시각. 화면의 "수령 후 경과"에 쓴다(CLAIMED·IN_PROGRESS일 때 의미가 있다)
+             */
+            claimedAt: string | null;
             /** @description FAIL마다 오른다. 3이면 ESCALATED */
             retryCount: number;
         };
@@ -6082,13 +7581,21 @@ export interface components {
                 repo: string;
                 /** @enum {string|null} */
                 teamRole: "FRONTEND" | "BACKEND" | null;
-                /** @enum {string} */
+                /**
+                 * @description PM은 INTEGRATION을 내지 않는다(내면 교정 대상). 옛 초안에는 있을 수 있다
+                 * @enum {string}
+                 */
                 kind: "IMPLEMENT" | "INTEGRATION" | "REWORK";
                 /** @description 명세 featureKey */
                 spec: string | null;
                 /** @description 먼저 끝나야 하는 태스크의 ref */
                 dependsOn: string[];
             }[];
+            /**
+             * @description 통합 확인 항목. PM은 INTEGRATION 태스크를 만들지 않고(에이전트에게는 선행 코드·상대 레포·실행 수단이 없다) 여기에 적는다.
+             *     모든 태스크가 DONE이 되면 대표의 **G3 카드**(통합 확인·완료 승인)에 그대로 들어간다. 이 필드 이전에 만든 초안에는 없다.
+             */
+            integrationChecks?: string[];
         };
         /** @description 중계 모드에서 pm-worker가 실행할 모델 호출 한 건. 서버가 만든 지침·프롬프트·출력 스키마를 그대로 실행한다 */
         PmRelayJob: {
@@ -6246,6 +7753,14 @@ export interface components {
             };
             specTests: components["schemas"]["SpecTest"][];
             policyHash: string;
+            /** @description 프로젝트의 질문 중계 스위치. 꺼져 있으면 Executor가 권한 도구(AskUserQuestion)를 붙이지 않는다 */
+            questionRelay: boolean;
+            /** @description 이 태스크에서 물어 받은 답 — 질문 때문에 멈췄다 재개한 실행이 읽는다. source=agent는 상대 에이전트가 코드에서 찾은 답(사람 미확인) */
+            answeredQuestions: {
+                question: string;
+                answer: string;
+                source: string;
+            }[];
             /** @description 직전 제출이 대표에게 반려됐으면 그 사유. 반려되면 태스크가 READY로 돌아오고 같은 태스크 브랜치에서 이어서 고친다 */
             lastRejection: {
                 /** Format: uuid */

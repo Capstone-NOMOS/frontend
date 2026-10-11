@@ -11,7 +11,9 @@ import { noteKeys } from "@/entities/note";
 import { orgKeys } from "@/entities/org";
 import { planKeys } from "@/entities/plan";
 import { projectKeys } from "@/entities/project";
+import { questionKeys } from "@/entities/question";
 import { repoKeys } from "@/entities/repo";
+import { roomKeys } from "@/entities/room";
 import { specKeys } from "@/entities/spec";
 import { taskKeys } from "@/entities/task";
 
@@ -21,9 +23,11 @@ const ORG_TOPICS: Record<string, QueryKey[]> = {
   approvals: [approvalKeys.all],
   // 접속 상태 변화 포함. 팀원이 배정되면 프로젝트 목록이 바뀌는데 그 신호는 agents로만 온다(projects는 안 온다).
   // PM 작업기 접속도 이벤트가 없어 pm/status를 같이 다시 읽는다 (노션 "웹소켓과 폴링의 구분점" ①②)
-  agents: [agentKeys.all, [...projectKeys.all, "list"], planKeys.all],
+  // 룸 목록의 에이전트 접속 상태도 여기서 바뀐다
+  agents: [agentKeys.all, [...projectKeys.all, "list"], planKeys.all, roomKeys.all],
   repos: [repoKeys.all],
   members: [orgKeys.all],
+  questions: [questionKeys.all],
 };
 
 // 프로젝트 신호. 그 프로젝트를 구독한 화면에만 온다 (useProjectStream)
@@ -37,6 +41,8 @@ const PROJECT_TOPICS: Record<string, (projectId: string) => QueryKey[]> = {
   notes: (id) => [noteKeys.list(id)],
   events: (id) => [eventKeys.list(id)],
   specs: (id) => [specKeys.list(id)],
+  room: (id) => [roomKeys.project(id)],
+  questions: () => [questionKeys.all],
 };
 
 /** 웹소켓 연결을 유지하고, 신호를 쿼리 무효화로 바꾼다. 무효화는 화면에 떠 있는 쿼리만 다시 부른다 */

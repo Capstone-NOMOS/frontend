@@ -10,7 +10,7 @@ import { cn } from "@/shared/lib/format";
 import type { Level } from "@/shared/model";
 import { LEVELS, LevelGates } from "@/entities/policy";
 import { useCreateProject } from "@/entities/project";
-import { OwnershipBadge, useRepos } from "@/entities/repo";
+import { CreateGithubRepo, OwnershipBadge, useRepos } from "@/entities/repo";
 import { useCurrentUser } from "@/entities/user";
 
 type Step = "name" | "repos" | "level" | "pmBudget" | "extras";
@@ -240,6 +240,24 @@ const selectable = (r: Schemas["RepoListItem"]) => r.ownershipAssigned && r.acti
 function RepoPicker({ orgId, onDone }: { orgId: string; onDone: (repos: { id: string; fullName: string }[]) => void }) {
   const repos = useRepos(orgId);
   const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [creating, setCreating] = useState(false);
+  // 이 화면은 대표 전용이라 "새 레포 만들기"를 항상 보여 준다. 만든 레포는 소유 역할이 있어 바로 고를 수 있다
+  const createRepo = creating ? (
+    <div className="mt-3">
+      <CreateGithubRepo
+        orgId={orgId}
+        onClose={() => setCreating(false)}
+        onCreated={(repo) => {
+          setPicked((prev) => new Set(prev).add(repo.id));
+          setCreating(false);
+        }}
+      />
+    </div>
+  ) : (
+    <Button variant="outline" size="sm" className="mt-3" onClick={() => setCreating(true)}>
+      새 레포 만들기
+    </Button>
+  );
 
   if (repos.isPending) {
     return (
@@ -260,10 +278,14 @@ function RepoPicker({ orgId, onDone }: { orgId: string; onDone: (repos: { id: st
   if (repos.data.length === 0) {
     return (
       <ChatCard>
-        <p className="text-[13.5px] text-ink-700">연결된 레포가 없습니다. 먼저 조직에서 레포를 연결하세요.</p>
-        <Button href="/org" variant="outline" size="sm" className="mt-3">
-          조직으로
-        </Button>
+        <p className="text-[13.5px] text-ink-700">
+          연결된 레포가 없습니다. 새 레포를 만들거나{" "}
+          <Link href="/org" className="font-medium text-ink-900 underline underline-offset-2">
+            조직에서 기존 레포를 연결
+          </Link>
+          하세요.
+        </p>
+        {createRepo}
       </ChatCard>
     );
   }
@@ -315,14 +337,17 @@ function RepoPicker({ orgId, onDone }: { orgId: string; onDone: (repos: { id: st
           </li>
         ))}
       </ul>
-      <Button
-        size="sm"
-        className="mt-3"
-        disabled={picked.size === 0}
-        onClick={() => onDone(repos.data.filter((r) => picked.has(r.id)))}
-      >
-        {picked.size > 0 ? `${picked.size}개 선택` : "선택"}
-      </Button>
+      {createRepo}
+      <div>
+        <Button
+          size="sm"
+          className="mt-3"
+          disabled={picked.size === 0 || creating}
+          onClick={() => onDone(repos.data.filter((r) => picked.has(r.id)))}
+        >
+          {picked.size > 0 ? `${picked.size}개 선택` : "선택"}
+        </Button>
+      </div>
     </ChatCard>
   );
 }
@@ -363,6 +388,7 @@ function Extras({
   const create = useCreateProject(orgId);
   const [budget, setBudget] = useState("");
   const [deadline, setDeadline] = useState("");
+  const [questionRelay, setQuestionRelay] = useState(true);
   const budgetUsd = budget.trim() === "" ? undefined : parseUsd(budget);
 
   const submit = () =>
@@ -375,6 +401,8 @@ function Extras({
         ...(budgetUsd != null && { budgetUsd }),
         // <input type="date">는 YYYY-MM-DD 문자열을 준다. Date로 바꾸지 않는다(타임존)
         ...(deadline && { deadline }),
+        // 생략하면 켜짐
+        ...(!questionRelay && { questionRelay }),
       },
       { onSuccess: (detail) => onCreated(detail.project.id) },
     );
@@ -396,6 +424,21 @@ function Extras({
         </div>
         <Input label="마감일 (선택)" type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
       </div>
+      <label className="mt-3 flex cursor-pointer items-start gap-2.5 text-[13.5px]">
+        <input
+          type="checkbox"
+          className="mt-1"
+          checked={questionRelay}
+          onChange={(e) => setQuestionRelay(e.target.checked)}
+        />
+        <span>
+          질문 중계
+          <span className="block text-[12px] text-ink-500">
+            끄면 에이전트가 다른 역할에게 묻지 않고 가정하고 진행합니다(대조군 실험 등). 시작 전까지 설정에서 바꿀 수
+            있습니다.
+          </span>
+        </span>
+      </label>
       {error && (
         <div className="mt-3 text-[12.5px] text-forbidden">
           {error instanceof ApiError && error.code === "REPO_OWNERSHIP_NOT_SET" ? (

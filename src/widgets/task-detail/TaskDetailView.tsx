@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useState } from "react";
 import { ArrowLeft, GitBranch, Loader2 } from "lucide-react";
 import { errorMessage, type Schemas } from "@/shared/api";
-import { Badge, EmptyState, SectionTitle } from "@/shared/ui";
-import { cn, fmtDateTime } from "@/shared/lib/format";
+import { Badge, Button, EmptyState, Input, SectionTitle } from "@/shared/ui";
+import { cn, fmtDateTime, relTime } from "@/shared/lib/format";
 import {
   GateModeBadge,
   VERIFICATION_ORDER,
@@ -15,7 +15,9 @@ import {
 } from "@/entities/artifact";
 import { NoteItem, useNotes } from "@/entities/note";
 import { ProjectErrorView } from "@/entities/project";
-import { ApiTaskBadge, TeamRoleBadge, useTasks } from "@/entities/task";
+import { ROLE_ROOM } from "@/entities/room";
+import { ApiTaskBadge, BLOCKED_REASON, TeamRoleBadge, useResumeTask, useTasks } from "@/entities/task";
+import { useCurrentUser } from "@/entities/user";
 
 // 결과가 늦게 오는 단계(V2·V4는 브릿지 보고). INTEGRATION은 아직 돌지 않으므로 빈자리로 보이지 않는다
 const EXPECTED_STAGES = VERIFICATION_ORDER.filter((s) => s !== "INTEGRATION");
@@ -58,9 +60,12 @@ export function TaskDetailView({ projectId, taskId }: { projectId: string; taskI
                   <GitBranch size={13} /> {task.branchName}
                 </p>
               )}
-              {task.blockedReason && (
-                <p className="mt-3 rounded-lg bg-human-bg px-3 py-2 text-[13px] text-human">{task.blockedReason}</p>
+              {(task.state === "CLAIMED" || task.state === "IN_PROGRESS") && task.claimedAt && (
+                <p className="mt-1 text-[12.5px] text-ink-500" title={fmtDateTime(task.claimedAt)}>
+                  수령 {relTime(task.claimedAt)}
+                </p>
               )}
+              {task.state === "BLOCKED" && task.blockedReason && <Blocked projectId={projectId} task={task} />}
             </header>
 
             <Submissions taskId={taskId} />
@@ -69,6 +74,68 @@ export function TaskDetailView({ projectId, taskId }: { projectId: string; taskI
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+/** BLOCKED는 이유마다 풀리는 방법이 다르다. QUESTION은 답하면 자동으로, AGENT_STOPPED는 대표가 재개해야 풀린다 */
+function Blocked({ projectId, task }: { projectId: string; task: Schemas["Task"] }) {
+  const isRep = useCurrentUser().me?.orgRole === "REPRESENTATIVE";
+  const resume = useResumeTask();
+  const [note, setNote] = useState("");
+  const reason = task.blockedReason!;
+  const roomHref = task.teamRole && `/p/${projectId}/rooms/${ROLE_ROOM[task.teamRole].slug}`;
+
+  return (
+    <div className="mt-3 rounded-lg bg-human-bg px-3 py-2.5 text-[13px]">
+      <p className="font-medium text-human">{BLOCKED_REASON[reason]}</p>
+      {reason === "QUESTION" && (
+        <p className="mt-1 text-ink-700">
+          에이전트가 다른 역할에게 질문하고 태스크를 잠시 내려놓았습니다. 답이 오면 자동으로 다시 시작합니다 ·{" "}
+          <Link href={`/p/${projectId}/inbox`} className="font-medium underline underline-offset-2">
+            받은 편지함에서 질문 보기
+          </Link>
+        </p>
+      )}
+      {reason === "AGENT_STOPPED" && (
+        <>
+          <p className="mt-1 text-ink-700">
+            에이전트가 제출하지 않고 끝났습니다(권한·환경 문제 또는 응답 끊김). 재시도 횟수는 오르지 않습니다.
+            {roomHref && (
+              <>
+                {" "}
+                사유는{" "}
+                <Link href={roomHref} className="font-medium underline underline-offset-2">
+                  룸 피드
+                </Link>
+                에 있습니다.
+              </>
+            )}
+          </p>
+          {isRep ? (
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <Input
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                disabled={resume.isPending}
+                placeholder="무엇을 해결했는지 (선택, 룸에 보입니다)"
+                aria-label="재개 메모"
+                className="h-8 min-w-0 flex-1 bg-white text-[13px] sm:max-w-[360px]"
+              />
+              <Button
+                size="sm"
+                disabled={resume.isPending}
+                onClick={() => resume.mutate({ taskId: task.id, note: note.trim() || undefined })}
+              >
+                {resume.isPending ? "재개하는 중…" : "재개"}
+              </Button>
+            </div>
+          ) : (
+            <p className="mt-1 text-ink-700">대표가 원인을 해결한 뒤 재개합니다.</p>
+          )}
+          {resume.isError && <p className="mt-2 text-[12.5px] text-forbidden">{errorMessage(resume.error)}</p>}
+        </>
+      )}
     </div>
   );
 }
