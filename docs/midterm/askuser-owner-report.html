@@ -48,7 +48,7 @@ footer{border-top:1px solid var(--rule);padding:28px;max-width:1100px;margin:0 a
 </style></head><body>
 <header class="top"><div class="kicker">NOMOS 연구 노트 &nbsp; 중앙대학교 캡스톤디자인</div><h1>에이전트의 질문은 누구에게 가야 하는가</h1><p class="lede">코딩 에이전트가 작업 중에 사람에게 묻는 질문(Claude Code의 AskUserQuestion)을, 여러 사람이 함께 개발하는 팀에서 그 결정을 내릴 권한이 있는 사람에게 바로 보내는 문제를 다룬다. 실제 질문 데이터, 사용자 커뮤니티의 논의, 공개 연구, 그리고 우리가 직접 돌린 라우터 비교 실험을 바탕으로 이 방향이 의미가 있는지, 기술적으로 되는지, 무엇은 새롭지 않은지를 정리했다.</p>
 <div class="meta"><span>2026년 10월</span><span>최영현, 오영훈, 전병국</span><span>데이터와 코드: NOMOS 연구 허브</span></div></header>
-<div class="wrap"><nav class="toc"><b>목차</b><a href="#s-한눈에-보기">한눈에 보기</a><a href="#s-1-문제-질문은-한-줄로만-흐른다">1. 문제: 질문은 한 줄로만 흐른다</a><a href="#s-2-사용자들은-무엇을-이야기하고-있나">2. 사용자들은 무엇을 이야기하고 있나</a><a href="#s-3-데이터로-본-질문-행동">3. 데이터로 본 질문 행동</a><a href="#s-4-실험-owner-배정은-얼마나-정확하게-되나">4. 실험: owner 배정은 얼마나 정확하게 되나</a><a href="#s-5-냉정한-판단">5. 냉정한 판단</a><a href="#s-6-제안-owner-배정-다섯-단계">6. 제안: owner 배정 다섯 단계</a><a href="#s-7-더-넣으면-좋을-아이디어">7. 더 넣으면 좋을 아이디어</a><a href="#s-8-기말까지의-평가-계획">8. 기말까지의 평가 계획</a><a href="#s-출처">출처</a></nav><main><h2 id="s-한눈에-보기">한눈에 보기</h2>
+<div class="wrap"><nav class="toc"><b>목차</b><a href="#s-한눈에-보기">한눈에 보기</a><a href="#s-1-문제-질문은-한-줄로만-흐른다">1. 문제: 질문은 한 줄로만 흐른다</a><a href="#s-2-사용자들은-무엇을-이야기하고-있나">2. 사용자들은 무엇을 이야기하고 있나</a><a href="#s-3-데이터로-본-질문-행동">3. 데이터로 본 질문 행동</a><a href="#s-4-실험-owner-배정은-얼마나-정확하게-되나">4. 실험: owner 배정은 얼마나 정확하게 되나</a><a href="#s-5-냉정한-판단">5. 냉정한 판단</a><a href="#s-6-두-번째-축-공통-계약-위에서-병렬로">6. 두 번째 축: 공통 계약 위에서 병렬로</a><a href="#s-7-제안-owner-배정-다섯-단계">7. 제안: owner 배정 다섯 단계</a><a href="#s-8-더-넣으면-좋을-아이디어">8. 더 넣으면 좋을 아이디어</a><a href="#s-9-기말까지의-평가-계획">9. 기말까지의 평가 계획</a><a href="#s-출처">출처</a></nav><main><h2 id="s-한눈에-보기">한눈에 보기</h2>
 <div class="stats"><div class="stat"><div class="v">60%</div><div class="l">실제 팀 질문 173개 중 1순위로 대표(PM)가 정할 질문</div></div><div class="stat"><div class="v">13%</div><div class="l">지금 NOMOS 서버 기본 규칙(반대 역할)이 맞힌 비율</div></div><div class="stat"><div class="v">94%</div><div class="l">LLM이 owner를 직접 고를 때 정확도(sonnet, 실제 질문)</div></div><div class="stat"><div class="v">104초</div><div class="l">사람이 질문에 답하기까지 걸린 시간 중앙값(p90 약 31분)</div></div></div>
 
 <ol>
@@ -544,7 +544,7 @@ footer{border-top:1px solid var(--rule);padding:28px;max-width:1100px;margin:0 a
 </tr>
 </tbody>
 </table></div>
-<p>모든 라우터에서 같은 모양이었다. 확신이 낮은 질문도 LLM의 1순위가 대표보다 더 자주 맞았다. 그래서 6절의 제안에서는 확신이 낮을 때 대표에게 몰지 않고 1순위 후보에게 보내되 버튼 하나로 넘길 수 있게 바꿨다.</p>
+<p>모든 라우터에서 같은 모양이었다. 확신이 낮은 질문도 LLM의 1순위가 대표보다 더 자주 맞았다. 그래서 7절의 제안에서는 확신이 낮을 때 대표에게 몰지 않고 1순위 후보에게 보내되 버튼 하나로 넘길 수 있게 바꿨다.</p>
 <h3 id="s-오류를-5-이하로-지키며-자동으로-보낼-수-있는-몫">오류를 5% 이하로 지키며 자동으로 보낼 수 있는 몫</h3>
 <p>확신도가 높은 순서로 자동 배정하고 나머지는 사람이 나눠 준다고 할 때, 자동 배정한 몫의 오류가 5%를 넘지 않는 최대 비율이다. v1 sonnet 98.3%, v1 haiku 86.1%, 유형 분류 sonnet 83.8%, 유형 분류 haiku 50.3%였다. 작은 모델이 자기 확신도를 덜 정확하게 매긴다는 뜻이다. 비용 때문에 haiku를 쓰려면 확신도 보정이 따로 필요하다.</p>
 <h3 id="s-이전-결과와의-관계">이전 결과와의 관계</h3>
@@ -597,7 +597,72 @@ footer{border-top:1px solid var(--rule);padding:28px;max-width:1100px;margin:0 a
 <li><strong>정답 라벨이 아직 사람 검수 전이다.</strong> 기말까지 팀원 세 명이 블라인드로 다시 붙여 일치도를 내야 숫자를 주장할 수 있다.</li>
 <li><strong>답을 기다리는 시간은 라우팅으로 줄지 않는다.</strong> 맞는 사람에게 가도 그 사람이 자리에 없으면 기다린다. 대기 중앙값 104초, p90 31분이라는 분포가 그 상한을 보여 준다.</li>
 </ul>
-<h2 id="s-6-제안-owner-배정-다섯-단계">6. 제안: owner 배정 다섯 단계</h2>
+<h2 id="s-6-두-번째-축-공통-계약-위에서-병렬로">6. 두 번째 축: 공통 계약 위에서 병렬로</h2>
+<p>교수님이 짚은 1차 목표는 둘이다. 할당이 맞게 되는가, 그리고 공통 프로토콜을 지키면서 병렬 개발이 되는가. 앞 절들이 첫째를 다뤘다면 이 절은 둘째다.</p>
+<h3 id="s-계약은-생각보다-자주-깨진다">계약은 생각보다 자주 깨진다</h3>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>근거</th>
+<th>결과</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>공개 웹앱 레포 8개의 OpenAPI 스펙 변경 146쌍(NOMOS 연구 허브 M4, oasdiff)</td>
+<td>스펙을 바꾼 커밋의 46%(95% 구간 38~54%)에 깨지는 변경이 하나 이상 있었다</td>
+</tr>
+<tr>
+<td>같은 레포들의 사람 리뷰 코멘트 중 FE와 BE 계약 불일치 언급(M4)</td>
+<td>1.6~8.4%(두 모델 라벨의 범위). 불일치를 깨뜨린 쪽은 백엔드가 74%</td>
+</tr>
+</tbody>
+</table></div>
+<p>계약은 한 번 정하고 끝나는 문서가 아니라 계속 흔들린다. 그리고 흔드는 쪽은 대개 제공자(백엔드)다. FE와 BE 에이전트가 동시에 일하면 이 흔들림이 더 빨라진다.</p>
+<h3 id="s-nomos가-가진-장치와-상태">NOMOS가 가진 장치와 상태</h3>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>장치</th>
+<th>하는 일</th>
+<th>상태</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>최소 계약 먼저(PM 선행 규칙)</td>
+<td>계약만 보고 만들 수 있는 일은 선행을 걸지 않고 병행한다. 계약을 먼저 정해야 하는데 명세에 다 못 적으면 "계약 확정" 태스크로 쪼개고 상대는 그 태스크에만 선행을 건다</td>
+<td>동작(PM 지침)</td>
+</tr>
+<tr>
+<td>결정 기록</td>
+<td>확정된 계약은 DECIDED 노트로 프로젝트 전체에 전달한다. 남의 소관을 가정했으면 DECIDED가 아니라 "가정함, 확인 필요" 노트로 남긴다(지어낸 계약을 DECIDED로 발행한 실험 결과에서 나온 규칙)</td>
+<td>동작</td>
+</tr>
+<tr>
+<td>경로 소유권과 실제 diff 검사(V3)</td>
+<td>남의 영역 파일을 고친 커밋은 제출 단계에서 반려된다. 신고와 실제 diff가 다르면 실패</td>
+<td>동작</td>
+</tr>
+<tr>
+<td>계약 대조(V1A)</td>
+<td>실제 응답의 스키마, 상태 코드, 필드명을 OpenAPI 계약과 기계적으로 비교한다</td>
+<td><strong>비어 있음.</strong> 계약을 담을 테이블이 없어 항상 SKIPPED</td>
+</tr>
+<tr>
+<td>질문 중계</td>
+<td>계약에 없는 결정은 정할 권한이 있는 사람에게 묻는다</td>
+<td>동작(이 문서의 주제)</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="s-판단">판단</h3>
+<ul>
+<li><strong>"최소 계약을 먼저 확정하고 병렬로"는 이미 PM 지침에 들어 있다.</strong> 새로 만들 것은 많지 않다.</li>
+<li><strong>가장 큰 빈칸은 계약 대조(V1A)다.</strong> 이게 꺼져 있으면 에이전트가 계약을 지켰는지 서버가 모르고, 기말 실험의 "결정 재작업" 지표도 사람이 손으로 세야 한다. 연구 허브에 oasdiff 기반 비교가 이미 있으므로, 계약 저장과 응답 대조를 붙이는 일이 기말까지 백엔드 쪽 최우선 과제다.</li>
+<li>깨뜨리는 쪽이 대개 제공자라는 M4 결과는 질문 라우팅과도 이어진다. 계약을 바꾸려는 쪽이 먼저 소비자에게 묻게 하면(BE가 "화면에 이 필드가 필요한가요?"를 FE에게) 깨짐을 미리 막을 수 있다. 이번 실험에서 LLM이 가장 자주 틀린 유형이 바로 이 "소비자 요구" 질문이었다.</li>
+</ul>
+<h2 id="s-7-제안-owner-배정-다섯-단계">7. 제안: owner 배정 다섯 단계</h2>
 <p>실험 결과를 반영해 기획안의 "LLM 확신도가 낮으면 일임" 구조를 아래처럼 바꾼다.</p>
 <div class="tablewrap"><table>
 <thead>
@@ -635,7 +700,7 @@ footer{border-top:1px solid var(--rule);padding:28px;max-width:1100px;margin:0 a
 </tr>
 </tbody>
 </table></div>
-<h2 id="s-7-더-넣으면-좋을-아이디어">7. 더 넣으면 좋을 아이디어</h2>
+<h2 id="s-8-더-넣으면-좋을-아이디어">8. 더 넣으면 좋을 아이디어</h2>
 <div class="tablewrap"><table>
 <thead>
 <tr>
@@ -696,7 +761,7 @@ footer{border-top:1px solid var(--rule);padding:28px;max-width:1100px;margin:0 a
 </tr>
 </tbody>
 </table></div>
-<h2 id="s-8-기말까지의-평가-계획">8. 기말까지의 평가 계획</h2>
+<h2 id="s-9-기말까지의-평가-계획">9. 기말까지의 평가 계획</h2>
 <h3 id="s-질문-두-개">질문 두 개</h3>
 <ul>
 <li><strong>할당이 맞게 되는가.</strong> 팀원 세 명이 질문 300개(실제 질문 + 보류 세트 + 실험 중 생긴 질문)에 블라인드로 owner를 붙이고 일치도(카파)를 낸다. 라우터별 첫 수신자 정확도, 대표 부담, 넘기기 횟수, 질문에서 답까지 걸린 시간을 잰다.</li>
@@ -740,7 +805,7 @@ footer{border-top:1px solid var(--rule);padding:28px;max-width:1100px;margin:0 a
 <tbody>
 <tr>
 <td>1~2</td>
-<td>사람 검수 300문항, 라우터 v2를 서버 라우터 자리에 연결(설정으로 선택), 넘기기 버튼</td>
+<td>사람 검수 300문항, 라우터 v2를 서버 라우터 자리에 연결(설정으로 선택), 넘기기 버튼, 계약 대조(V1A) 켜기</td>
 </tr>
 <tr>
 <td>3~4</td>
@@ -772,8 +837,8 @@ footer{border-top:1px solid var(--rule);padding:28px;max-width:1100px;margin:0 a
 <li>Hong 외, MetaGPT, ICLR 2024, <a href="https://arxiv.org/abs/2308.00352">arXiv 2308.00352</a></li>
 <li>Jeong, Kim, Zimmermann, Improving bug triage with bug tossing graphs, FSE 2009 / Chen 외, An empirical investigation of incident triage, ICSE-SEIP 2019</li>
 <li>Jev: <a href="https://www.datacamp.com/blog/system-one-models-jev">DataCamp 소개</a>, <a href="https://towardsdatascience.com/jev-vs-llms-when-ai-moves-from-generation-to-decision-making/">Towards Data Science</a></li>
-<li>NOMOS 연구 허브(로컬): <code>reports/askuser_data_sources.md</code>, <code>reports/rq2_routing.md</code>, <code>reports/rq6_asking.md</code>, <code>reports/askuser_owner/results.md</code></li>
-<li>NOMOS 백엔드: <code>CLAUDE.md</code> 질문 중계 절, <code>src/domain/question/router.ts</code>, <code>scripts/experiments/consult-accuracy.ts</code></li>
+<li>NOMOS 연구 허브(로컬): <code>reports/askuser_data_sources.md</code>, <code>reports/rq2_routing.md</code>, <code>reports/rq4_contract.md</code>, <code>reports/rq6_asking.md</code>, <code>reports/askuser_owner/results.md</code></li>
+<li>NOMOS 백엔드: <code>CLAUDE.md</code> 질문 중계, 검증(V1A~V4), PM 지침 절, <code>src/domain/question/router.ts</code>, <code>scripts/experiments/consult-accuracy.ts</code></li>
 </ul></main></div>
 <footer>이 문서의 숫자는 각 절에 출처를 붙였다. 예시값은 실측처럼 쓰지 않았다. 사람 검수 전 라벨에 기댄 숫자는 그렇게 표시했다.</footer>
 <script>

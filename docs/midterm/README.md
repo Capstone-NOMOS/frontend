@@ -4,7 +4,7 @@
 | --- | --- |
 | `askuser-owner-report.html` | 조사 보고서. 브라우저로 바로 열린다(파일 하나, 글꼴만 CDN) |
 | `askuser-owner-report.md` | 같은 보고서의 원본 마크다운. GitHub에서 그대로 읽힌다 |
-| `midterm-deck.html` | 발표 슬라이드 14장. 브라우저로 연다 |
+| `midterm-deck.html` | 발표 슬라이드 15장. 브라우저로 연다 |
 | `midterm-deck.pptx` | 같은 슬라이드의 PowerPoint 판(수정용) |
 
 ## 발표할 때
