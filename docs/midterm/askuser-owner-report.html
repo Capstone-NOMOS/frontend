@@ -33,7 +33,7 @@ pre{background:var(--soft);padding:16px 18px;border-radius:8px;overflow:auto}pre
 table{width:100%;border-collapse:collapse;margin:20px 0;font-size:14.5px;line-height:1.5}
 th{text-align:left;font-weight:650;color:var(--muted);font-size:12.5px;letter-spacing:.03em;border-bottom:1px solid var(--ink);padding:8px 10px 8px 0}
 td{border-bottom:1px solid var(--rule);padding:9px 10px 9px 0;vertical-align:top}
-.tablewrap{overflow-x:auto}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 figure{margin:28px 0 36px}figcaption{font-size:13.5px;color:var(--muted);margin-top:10px;line-height:1.55}
 .fig-title{font-weight:650;font-size:15px;margin-bottom:12px}
 svg text{font-family:inherit}
@@ -43,6 +43,7 @@ svg text{font-family:inherit}
 .bar rect.m{transition:opacity .15s}.bar:hover rect.m{opacity:.75}
 footer{border-top:1px solid var(--rule);padding:28px;max-width:1100px;margin:0 auto;font-size:13px;color:var(--muted)}
 @media (max-width:900px){.wrap{grid-template-columns:1fr;gap:0}nav.toc{display:none}h1{font-size:32px}.lede{font-size:18px}header.top{padding-top:48px}}
+@media (max-width:600px){body{font-size:16px}table{font-size:13px}th,td{min-width:6.5em;padding-right:8px}.tablewrap{margin:0 -20px;padding:0 20px}main h2{font-size:24px}.stat .v{font-size:28px}}
 @media print{nav.toc{display:none}.wrap{grid-template-columns:1fr}body{background:#fff}}
 </style></head><body>
 <header class="top"><div class="kicker">NOMOS 연구 노트 &nbsp; 중앙대학교 캡스톤디자인</div><h1>에이전트의 질문은 누구에게 가야 하는가</h1><p class="lede">코딩 에이전트가 작업 중에 사람에게 묻는 질문(Claude Code의 AskUserQuestion)을, 여러 사람이 함께 개발하는 팀에서 그 결정을 내릴 권한이 있는 사람에게 바로 보내는 문제를 다룬다. 실제 질문 데이터, 사용자 커뮤니티의 논의, 공개 연구, 그리고 우리가 직접 돌린 라우터 비교 실험을 바탕으로 이 방향이 의미가 있는지, 기술적으로 되는지, 무엇은 새롭지 않은지를 정리했다.</p>
