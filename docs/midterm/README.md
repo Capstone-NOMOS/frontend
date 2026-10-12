@@ -20,6 +20,7 @@
 .venv/bin/python -m hub.askuser.extract            # 로컬 세션에서 AskUserQuestion 질문 추출
 .venv/bin/python -m hub.askuser.labels             # 임시 라벨 붙이기
 .venv/bin/python -m hub.analysis.askuser_owner_report   # 라우터 채점 → reports/askuser_owner/results.json
+.venv/bin/python -m hub.askuser.check_numbers <보고서.md>   # 보고서에 적은 숫자를 결과와 대조
 .venv/bin/python -m hub.askuser.build_docs <보고서.md> <보고서.html>
 .venv/bin/python -m hub.askuser.build_deck <이 폴더>    # 덱 HTML과 PPTX를 results.json 숫자로 다시 그린다
 ```
