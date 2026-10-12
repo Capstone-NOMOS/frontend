@@ -359,6 +359,79 @@ footer{border-top:1px solid var(--rule);padding:28px;max-width:1100px;margin:0 a
 <li><strong>v2는 낙관적으로 읽어야 한다.</strong> v2 규칙(소비자 요구는 소비자에게, 응답 모양은 제공자에게, 운영 반영은 무조건 PM에게, 남의 파일은 소유 역할에게, 확신이 없어도 PM으로 몰지 않기)은 실제 질문의 오답을 보고 만들었다. 실제 질문 98.3%는 같은 데이터에서 잰 숫자다. 처음 보는 보류 세트에서는 v1과 차이가 없었다(100%, 96.9%). 보류 세트가 너무 명확해서 변별력이 없었던 것도 이유다. 사람 검수와 새 질문으로 다시 재야 한다.</li>
 <li><strong>정확도만 보면 "전부 PM에게"도 80%다.</strong> PM이 정해도 되는 질문이 많아서다. 그래서 대표에게 보낸 비율을 같이 봐야 한다. v1 sonnet은 73.4%를 대표에게 보냈고, v2 sonnet은 65.9%로 정답 분포(59.5%)에 가까워졌다.</li>
 </ul>
+<h3 id="s-숫자를-얼마나-믿을-수-있나">숫자를 얼마나 믿을 수 있나</h3>
+<p>표본이 작은 세트가 많아서 95% 신뢰구간(Wilson)과, 같은 문항에서 두 라우터를 짝지어 비교한 검정(McNemar 정확 검정)을 같이 낸다.</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>수치</th>
+<th>95% 구간</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LLM 직접 v1(sonnet), 실제 질문 94.2%</td>
+<td>89.7~96.8%</td>
+</tr>
+<tr>
+<td>LLM 직접 v1(haiku), 실제 질문 91.3%</td>
+<td>86.2~94.7%</td>
+</tr>
+<tr>
+<td>반대 역할 규칙, 실제 질문 13.3%</td>
+<td>9.0~19.2%</td>
+</tr>
+<tr>
+<td>LLM 직접 v1(sonnet), 백엔드 20문항 95.0%</td>
+<td>76.4~99.1%</td>
+</tr>
+<tr>
+<td>반대 역할 규칙, 백엔드 20문항 70.0%</td>
+<td>48.1~85.5%</td>
+</tr>
+</tbody>
+</table></div>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>실제 질문에서 짝지은 비교</th>
+<th>앞쪽만 맞힘</th>
+<th>뒤쪽만 맞힘</th>
+<th>p</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LLM 직접 v1(sonnet) vs 반대 역할 규칙</td>
+<td>149</td>
+<td>9</td>
+<td>0.001 미만</td>
+</tr>
+<tr>
+<td>LLM 직접 v1(sonnet) vs 키워드 규칙</td>
+<td>37</td>
+<td>9</td>
+<td>0.00004</td>
+</tr>
+<tr>
+<td>LLM 직접 v1(sonnet) vs 유형 분류 + 팀 표(sonnet)</td>
+<td>8</td>
+<td>7</td>
+<td>1</td>
+</tr>
+<tr>
+<td>LLM 직접 v1(sonnet) vs LLM 직접 v1(haiku)</td>
+<td>10</td>
+<td>5</td>
+<td>0.30</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>실제 질문에서 LLM이 반대 역할 규칙과 키워드 규칙보다 낫다는 것은 통계적으로 분명하다.</li>
+<li><strong>백엔드 20문항의 "95% 대 70%"는 구간이 겹친다.</strong> 표본이 작아서 이 세트만으로는 차이를 주장할 수 없다.</li>
+<li>직접 지정과 유형 분류의 차이, sonnet과 haiku의 차이는 실제 질문에서 유의하지 않다. 비용과 지연을 생각하면 haiku로도 충분할 수 있다는 뜻이고, 기말에 운영 경로로 지연과 비용을 재서 정한다.</li>
+</ul>
 <h3 id="s-사례로-보기">사례로 보기</h3>
 <p>실제 질문과 백엔드 20문항에서 골랐다. 프로젝트 고유 이름은 일반적인 말로 바꿨다.</p>
 <div class="tablewrap"><table>
