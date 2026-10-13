@@ -48,7 +48,7 @@ footer{border-top:1px solid var(--rule);padding:28px;max-width:1100px;margin:0 a
 </style></head><body>
 <header class="top"><div class="kicker">NOMOS 연구 노트 &nbsp; 중앙대학교 캡스톤디자인</div><h1>에이전트의 질문은 누구에게 가야 하는가</h1><p class="lede">코딩 에이전트가 작업 중에 사람에게 묻는 질문(Claude Code의 AskUserQuestion)을, 여러 사람이 함께 개발하는 팀에서 그 결정을 내릴 권한이 있는 사람에게 바로 보내는 문제를 다룬다. 실제 질문 데이터, 사용자 커뮤니티의 논의, 공개 연구, 그리고 우리가 직접 돌린 라우터 비교 실험을 바탕으로 이 방향이 의미가 있는지, 기술적으로 되는지, 무엇은 새롭지 않은지를 정리했다.</p>
 <div class="meta"><span>2026년 10월</span><span>최영현, 오영훈, 전병국</span><span>데이터와 코드: NOMOS 연구 허브</span></div></header>
-<div class="wrap"><nav class="toc"><b>목차</b><a href="#s-한눈에-보기">한눈에 보기</a><a href="#s-1-문제-질문은-한-줄로만-흐른다">1. 문제: 질문은 한 줄로만 흐른다</a><a href="#s-2-사용자들은-무엇을-이야기하고-있나">2. 사용자들은 무엇을 이야기하고 있나</a><a href="#s-3-데이터로-본-질문-행동">3. 데이터로 본 질문 행동</a><a href="#s-4-실험-owner-배정은-얼마나-정확하게-되나">4. 실험: owner 배정은 얼마나 정확하게 되나</a><a href="#s-5-냉정한-판단">5. 냉정한 판단</a><a href="#s-6-두-번째-축-공통-계약-위에서-병렬로">6. 두 번째 축: 공통 계약 위에서 병렬로</a><a href="#s-7-제안-owner-배정-다섯-단계">7. 제안: owner 배정 다섯 단계</a><a href="#s-8-더-넣으면-좋을-아이디어">8. 더 넣으면 좋을 아이디어</a><a href="#s-9-기말까지의-평가-계획">9. 기말까지의 평가 계획</a><a href="#s-출처">출처</a></nav><main><h2 id="s-한눈에-보기">한눈에 보기</h2>
+<div class="wrap"><nav class="toc"><b>목차</b><a href="#s-한눈에-보기">한눈에 보기</a><a href="#s-1-문제-질문은-한-줄로만-흐른다">1. 문제: 질문은 한 줄로만 흐른다</a><a href="#s-2-사용자들은-무엇을-이야기하고-있나">2. 사용자들은 무엇을 이야기하고 있나</a><a href="#s-3-데이터로-본-질문-행동">3. 데이터로 본 질문 행동</a><a href="#s-4-실험-owner-배정은-얼마나-정확하게-되나">4. 실험: owner 배정은 얼마나 정확하게 되나</a><a href="#s-5-냉정한-판단">5. 냉정한 판단</a><a href="#s-6-두-번째-축-공통-계약-위에서-병렬로">6. 두 번째 축: 공통 계약 위에서 병렬로</a><a href="#s-7-제안-owner-배정-다섯-단계">7. 제안: owner 배정 다섯 단계</a><a href="#s-8-더-넣으면-좋을-아이디어">8. 더 넣으면 좋을 아이디어</a><a href="#s-9-기말까지의-평가-계획">9. 기말까지의 평가 계획</a><a href="#s-용어">용어</a><a href="#s-출처">출처</a></nav><main><h2 id="s-한눈에-보기">한눈에 보기</h2>
 <div class="stats"><div class="stat"><div class="v">60%</div><div class="l">실제 팀 질문 173개 중 1순위로 대표(PM)가 정할 질문</div></div><div class="stat"><div class="v">13%</div><div class="l">지금 NOMOS 서버 기본 규칙(반대 역할)이 맞힌 비율</div></div><div class="stat"><div class="v">94%</div><div class="l">LLM이 owner를 직접 고를 때 정확도(sonnet, 실제 질문)</div></div><div class="stat"><div class="v">104초</div><div class="l">사람이 질문에 답하기까지 걸린 시간 중앙값(p90 약 31분)</div></div></div>
 
 <ol>
@@ -832,6 +832,69 @@ footer{border-top:1px solid var(--rule);padding:28px;max-width:1100px;margin:0 a
 <tr>
 <td>8</td>
 <td>기말 발표: 실측 표, 시연</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="s-용어">용어</h2>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>말</th>
+<th>이 문서에서의 뜻</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AskUserQuestion</td>
+<td>Claude Code가 작업 중에 사람에게 선택지를 주고 묻는 도구. 질문 1~4개, 선택지 2~4개</td>
+</tr>
+<tr>
+<td>owner</td>
+<td>그 질문의 답을 정할 권한이 있는 사람. 그 정보를 아는 사람이 아니라 정할 권한이 있는 사람이다</td>
+</tr>
+<tr>
+<td>PM(대표)</td>
+<td>요구사항, 범위, 우선순위, 출시를 정하는 사람. NOMOS 서버에서는 조직 대표(REPRESENTATIVE)</td>
+</tr>
+<tr>
+<td>SELF</td>
+<td>질문한 에이전트의 역할 자신이 정할 일. 남에게 물을 필요가 없다</td>
+</tr>
+<tr>
+<td>라우터</td>
+<td>질문을 받아 owner를 정하는 부분. 규칙으로 정할 수도, LLM에게 물을 수도 있다</td>
+</tr>
+<tr>
+<td>첫 수신자 정확도</td>
+<td>질문이 처음 도착한 사람이 owner인 비율. 이 문서의 기본 정확도</td>
+</tr>
+<tr>
+<td>대표 부담</td>
+<td>라우터가 질문을 대표에게 보낸 비율</td>
+</tr>
+<tr>
+<td>캐스케이드</td>
+<td>확신도가 문턱보다 낮은 질문을 다른 곳(여기서는 대표)으로 넘기는 방식</td>
+</tr>
+<tr>
+<td>보류 세트</td>
+<td>라우터를 고치기 전에 정답을 먼저 고정해 둔 문항. 고친 규칙이 처음 보는 질문에도 통하는지 보려고 쓴다</td>
+</tr>
+<tr>
+<td>haiku, sonnet</td>
+<td>Anthropic의 Claude 모델. haiku는 작고 싸고 빠르며, sonnet은 더 크고 정확하다</td>
+</tr>
+<tr>
+<td>V1A, V3</td>
+<td>NOMOS 서버의 제출 검증 단계. V1A는 실제 응답을 OpenAPI 계약과 비교하고, V3는 커밋의 실제 변경 파일이 소유 규칙에 맞는지 본다</td>
+</tr>
+<tr>
+<td>DECIDED 노트</td>
+<td>확정된 결정(계약 등)을 프로젝트 전체에 알리는 인계 노트</td>
+</tr>
+<tr>
+<td>신뢰구간</td>
+<td>표본이 달랐다면 정확도가 이 범위 안에 있었을 가능성이 95%라는 뜻의 범위</td>
 </tr>
 </tbody>
 </table></div>

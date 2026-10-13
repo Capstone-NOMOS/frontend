@@ -328,6 +328,24 @@ Claude Code 저장소에는 AskUserQuestion을 언급한 이슈가 1,205건 있�
 | 7 | 분석, Jev 비교 한 번 |
 | 8 | 기말 발표: 실측 표, 시연 |
 
+## 용어
+
+| 말 | 이 문서에서의 뜻 |
+| --- | --- |
+| AskUserQuestion | Claude Code가 작업 중에 사람에게 선택지를 주고 묻는 도구. 질문 1~4개, 선택지 2~4개 |
+| owner | 그 질문의 답을 정할 권한이 있는 사람. 그 정보를 아는 사람이 아니라 정할 권한이 있는 사람이다 |
+| PM(대표) | 요구사항, 범위, 우선순위, 출시를 정하는 사람. NOMOS 서버에서는 조직 대표(REPRESENTATIVE) |
+| SELF | 질문한 에이전트의 역할 자신이 정할 일. 남에게 물을 필요가 없다 |
+| 라우터 | 질문을 받아 owner를 정하는 부분. 규칙으로 정할 수도, LLM에게 물을 수도 있다 |
+| 첫 수신자 정확도 | 질문이 처음 도착한 사람이 owner인 비율. 이 문서의 기본 정확도 |
+| 대표 부담 | 라우터가 질문을 대표에게 보낸 비율 |
+| 캐스케이드 | 확신도가 문턱보다 낮은 질문을 다른 곳(여기서는 대표)으로 넘기는 방식 |
+| 보류 세트 | 라우터를 고치기 전에 정답을 먼저 고정해 둔 문항. 고친 규칙이 처음 보는 질문에도 통하는지 보려고 쓴다 |
+| haiku, sonnet | Anthropic의 Claude 모델. haiku는 작고 싸고 빠르며, sonnet은 더 크고 정확하다 |
+| V1A, V3 | NOMOS 서버의 제출 검증 단계. V1A는 실제 응답을 OpenAPI 계약과 비교하고, V3는 커밋의 실제 변경 파일이 소유 규칙에 맞는지 본다 |
+| DECIDED 노트 | 확정된 결정(계약 등)을 프로젝트 전체에 알리는 인계 노트 |
+| 신뢰구간 | 표본이 달랐다면 정확도가 이 범위 안에 있었을 가능성이 95%라는 뜻의 범위 |
+
 ## 출처
 
 - Claude Code 문서: [Agent SDK 사용자 입력](https://code.claude.com/docs/en/agent-sdk/user-input), [agent teams](https://code.claude.com/docs/en/agent-teams), [도구 레퍼런스](https://code.claude.com/docs/en/tools-reference) (2026-10-13 확인)
