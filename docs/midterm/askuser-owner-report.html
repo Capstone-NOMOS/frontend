@@ -15,7 +15,7 @@ header.top{max-width:1100px;margin:0 auto;padding:72px 28px 40px;border-bottom:1
 .kicker{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
 h1{font-size:44px;line-height:1.18;letter-spacing:-.03em;margin:14px 0 18px;font-weight:750;max-width:860px}
 .lede{font-size:20px;line-height:1.6;color:var(--ink2);max-width:760px;margin:0}
-.meta{margin-top:26px;font-size:14px;color:var(--muted);display:flex;gap:22px;flex-wrap:wrap}
+.meta{margin-top:26px;font-size:14px;color:var(--muted);display:flex;gap:22px;flex-wrap:wrap}.meta a{color:var(--ink2)}
 nav.toc{position:sticky;top:28px;align-self:start;padding-top:44px;font-size:14px;line-height:1.5}
 nav.toc b{display:block;font-size:12px;letter-spacing:.08em;color:var(--muted);margin-bottom:10px;font-weight:600}
 nav.toc a{display:block;padding:5px 0 5px 12px;border-left:2px solid var(--rule);text-decoration:none;color:var(--ink2)}
@@ -47,7 +47,7 @@ footer{border-top:1px solid var(--rule);padding:28px;max-width:1100px;margin:0 a
 @media print{nav.toc{display:none}.wrap{grid-template-columns:1fr}body{background:#fff}}
 </style></head><body>
 <header class="top"><div class="kicker">NOMOS 연구 노트 &nbsp; 중앙대학교 캡스톤디자인</div><h1>에이전트의 질문은 누구에게 가야 하는가</h1><p class="lede">코딩 에이전트가 작업 중에 사람에게 묻는 질문(Claude Code의 AskUserQuestion)을, 여러 사람이 함께 개발하는 팀에서 그 결정을 내릴 권한이 있는 사람에게 바로 보내는 문제를 다룬다. 실제 질문 데이터, 사용자 커뮤니티의 논의, 공개 연구, 그리고 우리가 직접 돌린 라우터 비교 실험을 바탕으로 이 방향이 의미가 있는지, 기술적으로 되는지, 무엇은 새롭지 않은지를 정리했다.</p>
-<div class="meta"><span>2026년 10월</span><span>최영현, 오영훈, 전병국</span><span>데이터와 코드: NOMOS 연구 허브</span></div></header>
+<div class="meta"><span>2026년 10월</span><span>최영현, 오영훈, 전병국</span><span>데이터와 코드: NOMOS 연구 허브</span></div><div class="meta" style="margin-top:10px">함께 보기 <a href="midterm-deck.html">발표 슬라이드</a> <a href="qna.html">예상 질문과 답</a></div></header>
 <div class="wrap"><nav class="toc"><b>목차</b><a href="#s-한눈에-보기">한눈에 보기</a><a href="#s-1-문제-질문은-한-줄로만-흐른다">1. 문제: 질문은 한 줄로만 흐른다</a><a href="#s-2-사용자들은-무엇을-이야기하고-있나">2. 사용자들은 무엇을 이야기하고 있나</a><a href="#s-3-데이터로-본-질문-행동">3. 데이터로 본 질문 행동</a><a href="#s-4-실험-owner-배정은-얼마나-정확하게-되나">4. 실험: owner 배정은 얼마나 정확하게 되나</a><a href="#s-5-냉정한-판단">5. 냉정한 판단</a><a href="#s-6-두-번째-축-공통-계약-위에서-병렬로">6. 두 번째 축: 공통 계약 위에서 병렬로</a><a href="#s-7-제안-owner-배정-다섯-단계">7. 제안: owner 배정 다섯 단계</a><a href="#s-8-더-넣으면-좋을-아이디어">8. 더 넣으면 좋을 아이디어</a><a href="#s-9-기말까지의-평가-계획">9. 기말까지의 평가 계획</a><a href="#s-용어">용어</a><a href="#s-출처">출처</a></nav><main><h2 id="s-한눈에-보기">한눈에 보기</h2>
 <div class="stats"><div class="stat"><div class="v">60%</div><div class="l">실제 팀 질문 173개 중 1순위로 대표(PM)가 정할 질문</div></div><div class="stat"><div class="v">13%</div><div class="l">지금 NOMOS 서버 기본 규칙(반대 역할)이 맞힌 비율</div></div><div class="stat"><div class="v">94%</div><div class="l">LLM이 owner를 직접 고를 때 정확도(sonnet, 실제 질문)</div></div><div class="stat"><div class="v">104초</div><div class="l">사람이 질문에 답하기까지 걸린 시간 중앙값(p90 약 31분)</div></div></div>
 

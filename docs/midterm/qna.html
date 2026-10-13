@@ -15,7 +15,7 @@ header.top{max-width:1100px;margin:0 auto;padding:72px 28px 40px;border-bottom:1
 .kicker{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
 h1{font-size:44px;line-height:1.18;letter-spacing:-.03em;margin:14px 0 18px;font-weight:750;max-width:860px}
 .lede{font-size:20px;line-height:1.6;color:var(--ink2);max-width:760px;margin:0}
-.meta{margin-top:26px;font-size:14px;color:var(--muted);display:flex;gap:22px;flex-wrap:wrap}
+.meta{margin-top:26px;font-size:14px;color:var(--muted);display:flex;gap:22px;flex-wrap:wrap}.meta a{color:var(--ink2)}
 nav.toc{position:sticky;top:28px;align-self:start;padding-top:44px;font-size:14px;line-height:1.5}
 nav.toc b{display:block;font-size:12px;letter-spacing:.08em;color:var(--muted);margin-bottom:10px;font-weight:600}
 nav.toc a{display:block;padding:5px 0 5px 12px;border-left:2px solid var(--rule);text-decoration:none;color:var(--ink2)}
@@ -47,7 +47,7 @@ footer{border-top:1px solid var(--rule);padding:28px;max-width:1100px;margin:0 a
 @media print{nav.toc{display:none}.wrap{grid-template-columns:1fr}body{background:#fff}}
 </style></head><body>
 <header class="top"><div class="kicker">NOMOS 연구 노트 &nbsp; 중앙대학교 캡스톤디자인</div><h1>중간발표 예상 질문과 답</h1><p class="lede">발표 뒤 질의응답에서 나올 만한 질문 12개에 대한 짧은 답. 숫자는 조사 보고서(askuser-owner-report)와 같은 출처에서 나왔다. 답은 30초 안에 말할 수 있는 길이로 썼다.</p>
-<div class="meta"><span>2026년 10월</span><span>최영현, 오영훈, 전병국</span><span>데이터와 코드: NOMOS 연구 허브</span></div></header>
+<div class="meta"><span>2026년 10월</span><span>최영현, 오영훈, 전병국</span><span>데이터와 코드: NOMOS 연구 허브</span></div><div class="meta" style="margin-top:10px">함께 보기 <a href="askuser-owner-report.html">조사 보고서</a> <a href="midterm-deck.html">발표 슬라이드</a></div></header>
 <div class="wrap"><nav class="toc"><b>목차</b><a href="#s-데이터와-라벨">데이터와 라벨</a><a href="#s-차별점">차별점</a><a href="#s-방법">방법</a><a href="#s-범위와-계획">범위와 계획</a></nav><main><h2 id="s-데이터와-라벨">데이터와 라벨</h2>
 <p><strong>Q1. 정답 라벨을 Claude가 붙였는데 믿을 수 있나요?</strong>
 아직은 임시 정답이라고 분명히 말씀드립니다. 같은 계열 모델 라우터에 유리할 수 있어서, 팀원 세 명이 같은 문항에 블라인드로 owner를 붙이는 검수 시트를 이미 만들어 두었습니다. 기말 전 첫 2주에 검수를 끝내고 일치도(카파)와 함께 숫자를 다시 냅니다. 백엔드 담당이 직접 정답을 붙인 20문항에서도 LLM이 95%였다는 점이 참고가 됩니다.</p>
