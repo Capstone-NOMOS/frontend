@@ -9,8 +9,8 @@
 
 ## 발표할 때
 
-- `midterm-deck.html`: 오른쪽 화살표나 스페이스로 다음, 왼쪽 화살표로 이전, `F`로 전체 화면. 화면 오른쪽 절반을 누르면 다음 장. 주소 끝 `#5`처럼 쓰면 그 장으로 간다. 인쇄하면 장마다 한 쪽짜리 PDF가 된다.
-- `midterm-deck.pptx`: 글꼴은 [Pretendard](https://github.com/orioncactus/pretendard)다. 발표 PC에 없으면 PowerPoint가 다른 글꼴로 바꿔 줄바꿈이 달라질 수 있으니 설치해 두거나 HTML 판으로 발표한다. 장마다 발표자 노트(말할 거리)가 들어 있다. HTML 판에는 노트가 화면에 나오지 않는다.
+- `midterm-deck.html`: 오른쪽 화살표나 스페이스로 다음, 왼쪽 화살표로 이전, `F`로 전체 화면, `N`으로 발표자 노트(화면 아래 패널) 켜고 끄기. 화면 오른쪽 절반을 누르면 다음 장. 주소 끝 `#5`처럼 쓰면 그 장으로 간다. 인쇄하면 장마다 한 쪽짜리 PDF가 된다.
+- `midterm-deck.pptx`: 글꼴은 [Pretendard](https://github.com/orioncactus/pretendard)다. 발표 PC에 없으면 PowerPoint가 다른 글꼴로 바꿔 줄바꿈이 달라질 수 있으니 설치해 두거나 HTML 판으로 발표한다. 장마다 발표자 노트(말할 거리)가 들어 있다. HTML 판은 `N`을 누르면 같은 노트가 보인다.
 
 ## 숫자를 다시 만들 때
 
