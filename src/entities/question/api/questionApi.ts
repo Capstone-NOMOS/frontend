@@ -2,8 +2,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch, livePoll, type Schemas } from "@/shared/api";
 
 type AgentQuestion = Schemas["AgentQuestion"];
-/** pending = 사람이 답해야 함 · agent_answered = 에이전트가 답함(사람 확인 권장) */
-type Status = "pending" | "agent_answered";
+/** pending = 사람이 답해야 함 · agent_answered = 에이전트가 답함(사람 확인 권장) · all = 룸 피드의 질문 카드용 */
+type Status = "pending" | "agent_answered" | "all";
 
 export const questionKeys = {
   all: ["question"] as const,

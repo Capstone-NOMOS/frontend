@@ -1291,6 +1291,97 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/orgs/{orgId}/members/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * 조직에서 멤버 내보내기 · 본인 탈퇴
+         * @description 대표가 다른 멤버를 내보내거나, `userId`가 나 자신이면 탈퇴다(021). **계정은 남고 조직만 빠진다** — 다른 조직의 초대를 받을 수 있고, 지난 기록(이벤트·노트·제출)은 그대로 남는다.
+         *     그 사람의 에이전트는 맡은 진행 중 프로젝트에서 빠지고 연결이 해제된다. 진행 중 태스크를 붙잡고 있으면 409 `ACTIVE_TASKS_HELD`.
+         *     대표는 나갈 수도 내보낼 수도 없다(409 `REPRESENTATIVE_CANNOT_LEAVE`). 대표가 아닌 사람이 남을 내보내면 403 `NOT_REPRESENTATIVE`.
+         *     빠진 사람의 화면 스트림(`/api/stream`)은 4403 `NOT_IN_ORG`로 끊긴다.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @example {{ORG_ID}} */
+                    orgId: components["parameters"]["OrgId"];
+                    userId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 빠짐. 함께 해제된 에이전트와 빠진 프로젝트 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** Format: uuid */
+                                userId: string;
+                                /** @description 연결 해제된 에이전트 */
+                                agentIds: string[];
+                                /** @description 배정이 풀린 프로젝트 */
+                                unassignedFrom: string[];
+                                /** @description 조직의 GitHub 레포 전부에서 접근 회수 결과 */
+                                githubRevocations: components["schemas"]["GithubRevokeResult"][];
+                            };
+                        };
+                    };
+                };
+                /** @description 이 조직의 멤버가 아님 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "ORG_MEMBER_NOT_FOUND",
+                         *         "message": "user is not a member of this organization"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+                /** @description 대표 · 진행 중 태스크를 붙잡고 있음 */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "REPRESENTATIVE_CANNOT_LEAVE",
+                         *         "message": "the representative cannot leave or be removed from the organization"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/orgs/{orgId}/agents": {
         parameters: {
             query?: never;
@@ -1568,7 +1659,57 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * 레포 연결 해제 (대표 전용)
+         * @description 조직에서 레포 연결을 끊는다(021). 진행 중(planning·active·halted) 프로젝트가 쓰고 있으면 409 `REPO_IN_ACTIVE_PROJECT`(details에 프로젝트).
+         *     GitHub의 레포는 그대로다. 행과 경로 규칙은 지우지 않는다(끝난 프로젝트의 태스크·검증이 가리킨다) — 같은 레포를 다시 연결하면 경로 규칙·소유권과 함께 되살아난다.
+         *     해제된 레포는 목록·프로젝트 생성·경로 API에서 없는 것(404 `REPO_NOT_FOUND`)으로 본다.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    repoId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 해제됨 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** Format: uuid */
+                                repoId: string;
+                                fullName: string;
+                            };
+                        };
+                    };
+                };
+                /** @description 진행 중 프로젝트가 사용 중 */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "REPO_IN_ACTIVE_PROJECT",
+                         *         "message": "acme/app is used by an active project; finish or abort it first"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+            };
+        };
         options?: never;
         head?: never;
         /**
@@ -1977,7 +2118,37 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * 보낸 초대 목록 (대표 전용)
+         * @description 아직 쓰이지도 취소되지도 않은 초대. 만료된 것도 expired=true로 함께 나온다(화면이 만료 표시·취소). 링크를 다시 복사할 때도 쓴다.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @example {{ORG_ID}} */
+                    orgId: components["parameters"]["OrgId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 초대 목록(최신순) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                invites: components["schemas"]["PendingInvite"][];
+                            };
+                        };
+                    };
+                };
+            };
+        };
         put?: never;
         /**
          * 초대 링크 발급 (대표 전용)
@@ -2018,6 +2189,7 @@ export interface paths {
                         /**
                          * @example {
                          *       "data": {
+                         *         "inviteId": "4b0c7c2e-9a3f-4d1e-8c55-1f2a3b4c5d6e",
                          *         "token": "{{INVITE_TOKEN}}",
                          *         "url": "http://localhost:3001/invites/{{INVITE_TOKEN}}",
                          *         "expiresAt": "2026-09-25T00:00:00.000Z",
@@ -2050,6 +2222,72 @@ export interface paths {
             };
         };
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/orgs/{orgId}/invites/{inviteId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * 초대 취소 (대표 전용)
+         * @description 취소한 링크로는 가입할 수 없다(수락 410 `INVITE_REVOKED`, 미리보기 `reason: revoked`). 이미 쓰인 초대는 취소할 수 없다(404) —
+         *     들어온 사람을 빼려면 멤버 내보내기(`DELETE /orgs/{orgId}/members/{userId}`)를 쓴다.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @example {{ORG_ID}} */
+                    orgId: components["parameters"]["OrgId"];
+                    inviteId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 취소됨 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** Format: uuid */
+                                inviteId: string;
+                            };
+                        };
+                    };
+                };
+                /** @description 대기 중인 초대가 아님(없음·이미 쓰임·이미 취소·다른 조직) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "INVITE_NOT_FOUND",
+                         *         "message": "no pending invite"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+            };
+        };
         options?: never;
         head?: never;
         patch?: never;
@@ -4468,7 +4706,7 @@ export interface paths {
          *     응답의 `notice`에도 같은 안내가 들어 있다.
          *
          *     프로젝트당 역할은 **하나씩만** 배정된다(`uq_project_members_role`). 실험 통제를 위해서다.
-         *     **G1(`started_at`) 이후에는 멤버를 바꿀 수 없다** — 도중에 바뀌면 통제가 흔들린다.
+         *     시작(G1) 뒤에도 배정할 수 있다(021) — 빠진 역할을 채울 때 쓴다. 끝난 프로젝트(completed·aborted)는 409 `PROJECT_NOT_OPEN`. 연결 해제된 에이전트는 배정할 수 없다(403 `AGENT_NOT_IN_ORG`).
          *
          *     **GitHub 협업자 자동 초대**: 배정과 함께 그 에이전트 주인을 프로젝트의 GitHub 레포(`githubRepoId`가 있는 것)마다
          *     push 권한 협업자로 초대한다(대표의 GitHub 토큰). 결과는 `githubInvites`(레포마다 한 줄). 초대가 실패해도 배정은 유효하다 —
@@ -4539,7 +4777,7 @@ export interface paths {
                         };
                     };
                 };
-                /** @description 대표가 아님 · 다른 조직의 에이전트 · G1 이후 */
+                /** @description 대표가 아님 · 다른 조직(또는 연결 해제된) 에이전트 */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -4662,6 +4900,85 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{projectId}/abort": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 프로젝트 중단 (대표 전용)
+         * @description 진행 중(planning·active·halted)인 프로젝트를 중단한다(021). **지우지 않고 `aborted`로 닫는다** — 이벤트·태스크·노트가 가리킨다.
+         *     - 에이전트가 풀린다(다른 프로젝트에 배정 가능). 실행 중인 CLI는 배정이 풀린 것을 보고 다시 배정을 기다린다.
+         *     - 레포를 다른 프로젝트에 쓸 수 있게 된다. 대기 질문은 만료로 닫히고, 대기 승인 카드는 대기열에서 빠지며 결정할 수 없다(409 `PROJECT_NOT_OPEN`).
+         *     - 룸에 "프로젝트가 중단되었습니다"가 모든 역할에 나온다. GitHub 협업자 권한은 회수하지 않는다(레포와 코드는 팀의 것).
+         *     이미 끝난 프로젝트(completed·aborted)는 409 `PROJECT_NOT_OPEN`.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @example {{PROJECT_ID}} */
+                    projectId: components["parameters"]["ProjectId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    /**
+                     * @example {
+                     *       "reason": "범위가 바뀌어 다시 계획한다"
+                     *     }
+                     */
+                    "application/json": {
+                        /** @description 룸·기록에 남는 사유(선택) */
+                        reason?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description 중단됨 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                project: components["schemas"]["Project"];
+                            };
+                        };
+                    };
+                };
+                /** @description 이미 끝난 프로젝트 */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "PROJECT_NOT_OPEN",
+                         *         "message": "project is completed; only an ongoing project can be aborted"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{projectId}/members/{agentId}": {
         parameters: {
             query?: never;
@@ -4675,7 +4992,8 @@ export interface paths {
         /**
          * 배정 해제 (대표 전용)
          * @description **역할 교체는 해제 후 재배정으로 한다.** UPDATE 경로를 두면 한 역할에 둘이 잠깐 겹칠 수 있다.
-         *     G1(`started_at`) 이후에는 해제도 막힌다.
+         *     시작(G1) 뒤에도 된다(021) — 단 그 에이전트가 진행 중 태스크(CLAIMED·IN_PROGRESS·VERIFYING)를 붙잡고 있으면 409 `ACTIVE_TASKS_HELD`(details에 태스크 목록).
+         *     빠진 역할의 태스크는 새 사람을 배정할 때까지 READY로 기다린다. 끝난 프로젝트(completed·aborted)는 409 `PROJECT_NOT_OPEN`.
          */
         delete: {
             parameters: {
@@ -4691,7 +5009,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description 해제됨. 남은 멤버 목록을 준다. */
+                /** @description 해제됨. 남은 멤버 목록과, 빠진 사람의 GitHub 레포 접근 회수 결과 */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -4700,18 +5018,21 @@ export interface paths {
                         /**
                          * @example {
                          *       "data": {
-                         *         "members": []
+                         *         "members": [],
+                         *         "githubRevocations": []
                          *       }
                          *     }
                          */
                         "application/json": {
                             data: {
                                 members: components["schemas"]["ProjectMember"][];
+                                /** @description 빠진 사람의 GitHub 레포 접근 회수 결과(대표 토큰). 대표 본인·GitHub 레포가 없으면 빈 배열 */
+                                githubRevocations: components["schemas"]["GithubRevokeResult"][];
                             };
                         };
                     };
                 };
-                /** @description 대표가 아니거나 G1 이후 */
+                /** @description 대표가 아님 */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -4720,8 +5041,8 @@ export interface paths {
                         /**
                          * @example {
                          *       "error": {
-                         *         "code": "PROJECT_STARTED",
-                         *         "message": "project has started; members are frozen"
+                         *         "code": "NOT_REPRESENTATIVE",
+                         *         "message": "this action requires the organization representative"
                          *       }
                          *     }
                          */
@@ -4739,6 +5060,116 @@ export interface paths {
                          *       "error": {
                          *         "code": "MEMBER_NOT_FOUND",
                          *         "message": "agent is not a member of this project"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+                /** @description 진행 중 태스크를 붙잡고 있음 · 끝난 프로젝트 */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "ACTIVE_TASKS_HELD",
+                         *         "message": "agent still holds 1 task(s) in progress; finish or stop them first"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * 에이전트 연결 해제
+         * @description 노트북 CLI 연결을 끊는다(021) — 그 에이전트의 주인이나 같은 조직의 대표가 한다(아니면 403 `NOT_AGENT_OWNER`).
+         *     맡은 진행 중 프로젝트에서 빠지고(진행 중 태스크가 있으면 409 `ACTIVE_TASKS_HELD`), refresh token이 폐기되며, 남은 access token도 401 `AGENT_DISCONNECTED`로 거부된다.
+         *     실행 중인 CLI의 태스크 스트림도 끊긴다. 목록(`GET /orgs/{orgId}/agents`)에서 빠진다.
+         *     같은 노트북에서 같은 이름으로 다시 `connect`하면 그 에이전트가 되살아난다.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @example {{AGENT_BE}} */
+                    agentId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 해제됨 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** Format: uuid */
+                                agentId: string;
+                                /** Format: date-time */
+                                disconnectedAt: string;
+                                /**
+                                 * Format: uuid
+                                 * @description 배정이 풀린 프로젝트(없으면 null)
+                                 */
+                                unassignedFrom: string | null;
+                                /** @description 빠진 사람의 GitHub 레포 접근 회수 결과(대표 토큰). 대표 본인·GitHub 레포가 없으면 빈 배열 */
+                                githubRevocations: components["schemas"]["GithubRevokeResult"][];
+                            };
+                        };
+                    };
+                };
+                /** @description 주인도 대표도 아님 */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "NOT_AGENT_OWNER",
+                         *         "message": "only the agent owner or the representative can disconnect it"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+                /** @description 없거나 이미 해제된 에이전트 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "AGENT_NOT_FOUND",
+                         *         "message": "agent not found"
                          *       }
                          *     }
                          */
@@ -6351,8 +6782,8 @@ export interface paths {
         put?: never;
         /**
          * 실행 중 도구 사용 보고 (Executor)
-         * @description Executor가 Claude 출력에서 도구 사용을 뽑아 2초마다 묶어 보낸다(최대 50줄). **도구 종류와 대상(작업공간 기준 경로·명령 첫 줄, 300자)만** 받는다 —
-         *     파일 내용·명령 결과·모델 설명은 받지 않는다(설명은 인계 노트의 몫). 열린 실행에만 붙는다(409 `RUN_NOT_OPEN`).
+         * @description Executor가 Claude 출력에서 도구 사용과 에이전트의 말을 뽑아 2초마다 묶어 보낸다(최대 50줄). 받는 것: 도구 종류·대상(작업공간 기준 경로·명령 첫 줄, 300자)·
+         *     성공 여부·수정 줄 수, 에이전트의 말(`say`, 500자 — 020). **파일 내용·diff·명령 출력은 받지 않는다.** 열린 실행에만 붙는다(409 `RUN_NOT_OPEN`).
          *     이벤트가 아니라 `agent_activity`에 쌓이고, 화면 스트림에는 `room` 토픽으로 알린다.
          */
         post: {
@@ -6371,25 +6802,44 @@ export interface paths {
                      * @example {
                      *       "items": [
                      *         {
+                     *           "kind": "say",
+                     *           "target": "레포 구조를 먼저 살펴보겠습니다."
+                     *         },
+                     *         {
                      *           "kind": "read",
-                     *           "target": "src/routes/auth.ts"
+                     *           "target": "src/routes/auth.ts",
+                     *           "ok": true
                      *         },
                      *         {
                      *           "kind": "edit",
-                     *           "target": "src/routes/auth.ts"
+                     *           "target": "src/routes/auth.ts",
+                     *           "ok": true,
+                     *           "added": 12,
+                     *           "removed": 3
                      *         },
                      *         {
                      *           "kind": "run",
-                     *           "target": "npm test"
+                     *           "target": "npm test",
+                     *           "ok": false
                      *         }
                      *       ]
                      *     }
                      */
                     "application/json": {
                         items: {
-                            /** @enum {string} */
-                            kind: "read" | "edit" | "write" | "run" | "search" | "other";
+                            /**
+                             * @description say = 에이전트의 말(020)
+                             * @enum {string}
+                             */
+                            kind: "read" | "edit" | "write" | "run" | "search" | "other" | "say";
+                            /** @description 도구 대상(경로·명령 첫 줄) 300자, say면 그 말 500자 */
                             target: string;
+                            /** @description 도구 결과가 오류가 아니었는가. 결과를 못 받았으면 생략 */
+                            ok?: boolean | null;
+                            /** @description 수정·작성으로 더한 줄 수(내용은 보내지 않는다) */
+                            added?: number | null;
+                            /** @description 수정으로 뺀 줄 수 */
+                            removed?: number | null;
                         }[];
                     };
                 };
@@ -7105,10 +7555,10 @@ export interface components {
              */
             expiresAt: string | null;
             /**
-             * @description valid=false일 때만 있다
+             * @description valid=false일 때만 있다. revoked = 대표가 취소한 초대
              * @enum {string}
              */
-            reason?: "expired" | "used" | "not_found";
+            reason?: "expired" | "used" | "revoked" | "not_found";
         };
         SignupResult: {
             /** Format: uuid */
@@ -7226,6 +7676,21 @@ export interface components {
             /** @description V3가 커밋을 읽을 곳. 자동으로 채워진다 */
             cloneUrl: string;
         };
+        GithubRevokeResult: {
+            /** Format: uuid */
+            repoId: string;
+            fullName: string;
+            /**
+             * @description - removed: 협업자에서 뺐다
+             *     - invitation_cancelled: 아직 수락하지 않은 초대를 취소했다
+             *     - not_collaborator: 원래 협업자가 아니었다
+             *     - skipped: 멤버나 대표가 GitHub를 연결하지 않았다(reason) — GitHub에서 직접 정리
+             *     - failed: GitHub 호출 실패(reason). 해제 자체는 이미 끝났다
+             * @enum {string}
+             */
+            status: "removed" | "invitation_cancelled" | "not_collaborator" | "skipped" | "failed";
+            reason?: string;
+        };
         GithubInviteResult: {
             /** Format: uuid */
             repoId: string;
@@ -7252,13 +7717,31 @@ export interface components {
              * @enum {string}
              */
             speaker: "pm" | "nomos" | "agent";
-            /** @description 원본 이벤트 타입(TASK_DISPATCHED 등) 또는 ACTIVITY_READ·ACTIVITY_EDIT·ACTIVITY_WRITE·ACTIVITY_RUN·ACTIVITY_SEARCH·ACTIVITY_OTHER. 아이콘용 */
+            /** @description 원본 이벤트 타입(TASK_DISPATCHED 등) 또는 ACTIVITY_READ·ACTIVITY_EDIT·ACTIVITY_WRITE·ACTIVITY_RUN·ACTIVITY_SEARCH·ACTIVITY_OTHER·ACTIVITY_SAY(에이전트의 말). 아이콘용 */
             type: string;
             /** Format: uuid */
             taskId: string | null;
             taskTitle: string | null;
             /** @description 화면에 그대로 보여 줄 문장(서버가 만든다) */
             text: string;
+            /**
+             * Format: uuid
+             * @description 질문 줄(QUESTION_*·TASK_BLOCKED_ON_QUESTION)이면 그 질문의 id — GET /projects/{projectId}/questions의 같은 id로 질문 카드(선택지·답)를 그린다. 그 외 null
+             */
+            questionId: string | null;
+            /** @description 활동 줄(ACTIVITY_*)이면 원본 값 — Claude Code처럼 도구 블록으로 그릴 때 쓴다. 이벤트 줄이면 null */
+            activity: {
+                /** @enum {string} */
+                kind: "read" | "edit" | "write" | "run" | "search" | "other" | "say";
+                /** @description 도구 대상(작업공간 기준 경로·명령 첫 줄) 또는 에이전트의 말 */
+                target: string;
+                /** @description false면 도구가 실패했다(예: 시험 실패). 결과를 모르면 null */
+                ok: boolean | null;
+                /** @description 수정·작성으로 더한 줄 수 */
+                added: number | null;
+                /** @description 수정으로 뺀 줄 수 */
+                removed: number | null;
+            } | null;
         };
         RoomSummary: {
             /** @enum {string} */
@@ -7312,6 +7795,11 @@ export interface components {
             createdAt: string;
         };
         InviteCreated: {
+            /**
+             * Format: uuid
+             * @description 취소(DELETE /orgs/{orgId}/invites/{inviteId})할 때 쓴다
+             */
+            inviteId: string;
             token: string;
             /** @description {FRONTEND_BASE_URL}/invites/{token} */
             url: string;
@@ -7319,6 +7807,20 @@ export interface components {
             expiresAt: string;
             /** @enum {string|null} */
             teamRole: "FRONTEND" | "BACKEND" | null;
+        };
+        PendingInvite: {
+            /** Format: uuid */
+            inviteId: string;
+            /** @description {FRONTEND_BASE_URL}/invites/{token} — 다시 복사할 수 있다 */
+            url: string;
+            /** @enum {string|null} */
+            teamRole: "FRONTEND" | "BACKEND" | null;
+            /** Format: date-time */
+            expiresAt: string;
+            /** @description 만료됐으면 true(수락 불가). 취소는 된다 */
+            expired: boolean;
+            /** Format: date-time */
+            createdAt: string;
         };
         InviteAccepted: {
             /** Format: uuid */

@@ -27,11 +27,11 @@ const STATUS: Record<
   AgentQuestion["status"],
   { label: string; tone: "warn" | "info" | "success" | "danger" | "neutral" }
 > = {
-  pending: { label: "답 필요", tone: "warn" },
-  agent_answered: { label: "에이전트가 답함 · 확인 권장", tone: "info" },
+  pending: { label: "답 기다리는 중", tone: "warn" },
+  agent_answered: { label: "상대 에이전트가 코드에서 답함 · 확인 권장", tone: "info" },
   answered: { label: "답함", tone: "success" },
-  expired: { label: "만료", tone: "danger" },
-  self_owned: { label: "묻는 쪽 소관", tone: "neutral" },
+  expired: { label: "만료 · 태스크는 대표에게 넘어감", tone: "danger" },
+  self_owned: { label: "스스로 정할 일로 돌려보냄", tone: "neutral" },
 };
 
 /** multiSelect는 고른 label을 "a, b"처럼 쉼표로 이어 보낸다 */
@@ -86,6 +86,12 @@ export function QuestionCard({
         <ArrowRight size={13} className="text-ink-400" aria-label="질문 대상" />
         <Badge tone={ROLE[q.targetRole].tone}>{ROLE[q.targetRole].label}</Badge>
         <Badge tone={STATUS[q.status].tone}>{STATUS[q.status].label}</Badge>
+        {/* 상담 초안이 있으면 몇 개를 코드에서 확인했는지 */}
+        {q.status === "pending" && q.draft && (
+          <Badge tone="info">
+            {q.questions.filter((x) => q.draft?.decided[x.question]).length}/{q.questions.length} 코드에서 확인
+          </Badge>
+        )}
         <Link href={taskHref} className="min-w-0 flex-1 truncate text-[13px] font-medium hover:underline">
           {taskTitle ?? "태스크 보기"}
         </Link>

@@ -84,6 +84,7 @@ const ERROR_MESSAGES: Record<string, string> = {
 
   // 410
   INVITE_EXPIRED: "만료된 초대입니다.",
+  INVITE_REVOKED: "취소된 초대입니다.",
   INVITE_ALREADY_USED: "이미 사용된 초대입니다.",
   DEVICE_REQUEST_EXPIRED: "만료된 연결 요청입니다. 터미널에서 다시 실행해 주세요.",
 
