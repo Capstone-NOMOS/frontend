@@ -356,7 +356,7 @@ function SidebarContent({
             <NavItem
               href={`${base}/docs/contract`}
               icon={<FileText size={16} />}
-              label="계약"
+              label="API 계약"
               active={is(`${base}/docs/contract`)}
               onNavigate={onNavigate}
             />

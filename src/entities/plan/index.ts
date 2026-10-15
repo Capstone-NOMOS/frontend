@@ -4,6 +4,7 @@ export {
   usePlans,
   usePmStatus,
   useRejectPlan,
+  useRequestFeatures,
   useRequestPlan,
   useRevisePlan,
   type PmStatus,

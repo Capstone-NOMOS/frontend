@@ -33,6 +33,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   GITHUB_FORBIDDEN:
     "GitHub가 거부했습니다. 그 조직에 레포를 만들 권한이 없거나, 조직이 NOMOS 앱을 승인하지 않았습니다.",
   ROOM_NOT_VISIBLE: "다른 역할의 룸은 볼 수 없습니다.",
+  NOT_CONTRACT_APPROVER: "백엔드 담당(없으면 대표)만 API 계약을 확정하거나 수정 요청할 수 있습니다.",
   NOT_QUESTION_TARGET: "이 질문에 답할 역할의 담당자나 대표만 답할 수 있습니다.",
   VERIFICATION_STAGE_NOT_REPORTABLE: "보고할 수 없는 검증 단계입니다.",
   NOT_AGENT_OWNER: "에이전트 주인이나 대표만 연결을 해제할 수 있습니다.",
@@ -84,6 +85,9 @@ const ERROR_MESSAGES: Record<string, string> = {
   PM_PLAN_IN_PROGRESS: "PM이 이미 계획을 작성하고 있습니다. 끝난 뒤 다시 요청해 주세요.",
   PM_BUDGET_EXCEEDED: "PM 예산을 넘어 요청할 수 없습니다.",
   PLAN_NOT_APPLICABLE: "검토 대기 중인 초안만 적용·수정 요청·반려할 수 있습니다.",
+  CONTRACT_REVISION_LIMIT: "이 계약의 수정 요청 한도(3회)를 다 썼습니다.",
+  NO_FEATURE_SPECS: "확정된 기능 명세가 없습니다. 기능 명세부터 받아 확정하세요.",
+  CONTRACTS_NOT_APPROVED: "API 계약이 아직 확정되지 않은 기능이 있습니다. 백엔드 담당이 먼저 확정해야 합니다.",
   PLAN_REVISION_LIMIT: "수정 요청 한도를 넘었습니다. 새 계획을 요청해 주세요.",
   APPROVAL_ALREADY_DECIDED: "이미 승인 또는 반려된 요청입니다.",
   APPROVAL_STALE: "태스크가 더 이상 승인 대기 상태가 아닙니다.",

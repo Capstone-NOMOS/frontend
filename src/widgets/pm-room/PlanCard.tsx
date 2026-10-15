@@ -23,6 +23,7 @@ import { TeamRoleBadge } from "@/entities/task";
 
 type PmPlan = Schemas["PmPlan"];
 type Draft = NonNullable<PmPlan["draft"]>;
+type FeatureDraft = NonNullable<PmPlan["featureDraft"]>;
 
 const MAX_FEEDBACK = 8000;
 const MAX_REASON = 1000;
@@ -44,7 +45,9 @@ export function PlanCard({
 }) {
   const depth = revisionDepth(plan, plans);
   const superseded = isSuperseded(plan, plans);
-  const title = depth > 0 ? `계획 초안 · 수정 ${depth}` : "계획 초안";
+  const feature = plan.kind === "feature";
+  const base = feature ? "기능 명세 초안" : "태스크 초안";
+  const title = depth > 0 ? `${base} · 수정 ${depth}` : base;
 
   if (plan.status === "pending") return <PendingCard plan={plan} title={title} />;
   if (plan.status === "failed") return <FailedCard plan={plan} title={title} onRetry={onRetry} />;
@@ -64,16 +67,33 @@ export function PlanCard({
         </span>
       }
     >
-      {plan.draft ? (
+      {feature && plan.featureDraft ? (
+        <FeatureBody draft={plan.featureDraft} collapsed={superseded} />
+      ) : !feature && plan.draft ? (
         <DraftBody draft={plan.draft} plan={plan} projectId={projectId} collapsed={superseded} />
       ) : (
         <p className="text-[13px] text-ink-500">초안 내용이 없습니다.</p>
       )}
 
-      {plan.status === "applied" && (
+      {plan.status === "applied" && feature && (
         <div className="mt-4 rounded-lg bg-auto-bg px-3 py-2.5 text-[13px]">
           <p className="flex items-center gap-1.5 font-medium text-auto">
-            <Check size={14} /> {plan.appliedAt && `${fmtDateTime(plan.appliedAt)}에 `}승인했습니다. 명세와 태스크가
+            <Check size={14} /> {plan.appliedAt && `${fmtDateTime(plan.appliedAt)}에 `}확정했습니다. 기능 명세가
+            만들어졌습니다.
+          </p>
+          <p className="mt-1 text-ink-700">
+            서버 API가 필요한 기능은 백엔드 담당이{" "}
+            <Link href={`/p/${projectId}/docs/contract`} className="font-medium underline underline-offset-2">
+              API 계약
+            </Link>
+            을 확정한 뒤 태스크를 나눌 수 있습니다.
+          </p>
+        </div>
+      )}
+      {plan.status === "applied" && !feature && (
+        <div className="mt-4 rounded-lg bg-auto-bg px-3 py-2.5 text-[13px]">
+          <p className="flex items-center gap-1.5 font-medium text-auto">
+            <Check size={14} /> {plan.appliedAt && `${fmtDateTime(plan.appliedAt)}에 `}승인했습니다. 태스크가
             만들어졌습니다.
           </p>
           <p className="mt-1 text-ink-700">
@@ -154,7 +174,8 @@ function PendingCard({ plan, title }: { plan: PmPlan; title: string }) {
     <Frame title={title} tone="neutral" right={<PlanStatusBadge status="pending" />}>
       <p className="flex items-center gap-2 text-[13.5px] text-ink-700">
         <Loader2 size={15} className="animate-spin text-ink-400" />
-        PM이 명세와 태스크를 작성하고 있습니다 · {Math.floor(sec / 60)}분 {sec % 60}초
+        PM이 {plan.kind === "feature" ? "기능 명세를" : "태스크를"} 작성하고 있습니다 · {Math.floor(sec / 60)}분{" "}
+        {sec % 60}초
       </p>
       <p className="mt-1 text-[12px] text-ink-500">보통 1~3분 걸립니다. 화면을 떠나도 작성은 계속됩니다.</p>
     </Frame>
@@ -207,7 +228,7 @@ function DraftBody({
         onClick={() => setOpen(true)}
         className="flex items-center gap-1 text-[12.5px] text-ink-500 hover:text-ink-900"
       >
-        <ChevronDown size={14} /> 명세 {draft.specs.length}개 · 태스크 {draft.tasks.length}개 펼치기
+        <ChevronDown size={14} /> 태스크 {draft.tasks.length}개 펼치기
       </button>
     );
   }
@@ -243,23 +264,28 @@ function DraftBody({
         </section>
       )}
 
-      <section>
-        <h4 className="text-[12px] font-semibold uppercase tracking-wide text-ink-500">명세 {draft.specs.length}개</h4>
-        <div className="mt-1.5 space-y-1.5">
-          {draft.specs.map((spec) => (
-            <details key={spec.featureKey} className="group rounded-lg border border-ink-200">
-              <summary className="flex cursor-pointer items-center gap-2 px-3 py-2 text-[13.5px] font-medium">
-                <span className="font-mono text-[12px] text-brand-600">{spec.featureKey}</span>
-                <span className="min-w-0 flex-1 truncate">{spec.title}</span>
-                <ChevronDown size={14} className="text-ink-400 transition group-open:rotate-180" />
-              </summary>
-              <div className="border-t border-ink-100 px-3 py-2">
-                <Markdown content={spec.content} className="text-[13px]" />
-              </div>
-            </details>
-          ))}
-        </div>
-      </section>
+      {/* 새 흐름에서는 명세가 기능 명세 단계에서 이미 확정돼 항상 빈 배열이다(옛 초안만 있다) */}
+      {draft.specs.length > 0 && (
+        <section>
+          <h4 className="text-[12px] font-semibold uppercase tracking-wide text-ink-500">
+            명세 {draft.specs.length}개
+          </h4>
+          <div className="mt-1.5 space-y-1.5">
+            {draft.specs.map((spec) => (
+              <details key={spec.featureKey} className="group rounded-lg border border-ink-200">
+                <summary className="flex cursor-pointer items-center gap-2 px-3 py-2 text-[13.5px] font-medium">
+                  <span className="font-mono text-[12px] text-brand-600">{spec.featureKey}</span>
+                  <span className="min-w-0 flex-1 truncate">{spec.title}</span>
+                  <ChevronDown size={14} className="text-ink-400 transition group-open:rotate-180" />
+                </summary>
+                <div className="border-t border-ink-100 px-3 py-2">
+                  <Markdown content={spec.content} className="text-[13px]" />
+                </div>
+              </details>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section>
         <h4 className="text-[12px] font-semibold uppercase tracking-wide text-ink-500">
@@ -335,6 +361,77 @@ function DraftBody({
   );
 }
 
+/** 기능 명세 초안. 대표가 읽고 판단할 수 있게 개발 용어 없이 쓴다 — 주소·필드는 백엔드 담당이 계약에서 정한다 */
+function FeatureBody({ draft, collapsed }: { draft: FeatureDraft; collapsed: boolean }) {
+  const [open, setOpen] = useState(!collapsed);
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="flex items-center gap-1 text-[12.5px] text-ink-500 hover:text-ink-900"
+      >
+        <ChevronDown size={14} /> 기능 {draft.features.length}개 펼치기
+      </button>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <p className="whitespace-pre-wrap text-[13.5px] leading-6 text-ink-900">{draft.summary}</p>
+
+      {draft.assumptions.length > 0 && (
+        <section className="rounded-lg bg-human-bg px-3 py-2.5">
+          <h4 className="text-[12px] font-semibold text-human">
+            요구가 모호해 가정한 것 {draft.assumptions.length}개 — 확인하세요
+          </h4>
+          <ul className="mt-1 list-disc space-y-0.5 pl-5 text-[13px] leading-6 text-ink-900">
+            {draft.assumptions.map((a) => (
+              <li key={a}>{a}</li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <section>
+        <h4 className="text-[12px] font-semibold uppercase tracking-wide text-ink-500">
+          기능 {draft.features.length}개
+        </h4>
+        <div className="mt-1.5 space-y-1.5">
+          {draft.features.map((f) => (
+            <details key={f.featureKey} className="group rounded-lg border border-ink-200">
+              <summary className="flex cursor-pointer items-center gap-2 px-3 py-2 text-[13.5px] font-medium">
+                <span className="font-mono text-[12px] text-brand-600">{f.featureKey}</span>
+                <span className="min-w-0 flex-1 truncate">{f.title}</span>
+                {f.needsApi && <Badge tone="info">API 필요</Badge>}
+                <ChevronDown size={14} className="text-ink-400 transition group-open:rotate-180" />
+              </summary>
+              <div className="space-y-2 border-t border-ink-100 px-3 py-2 text-[13px] leading-6">
+                <p className="whitespace-pre-wrap text-ink-900">{f.description}</p>
+                {f.acceptance.length > 0 && (
+                  <div>
+                    <div className="text-[12px] font-semibold text-ink-500">수용 기준</div>
+                    <ul className="list-disc space-y-0.5 pl-5 text-ink-900">
+                      {f.acceptance.map((a) => (
+                        <li key={a}>{a}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {f.needsApi && f.apiNeeds && (
+                  <p className="rounded-lg bg-review-bg px-2.5 py-1.5 text-[12.5px] text-ink-700">
+                    <span className="font-medium text-review">오가야 하는 데이터</span> · {f.apiNeeds}
+                  </p>
+                )}
+              </div>
+            </details>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
 type Mode = "idle" | "apply" | "revise" | "reject";
 
 function Actions({
@@ -359,8 +456,10 @@ function Actions({
   const busy = apply.isPending || revise.isPending || reject.isPending;
   const error = apply.error ?? revise.error ?? reject.error;
   const details = errorDetails(error);
-  const specs = plan.draft?.specs.length ?? 0;
-  const tasks = plan.draft?.tasks.length ?? 0;
+  const applyText =
+    plan.kind === "feature"
+      ? `기능 명세 ${plan.featureDraft?.features.length ?? 0}개가 만들어집니다. 태스크는 아직 생기지 않습니다.`
+      : `태스크 ${plan.draft?.tasks.length ?? 0}개가 만들어집니다. 프로젝트는 아직 시작되지 않습니다.`;
 
   const reset = () => {
     apply.reset();
@@ -376,7 +475,7 @@ function Actions({
     <div className="mt-4 border-t border-ink-100 pt-3">
       {mode === "apply" ? (
         <Confirm
-          text={`명세 ${specs}개와 태스크 ${tasks}개가 만들어집니다. 프로젝트는 아직 시작되지 않습니다.`}
+          text={applyText}
           confirmLabel={apply.isPending ? "적용 중…" : "승인"}
           disabled={busy}
           onConfirm={() => apply.mutate(plan.id, { onSuccess: onApplied, onSettled: () => setMode("idle") })}

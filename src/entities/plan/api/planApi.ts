@@ -51,11 +51,26 @@ function useInvalidatePlans(projectId: string) {
 
 const planPath = (projectId: string, planId: string) => `/projects/${projectId}/pm/plans/${planId}`;
 
-/** 202 pending. 409 PM_PLAN_IN_PROGRESS·PM_BUDGET_EXCEEDED, 503 PM_UNAVAILABLE */
+/**
+ * 1단계. 기능 명세 초안(kind: feature, featureDraft)을 요청한다. 202 pending — 폴링·수정·반려·확정은 계획과 같다.
+ * 확정하면 명세만 생기고 태스크는 생기지 않는다. 409 PM_PLAN_IN_PROGRESS·PM_BUDGET_EXCEEDED, 503 PM_UNAVAILABLE
+ */
+export function useRequestFeatures(projectId: string) {
+  return useMutation({
+    mutationFn: (body: RequestBody<"/projects/{projectId}/pm/features", "post">) =>
+      apiFetch<Schemas["PmPlan"]>(`/projects/${projectId}/pm/features`, { method: "POST", body }),
+    onSettled: useInvalidatePlans(projectId),
+  });
+}
+
+/**
+ * 3단계. 확정된 기능 명세와 API 계약으로 태스크를 나눈다(kind: tasks, draft.specs는 항상 빈 배열).
+ * 409 NO_FEATURE_SPECS(명세부터) · CONTRACTS_NOT_APPROVED(details.featureKeys의 계약을 BE 담당이 먼저 확정)
+ */
 export function useRequestPlan(projectId: string) {
   return useMutation({
     // 본문은 선택이라 생성 타입(RequestBody)이 never가 된다 — 직접 적는다
-    mutationFn: (body: { instruction?: string }) =>
+    mutationFn: (body: { instruction?: string } = {}) =>
       apiFetch<Schemas["PmPlan"]>(`/projects/${projectId}/pm/plans`, { method: "POST", body }),
     onSettled: useInvalidatePlans(projectId),
   });
