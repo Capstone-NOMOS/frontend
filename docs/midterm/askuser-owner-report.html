@@ -1,0 +1,921 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>에이전트의 질문은 누구에게 가야 하는가</title><meta name="description" content="코딩 에이전트가 작업 중에 사람에게 묻는 질문(Claude Code의 AskUserQuestion)을, 여러 사람이 함께 개발하는 팀에서 그 결정을 내릴 권한이 있는 사람에게 바로 보내는 문제를 다룬다. 실제 질문 데이터, 사용자 커뮤니티의 논의, 공개 연구, 그리고 우리가 직접 돌린 ">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+:root{--paper:#f7f6f2;--card:#fffffd;--ink:#16161a;--ink2:#47474d;--muted:#7a7a80;--rule:#dedcd5;--soft:#efede7;
+--accent:#2a78d6;--warm:#eb6834;--teal:#1baf7a;--neutral:#c4c2ba;--mark:#fff1c2}
+@media (prefers-color-scheme:dark){:root{--paper:#18181a;--card:#1f1f22;--ink:#efeee9;--ink2:#c9c8c1;--muted:#94938c;--rule:#34343a;
+--soft:#25252a;--accent:#3987e5;--warm:#d95926;--teal:#199e70;--neutral:#55555c;--mark:#4a3f12}}
+*{box-sizing:border-box}html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:17px/1.78 "Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+font-feature-settings:"tnum" 1;word-break:keep-all;overflow-wrap:break-word}
+a{color:inherit;text-decoration-color:var(--accent);text-underline-offset:3px}a:hover{color:var(--accent)}
+.wrap{display:grid;grid-template-columns:220px minmax(0,720px);gap:64px;max-width:1100px;margin:0 auto;padding:0 28px}
+header.top{max-width:1100px;margin:0 auto;padding:72px 28px 40px;border-bottom:1px solid var(--rule)}
+.kicker{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+h1{font-size:44px;line-height:1.18;letter-spacing:-.03em;margin:14px 0 18px;font-weight:750;max-width:860px}
+.lede{font-size:20px;line-height:1.6;color:var(--ink2);max-width:760px;margin:0}
+.meta{margin-top:26px;font-size:14px;color:var(--muted);display:flex;gap:22px;flex-wrap:wrap}.meta a{color:var(--ink2)}
+nav.toc{position:sticky;top:28px;align-self:start;padding-top:44px;font-size:14px;line-height:1.5}
+nav.toc b{display:block;font-size:12px;letter-spacing:.08em;color:var(--muted);margin-bottom:10px;font-weight:600}
+nav.toc a{display:block;padding:5px 0 5px 12px;border-left:2px solid var(--rule);text-decoration:none;color:var(--ink2)}
+nav.toc a.on,nav.toc a:hover{border-left-color:var(--accent);color:var(--ink)}
+main{padding:40px 0 120px;min-width:0}
+main h2{font-size:28px;letter-spacing:-.02em;line-height:1.3;margin:72px 0 18px;padding-top:22px;border-top:1px solid var(--ink);font-weight:720}
+main h2:first-child{margin-top:8px}
+main h3{font-size:19px;margin:40px 0 10px;letter-spacing:-.01em;font-weight:680}
+main p,main li{color:var(--ink)}main ul,main ol{padding-left:1.2em}main li{margin:4px 0}
+strong{font-weight:680;background:linear-gradient(transparent 62%,var(--mark) 62%)}
+blockquote{margin:24px 0;padding:14px 20px;border-left:3px solid var(--accent);background:var(--soft);color:var(--ink2);font-size:15.5px}
+blockquote p{margin:4px 0}
+code{font:14px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--soft);padding:1px 5px;border-radius:4px}
+pre{background:var(--soft);padding:16px 18px;border-radius:8px;overflow:auto}pre code{background:none;padding:0}
+table{width:100%;border-collapse:collapse;margin:20px 0;font-size:14.5px;line-height:1.5}
+th{text-align:left;font-weight:650;color:var(--muted);font-size:12.5px;letter-spacing:.03em;border-bottom:1px solid var(--ink);padding:8px 10px 8px 0}
+td{border-bottom:1px solid var(--rule);padding:9px 10px 9px 0;vertical-align:top}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+figure{margin:28px 0 36px}figcaption{font-size:13.5px;color:var(--muted);margin-top:10px;line-height:1.55}
+.fig-title{font-weight:650;font-size:15px;margin-bottom:12px}
+svg text{font-family:inherit}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);margin:26px 0}
+.stat{background:var(--card);padding:18px 18px 16px}.stat .v{font-size:34px;font-weight:720;letter-spacing:-.03em;line-height:1.1}
+.stat .l{font-size:13px;color:var(--muted);margin-top:8px;line-height:1.45}
+.bar rect.m{transition:opacity .15s}.bar:hover rect.m{opacity:.75}
+footer{border-top:1px solid var(--rule);padding:28px;max-width:1100px;margin:0 auto;font-size:13px;color:var(--muted)}
+@media (max-width:900px){.wrap{grid-template-columns:1fr;gap:0}nav.toc{display:none}h1{font-size:32px}.lede{font-size:18px}header.top{padding-top:48px}}
+@media (max-width:600px){body{font-size:16px}table{font-size:13px}th,td{min-width:6.5em;padding-right:8px}.tablewrap{margin:0 -20px;padding:0 20px}main h2{font-size:24px}.stat .v{font-size:28px}}
+@media print{nav.toc{display:none}.wrap{grid-template-columns:1fr}body{background:#fff}}
+</style></head><body>
+<header class="top"><div class="kicker">NOMOS 연구 노트 &nbsp; 중앙대학교 캡스톤디자인</div><h1>에이전트의 질문은 누구에게 가야 하는가</h1><p class="lede">코딩 에이전트가 작업 중에 사람에게 묻는 질문(Claude Code의 AskUserQuestion)을, 여러 사람이 함께 개발하는 팀에서 그 결정을 내릴 권한이 있는 사람에게 바로 보내는 문제를 다룬다. 실제 질문 데이터, 사용자 커뮤니티의 논의, 공개 연구, 그리고 우리가 직접 돌린 라우터 비교 실험을 바탕으로 이 방향이 의미가 있는지, 기술적으로 되는지, 무엇은 새롭지 않은지를 정리했다.</p>
+<div class="meta"><span>2026년 10월</span><span>최영현, 오영훈, 전병국</span><span>데이터와 코드: NOMOS 연구 허브</span></div><div class="meta" style="margin-top:10px">함께 보기 <a href="midterm-deck.html">발표 슬라이드</a> <a href="qna.html">예상 질문과 답</a></div></header>
+<div class="wrap"><nav class="toc"><b>목차</b><a href="#s-한눈에-보기">한눈에 보기</a><a href="#s-1-문제-질문은-한-줄로만-흐른다">1. 문제: 질문은 한 줄로만 흐른다</a><a href="#s-2-사용자들은-무엇을-이야기하고-있나">2. 사용자들은 무엇을 이야기하고 있나</a><a href="#s-3-데이터로-본-질문-행동">3. 데이터로 본 질문 행동</a><a href="#s-4-실험-owner-배정은-얼마나-정확하게-되나">4. 실험: owner 배정은 얼마나 정확하게 되나</a><a href="#s-5-냉정한-판단">5. 냉정한 판단</a><a href="#s-6-두-번째-축-공통-계약-위에서-병렬로">6. 두 번째 축: 공통 계약 위에서 병렬로</a><a href="#s-7-제안-owner-배정-다섯-단계">7. 제안: owner 배정 다섯 단계</a><a href="#s-8-더-넣으면-좋을-아이디어">8. 더 넣으면 좋을 아이디어</a><a href="#s-9-기말까지의-평가-계획">9. 기말까지의 평가 계획</a><a href="#s-용어">용어</a><a href="#s-출처">출처</a></nav><main><h2 id="s-한눈에-보기">한눈에 보기</h2>
+<div class="stats"><div class="stat"><div class="v">60%</div><div class="l">실제 팀 질문 173개 중 1순위로 대표(PM)가 정할 질문</div></div><div class="stat"><div class="v">13%</div><div class="l">지금 NOMOS 서버 기본 규칙(반대 역할)이 맞힌 비율</div></div><div class="stat"><div class="v">94%</div><div class="l">LLM이 owner를 직접 고를 때 정확도(sonnet, 실제 질문)</div></div><div class="stat"><div class="v">104초</div><div class="l">사람이 질문에 답하기까지 걸린 시간 중앙값(p90 약 31분)</div></div></div>
+
+<ol>
+<li><strong>Claude Code의 질문 채널은 구조적으로 한 사람에게만 간다.</strong> 서브에이전트는 질문 도구를 쓸 수 없고, 실험 기능인 agent teams도 팀원의 권한 요청을 리드 세션 한 곳으로 올린다. 여러 사람이 각자 에이전트를 돌리는 팀에서 "이 질문은 백엔드 담당이 정할 일"이라는 개념 자체가 없다.</li>
+<li><strong>질문의 다수는 프론트와 백엔드 사이가 아니라 대표(PM) 소관이다.</strong> 실제 팀 세션에서 나온 질문 173개를 라벨링해 보니 1순위 owner가 PM인 질문이 60%, 자기 소관이 35%, 상대 기술 역할 소관은 6%였다. 지금 서버의 기본 라우터는 PM을 고를 수 없어서 13%만 맞혔다.</li>
+<li><strong>owner 배정 자체는 어렵지 않다.</strong> LLM이 직접 고르면 실제 질문 94%, 백엔드 팀이 정답을 붙인 20문항 95%를 맞혔다. 키워드 규칙은 익숙한 데이터에서는 78%였지만 처음 보는 도메인에서는 53%로 떨어졌다. 다만 작은 모델(haiku)은 같은 질문을 다시 넣으면 21%가 다른 사람에게 갔다. 판정이 흔들리는 질문은 사람에게 "확인 필요"로 보여 줘야 한다.</li>
+<li><strong>진짜 어려운 부분은 정확도가 아니라 대표에게 몰리는 부하와 답을 기다리는 시간이다.</strong> 가장 정확한 라우터도 질문의 73%를 대표에게 보냈다. 기획안에 있던 "확신이 낮으면 대표에게"라는 단계는 오히려 첫 수신자 정확도를 떨어뜨렸다.</li>
+<li><strong>공통 계약 쪽은 장치가 거의 다 있고 빈칸이 하나다.</strong> "최소 계약을 먼저 확정하고 병렬로"는 이미 PM 지침에 들어 있다. 실제 응답을 OpenAPI 계약과 비교하는 검증(V1A)만 계약 저장소가 없어 꺼져 있고, 이걸 켜야 "계약을 지키며 병렬 개발했다"를 잴 수 있다.</li>
+<li><strong>우리가 만든 합성 질문은 LLM에게 너무 쉽다.</strong> 일부러 어렵게 만든 세트에서도 LLM은 93~100%를 맞혔다. 숫자를 주장하려면 사람 검수와 실제 팀 질문 로그가 필요하다.</li>
+<li><strong>그래서 이번 학기 목표는 "3역할 팀에서 할당이 맞게 되는가"와 "공통 계약 위에서 병렬 개발이 되는가" 두 가지로 좁힌다.</strong> 역할을 더 쪼개거나 비판, ERD, 스케줄러 에이전트를 붙이는 일은 뒤로 미룬다. 교수님 피드백과 같은 결론이다.</li>
+</ol>
+<blockquote>
+<p>이 문서의 숫자에는 출처를 붙였다. 기획 단계 표에 있던 "일반 에이전트 42%, NOMOS 91%" 같은 값은 예시값이라 쓰지 않았다. 실제 질문 라벨은 Claude가 붙인 임시 정답이고 사람 검수 전이다. 같은 계열 모델 라우터에 유리할 수 있다.</p>
+</blockquote>
+<h2 id="s-1-문제-질문은-한-줄로만-흐른다">1. 문제: 질문은 한 줄로만 흐른다</h2>
+<p>AskUserQuestion은 Claude Code가 작업 중에 사람에게 선택지를 주고 묻는 도구다. 질문 1~4개, 선택지 2~4개를 한 번에 보내고, 사람이 고른 답을 받아 같은 작업을 이어 간다(<a href="https://code.claude.com/docs/en/agent-sdk/user-input">Agent SDK 문서</a>).</p>
+<p>혼자 쓸 때는 이 구조가 자연스럽다. 질문을 받는 사람이 곧 결정권자이기 때문이다. 문제는 여러 사람이 각자 에이전트를 돌리는 팀이다. 프론트엔드 개발자의 에이전트가 "정원이 찬 스터디에 신청하면 서버가 어떤 에러 코드를 주나요?"라고 물으면, 그 질문은 프론트엔드 개발자 화면에 뜬다. 답할 권한도 정보도 없는 사람이 메신저로 백엔드 개발자를 찾아가 묻고, 답을 받아 다시 입력한다.</p>
+<p>Claude Code 공식 문서로 확인한 구조는 이렇다.</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>사실</th>
+<th>출처</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>서브에이전트에서는 AskUserQuestion을 쓸 수 없다. 질문은 메인 세션을 운영하는 사람에게만 간다</td>
+<td><a href="https://code.claude.com/docs/en/agent-sdk/user-input">Agent SDK 사용자 입력</a></td>
+</tr>
+<tr>
+<td>agent teams(실험 기능)에서 팀원의 권한 요청은 리드 세션으로 올라가고, 팀 전체가 한 사람의 한 세션 안에 있다. 팀은 세션마다 하나이고 세션끼리 공유할 수 없다</td>
+<td><a href="https://code.claude.com/docs/en/agent-teams">agent teams 문서</a></td>
+</tr>
+<tr>
+<td>같은 문서가 "프론트엔드, 백엔드, 테스트를 각각 다른 팀원이 맡는 계층 간 조율"을 대표 사용 예로 든다. 역할을 나눈 병렬 개발 자체는 이미 제품 기능이다</td>
+<td>같은 문서</td>
+</tr>
+<tr>
+<td>질문에 시간 제한(<code>askUserQuestionTimeout</code>)을 걸면, 시간이 지나 Claude가 스스로 판단해 진행하고 나중에 다시 물을 수 있다</td>
+<td><a href="https://code.claude.com/docs/en/tools-reference">도구 레퍼런스</a></td>
+</tr>
+<tr>
+<td>Agent SDK의 <code>canUseTool</code> 콜백으로 질문을 가로채 프로그램이 답을 돌려줄 수 있다. 질문을 다른 사람에게 보내는 공식 접점이다</td>
+<td><a href="https://code.claude.com/docs/en/agent-sdk/user-input">Agent SDK 사용자 입력</a></td>
+</tr>
+</tbody>
+</table></div>
+<p>정리하면, <strong>역할을 나눈 에이전트 병렬 개발은 Claude Code가 이미 하고 있고, 질문을 정할 권한이 있는 다른 사람에게 보내는 일은 구조적으로 하지 않는다.</strong> NOMOS가 차별점을 주장할 수 있는 자리는 뒤쪽이다.</p>
+<h2 id="s-2-사용자들은-무엇을-이야기하고-있나">2. 사용자들은 무엇을 이야기하고 있나</h2>
+<h3 id="s-질문-도구를-둘러싼-이슈">질문 도구를 둘러싼 이슈</h3>
+<p>Claude Code 저장소에는 AskUserQuestion을 언급한 이슈가 1,205건 있다(2026-10-03 검색, NOMOS 연구 허브). 성격이 분명한 것들을 골랐다.</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>이슈</th>
+<th>내용</th>
+<th>우리에게 주는 뜻</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://github.com/anthropics/claude-code/issues/12890">#12890</a>, <a href="https://github.com/anthropics/claude-code/issues/34592">#34592</a></td>
+<td>서브에이전트에서 질문 도구가 설정과 상관없이 빠져 있다. 문서에는 전달된다고 쓰여 있어 혼란이 크다</td>
+<td>멀티 에이전트에서 질문을 어떻게 흘릴지 공식 답이 아직 없다</td>
+</tr>
+<tr>
+<td><a href="https://github.com/anthropics/claude-code/issues/18721">#18721</a></td>
+<td>우회책: 서브에이전트가 "확인이 필요하다"는 구조화된 결과를 돌려주고 메인이 대신 묻는다</td>
+<td>질문을 구조화된 데이터로 다루는 방식이 사용자 사이에서 자연스럽게 나온다</td>
+</tr>
+<tr>
+<td><a href="https://github.com/anthropics/claude-code/issues/50728">#50728</a></td>
+<td>터미널 없는 헤드리스 실행에서는 질문이 빈 답으로 바로 끝난다(해결 안 함으로 닫힘)</td>
+<td>서버에서 에이전트를 돌리려면 질문을 받아 줄 자리를 직접 만들어야 한다. NOMOS가 실제로 부딪힌 문제다</td>
+</tr>
+<tr>
+<td><a href="https://github.com/anthropics/claude-code/issues/70648">#70648</a></td>
+<td>원격 세션에서 쉬었다 돌아오면 같은 질문에 2~7번 답해야 한다</td>
+<td>비동기로 답하는 상황(답할 사람이 자리에 없음)을 제품이 아직 잘 다루지 못한다</td>
+</tr>
+<tr>
+<td><a href="https://github.com/github/spec-kit/issues/2181">spec-kit #2181</a></td>
+<td>명세 도구가 번호 목록 대신 네이티브 질문 도구를 쓰게 해 달라는 요청</td>
+<td>질문이 명세 작성의 핵심 단계로 쓰이고 있다</td>
+</tr>
+<tr>
+<td><a href="https://github.com/CCoupel/claude_project_template/pull/54">템플릿 PR #54</a></td>
+<td>agent teams에서 막힌 팀원의 질문을 리드에게 보고하고, 리드가 AskUserQuestion으로 바꿔 묻게 하는 공동체 패턴</td>
+<td>"질문을 중계한다"는 발상은 이미 사용자들이 손으로 하고 있다. 다만 받는 사람은 여전히 한 명이다</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="s-묻게-하라-쪽의-흐름">"묻게 하라" 쪽의 흐름</h3>
+<p>블로그와 강의에서는 반대 방향의 이야기도 많다. 기능을 만들기 전에 "AskUserQuestion으로 나를 인터뷰해라"라고 시켜 명세를 다듬는 방식이 널리 퍼졌다. 한 줄짜리 요구사항에서 수십 개의 질문이 나왔다는 사례도 있다(<a href="https://torqsoftware.com/blog/2026/2026-01-14-claude-ask-user-question/">torq software 블로그</a>). 질문이 많아질수록 "누가 답할 것인가"의 비용도 커진다.</p>
+<h3 id="s-멀티-에이전트-자체에-대한-논쟁">멀티 에이전트 자체에 대한 논쟁</h3>
+<p>2025년 6월 Cognition이 "멀티 에이전트를 만들지 마라"는 글에서 맥락이 나뉘면 하위 에이전트들이 서로 다른 가정으로 일을 해 결과가 어긋난다고 주장했다. 다음 날 Anthropic은 서브에이전트마다 따로 맥락을 주는 연구 시스템이 단일 에이전트보다 넓은 조사에서 낫다는 글을 냈다. LangChain의 정리는 "읽기는 병렬화하기 쉽고 쓰기는 어렵다. 쓰기가 충돌하면 결과가 나빠진다"였다(<a href="https://blog.langchain.com/how-and-when-to-build-multi-agent-systems">LangChain 블로그</a>).</p>
+<p>이 논쟁은 NOMOS에 그대로 적용된다. 프론트와 백엔드 에이전트가 동시에 코드를 쓰는 일은 Cognition이 경고한 상황이다. 서로 다른 가정을 막는 장치가 바로 <strong>먼저 합의한 최소 계약</strong>과 <strong>정할 권한이 있는 사람에게 가는 질문</strong>이다. 그래서 이 두 가지가 이번 학기의 1차 목표가 된다.</p>
+<p>에이전트끼리 토론시키면 나아진다는 주장도 냉정하게 볼 필요가 있다. NeurIPS 2025 논문 "Debate or Vote"는 7개 벤치마크에서 멀티 에이전트 토론의 이득 대부분이 단순 다수결에서 나오고, 토론 자체는 기대 정확도를 올리지 않는다고 보였다(<a href="https://arxiv.org/abs/2508.17536">arXiv 2508.17536</a>). 비판 전용 에이전트를 붙이는 계획을 뒤로 미루는 이유 중 하나다.</p>
+<h2 id="s-3-데이터로-본-질문-행동">3. 데이터로 본 질문 행동</h2>
+<h3 id="s-얼마나-자주-왜-묻나">얼마나 자주, 왜 묻나</h3>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>출처</th>
+<th>결과</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Anthropic, "Measuring AI agent autonomy in practice" (2026-02-18)</td>
+<td>대화형 Claude Code 세션 50만 개에서 Claude가 스스로 멈춘 이유: 접근 방식 선택지 제시 35%, 진단 정보 요청 21%, 모호한 요청 명확화 13%, 자격 증명과 접근 권한 12%, 승인과 확인 11%</td>
+</tr>
+<tr>
+<td>NOMOS 연구 허브 M6 (AIDev, 코딩 에이전트 PR 코멘트)</td>
+<td>사람에게 묻는 글 1.4%. 물을 때는 요구사항 모호가 57%</td>
+</tr>
+<tr>
+<td>Ambig-SWE (ICLR 2026, <a href="https://arxiv.org/abs/2502.13069">arXiv 2502.13069</a>)</td>
+<td>따로 지시하지 않으면 모델은 거의 묻지 않는다. 정보가 빠진 이슈를 알아채는 능력은 프롬프트에 크게 좌우된다</td>
+</tr>
+<tr>
+<td>HumanEvalComm (<a href="https://arxiv.org/abs/2406.00215">arXiv 2406.00215</a>)</td>
+<td>문제를 일부러 모호하게 바꿔도 응답의 60% 이상이 묻지 않고 코드를 낸다</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="s-우리-팀이-실제로-받은-질문">우리 팀이 실제로 받은 질문</h3>
+<p>맥미니 한 대의 Claude Code 세션 기록(2026-05-21 ~ 10-12)에서 AskUserQuestion 질문 220개를 뽑았다. 그중 173개는 Jazzify라는 실제 팀 프로젝트에서 나왔다. 이 팀은 프론트엔드와 백엔드를 다른 사람이 맡고, 프론트가 백엔드에 요구사항 문서를 올리는 방식으로 일한다. 이 맥미니의 주인은 프론트 담당이다.</p>
+<div class="stats"><div class="stat"><div class="v">220</div><div class="l">추출한 질문(답이 있는 것 215)</div></div><div class="stat"><div class="v">77.5%</div><div class="l">추천 선택지를 그대로 고른 비율(110/142)</div></div><div class="stat"><div class="v">68%</div><div class="l">첫 번째 선택지를 고른 비율</div></div><div class="stat"><div class="v">104초</div><div class="l">답까지 걸린 시간 중앙값, p90 약 31분</div></div></div>
+
+<p>질문마다 "이 팀이 PM, FE, BE 3인 팀이었다면 누가 정할 결정인가"를 붙였다. 결정 유형(우선순위, 범위, 제품 정책, 화면, API 계약, 자기 구현, 환경과 배포, 요청 의도 확인)도 함께 붙였다.</p>
+<figure><div class="fig-title">실제 질문 173개, 1순위로 정할 권한이 있는 사람</div><svg viewBox="0 0 720 138" width="100%" role="img" aria-label="owner 분포"><text x="138" y="25.8" font-size="13" fill="var(--ink2)" text-anchor="end">FE 에이전트 질문 (133)</text><g class="bar"><title>FE 에이전트 질문 (133): PM(대표) 소관 81개 (61%)</title><rect class="m" x="150.0" y="4" width="339.1" height="34" rx="3" fill="var(--accent)"/><text x="158.0" y="25.8" font-size="12.5" font-weight="650" fill="#fff">61%</text></g><g class="bar"><title>FE 에이전트 질문 (133): 자기 소관 43개 (32%)</title><rect class="m" x="491.1" y="4" width="179.1" height="34" rx="3" fill="var(--neutral)"/><text x="499.1" y="25.8" font-size="12.5" font-weight="650" fill="#fff">32%</text></g><g class="bar"><title>FE 에이전트 질문 (133): 상대 기술 역할 소관 9개 (7%)</title><rect class="m" x="672.1" y="4" width="35.9" height="34" rx="3" fill="var(--warm)"/></g><text x="138" y="77.8" font-size="13" fill="var(--ink2)" text-anchor="end">BE 에이전트 질문 (40)</text><g class="bar"><title>BE 에이전트 질문 (40): PM(대표) 소관 22개 (55%)</title><rect class="m" x="150.0" y="56" width="306.0" height="34" rx="3" fill="var(--accent)"/><text x="158.0" y="77.8" font-size="12.5" font-weight="650" fill="#fff">55%</text></g><g class="bar"><title>BE 에이전트 질문 (40): 자기 소관 17개 (42%)</title><rect class="m" x="458.0" y="56" width="236.0" height="34" rx="3" fill="var(--neutral)"/><text x="466.0" y="77.8" font-size="12.5" font-weight="650" fill="#fff">42%</text></g><g class="bar"><title>BE 에이전트 질문 (40): 상대 기술 역할 소관 1개 (2%)</title><rect class="m" x="696.0" y="56" width="12.0" height="34" rx="3" fill="var(--warm)"/></g><rect x="150" y="120" width="10" height="10" rx="2" fill="var(--accent)"/><text x="165" y="129" font-size="12" fill="var(--ink2)">PM(대표) 소관</text><rect x="280" y="120" width="10" height="10" rx="2" fill="var(--neutral)"/><text x="295" y="129" font-size="12" fill="var(--ink2)">자기 소관</text><rect x="362" y="120" width="10" height="10" rx="2" fill="var(--warm)"/><text x="377" y="129" font-size="12" fill="var(--ink2)">상대 기술 역할 소관</text></svg><figcaption>Jazzify 팀 세션의 AskUserQuestion 질문. "3인 팀(PM, FE, BE)이었다면 누가 정할 결정인가"로 라벨링(Claude 임시 라벨, 사람 검수 전).</figcaption></figure>
+
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>1순위 owner</th>
+<th>FE 에이전트 질문(133)</th>
+<th>BE 에이전트 질문(40)</th>
+<th>합계</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PM(대표)</td>
+<td>81</td>
+<td>22</td>
+<td>103 (60%)</td>
+</tr>
+<tr>
+<td>자기 소관</td>
+<td>43</td>
+<td>17</td>
+<td>60 (35%)</td>
+</tr>
+<tr>
+<td>상대 기술 역할</td>
+<td>9</td>
+<td>1</td>
+<td>10 (6%)</td>
+</tr>
+</tbody>
+</table></div>
+<p>눈에 띄는 점이 셋 있다.</p>
+<ul>
+<li><strong>우선순위를 묻는 질문이 32개나 된다.</strong> "이 백엔드 요구사항 문서를 몇 순위로 올릴까요?" 같은 질문이다. 개발자 개인이 아니라 대표가 정할 일이다.</li>
+<li><strong>요청 의도를 되묻는 질문이 27개다.</strong> "말씀하신 상단바가 어느 화면인가요?" 같은 질문은 그 일을 시킨 사람만 답할 수 있다.</li>
+<li><strong>선택지에 "백엔드에 판단 위임"이 직접 나온 질문이 있다.</strong> 프론트 에이전트가 이미 자기 소관이 아님을 알면서도 프론트 개발자에게 물은 경우다.</li>
+</ul>
+<p>이 숫자는 Claude가 붙인 임시 라벨이고, 한 사람의 세션이라는 한계가 있다. 그래도 기획 단계에서 가정한 "FE와 BE 사이의 질문 라우팅"이 전체의 작은 부분이고, 대표에게 가야 할 질문이 훨씬 많다는 방향은 뚜렷하다.</p>
+<h2 id="s-4-실험-owner-배정은-얼마나-정확하게-되나">4. 실험: owner 배정은 얼마나 정확하게 되나</h2>
+<h3 id="s-무엇을-비교했나">무엇을 비교했나</h3>
+<p>같은 질문을 여러 라우터에 넣고, 첫 수신자가 그 결정을 정할 권한이 있는 사람인지 쟀다. 평가 세트는 다섯 가지이고 합치지 않고 따로 본다.</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>세트</th>
+<th>문항</th>
+<th>정답을 붙인 사람</th>
+<th>특징</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>실제 팀 질문</td>
+<td>173</td>
+<td>Claude(임시, 사람 검수 전)</td>
+<td>문장이 길고 맥락에 기댄다. 가장 현실적이다</td>
+</tr>
+<tr>
+<td>백엔드 20문항</td>
+<td>20</td>
+<td>NOMOS 백엔드 담당</td>
+<td>질문 중계 실험에서 나온 질문 10개와 만든 질문 10개. 역할이 FE와 BE뿐이다</td>
+</tr>
+<tr>
+<td>정원 마감 합성</td>
+<td>24</td>
+<td>Claude</td>
+<td>"정원이 차면 신청하지 못하게 해" 시나리오</td>
+</tr>
+<tr>
+<td>결제 환불 보류 세트</td>
+<td>32</td>
+<td>Claude, 개선안을 만들기 전에 고정</td>
+<td>처음 보는 도메인. 레포 경로 소유 표를 상황에 넣었다</td>
+</tr>
+<tr>
+<td>초대 수락 어려운 보류 세트</td>
+<td>30</td>
+<td>Claude, 라우터 실행 전에 고정</td>
+<td>위 세트가 너무 쉬워 새로 만들었다. 기술적이지만 자기 소관인 질문, BE가 묻는 소비자 요구, 운영 반영을 섞었다</td>
+</tr>
+</tbody>
+</table></div>
+<p>라우터는 여섯 종류다. 지금 서버 기본값인 반대 역할 규칙, 전부 PM에게 보내기, 키워드 규칙, LLM이 결정 유형만 분류하고 owner는 팀 표로 정하는 방식, LLM이 owner를 직접 고르는 방식(v1), 그리고 v1의 오답을 보고 경계 규칙을 더한 v2다. LLM은 haiku와 sonnet을 썼다.</p>
+<blockquote>
+<p>LLM 라우터는 정답을 볼 수 없게 막은 별도 에이전트가 문항만 읽고 판정했다. 연구 허브의 <code>claude -p</code> 경로는 실험 당일 구독 주간 한도에 걸려 쓰지 못했다. 그래서 지연과 비용은 운영 조건과 달라 이 표에 싣지 않는다.</p>
+</blockquote>
+<h3 id="s-결과">결과</h3>
+<figure><div class="fig-title">첫 수신자가 정할 권한이 있는 사람인 비율 (실제 질문 173개)</div><svg viewBox="0 0 720 334" width="100%" role="img" aria-label="라우터 정확도"><line x1="230.0" x2="230.0" y1="0" y2="312" stroke="var(--rule)" stroke-width="1"/><text x="230.0" y="328" font-size="11" fill="var(--muted)" text-anchor="middle">0%</text><line x1="334.5" x2="334.5" y1="0" y2="312" stroke="var(--rule)" stroke-width="1"/><text x="334.5" y="328" font-size="11" fill="var(--muted)" text-anchor="middle">25%</text><line x1="439.0" x2="439.0" y1="0" y2="312" stroke="var(--rule)" stroke-width="1"/><text x="439.0" y="328" font-size="11" fill="var(--muted)" text-anchor="middle">50%</text><line x1="543.5" x2="543.5" y1="0" y2="312" stroke="var(--rule)" stroke-width="1"/><text x="543.5" y="328" font-size="11" fill="var(--muted)" text-anchor="middle">75%</text><line x1="648.0" x2="648.0" y1="0" y2="312" stroke="var(--rule)" stroke-width="1"/><text x="648.0" y="328" font-size="11" fill="var(--muted)" text-anchor="middle">100%</text><g class="bar"><title>반대 역할 규칙(현재 서버 기본값): 정확도 13.3%, PM으로 보낸 비율 0.0%</title><text x="218" y="19.8" font-size="13" fill="var(--ink2)" text-anchor="end">반대 역할 규칙(현재 서버 기본값)</text><rect class="m" x="230" y="4" width="55.6" height="22" rx="4" fill="var(--warm)"/><text x="292.6" y="19.8" font-size="13" font-weight="650" fill="var(--ink)">13.3%</text></g><g class="bar"><title>전부 PM에게: 정확도 80.3%, PM으로 보낸 비율 100.0%</title><text x="218" y="53.8" font-size="13" fill="var(--ink2)" text-anchor="end">전부 PM에게</text><rect class="m" x="230" y="38" width="335.8" height="22" rx="4" fill="var(--neutral)"/><text x="572.8" y="53.8" font-size="13" font-weight="650" fill="var(--ink)">80.3%</text></g><g class="bar"><title>키워드 규칙 + 팀 표: 정확도 78.0%, PM으로 보낸 비율 37.6%</title><text x="218" y="87.8" font-size="13" fill="var(--ink2)" text-anchor="end">키워드 규칙 + 팀 표</text><rect class="m" x="230" y="72" width="326.2" height="22" rx="4" fill="var(--neutral)"/><text x="563.2" y="87.8" font-size="13" font-weight="650" fill="var(--ink)">78.0%</text></g><g class="bar"><title>LLM 유형 분류 + 팀 표(haiku): 정확도 93.1%, PM으로 보낸 비율 55.5%</title><text x="218" y="121.8" font-size="13" fill="var(--ink2)" text-anchor="end">LLM 유형 분류 + 팀 표(haiku)</text><rect class="m" x="230" y="106" width="389.0" height="22" rx="4" fill="var(--neutral)"/><text x="626.0" y="121.8" font-size="13" font-weight="650" fill="var(--ink)">93.1%</text></g><g class="bar"><title>LLM 유형 분류 + 팀 표(sonnet): 정확도 93.6%, PM으로 보낸 비율 60.1%</title><text x="218" y="155.8" font-size="13" fill="var(--ink2)" text-anchor="end">LLM 유형 분류 + 팀 표(sonnet)</text><rect class="m" x="230" y="140" width="391.4" height="22" rx="4" fill="var(--neutral)"/><text x="628.4" y="155.8" font-size="13" font-weight="650" fill="var(--ink)">93.6%</text></g><g class="bar"><title>LLM 직접 지정(haiku): 정확도 91.3%, PM으로 보낸 비율 62.4%</title><text x="218" y="189.8" font-size="13" fill="var(--ink2)" text-anchor="end">LLM 직접 지정(haiku)</text><rect class="m" x="230" y="174" width="381.8" height="22" rx="4" fill="var(--accent)"/><text x="618.8" y="189.8" font-size="13" font-weight="650" fill="var(--ink)">91.3%</text></g><g class="bar"><title>LLM 직접 지정(sonnet): 정확도 94.2%, PM으로 보낸 비율 73.4%</title><text x="218" y="223.8" font-size="13" fill="var(--ink2)" text-anchor="end">LLM 직접 지정(sonnet)</text><rect class="m" x="230" y="208" width="393.8" height="22" rx="4" fill="var(--accent)"/><text x="630.8" y="223.8" font-size="13" font-weight="650" fill="var(--ink)">94.2%</text></g><g class="bar"><title>LLM 직접 지정 v2(haiku): 정확도 93.6%, PM으로 보낸 비율 69.4%</title><text x="218" y="257.8" font-size="13" fill="var(--ink2)" text-anchor="end">LLM 직접 지정 v2(haiku)</text><rect class="m" x="230" y="242" width="391.4" height="22" rx="4" fill="var(--accent)"/><text x="628.4" y="257.8" font-size="13" font-weight="650" fill="var(--ink)">93.6%</text></g><g class="bar"><title>LLM 직접 지정 v2(sonnet): 정확도 98.3%, PM으로 보낸 비율 65.9%</title><text x="218" y="291.8" font-size="13" fill="var(--ink2)" text-anchor="end">LLM 직접 지정 v2(sonnet)</text><rect class="m" x="230" y="276" width="410.8" height="22" rx="4" fill="var(--accent)"/><text x="647.8" y="291.8" font-size="13" font-weight="650" fill="var(--ink)">98.3%</text></g></svg><div class="fig-title" style="margin-top:22px">같은 라우터가 대표(PM)에게 보낸 비율</div><svg viewBox="0 0 720 334" width="100%" role="img" aria-label="PM 부담"><line x1="230.0" x2="230.0" y1="0" y2="312" stroke="var(--rule)" stroke-width="1"/><text x="230.0" y="328" font-size="11" fill="var(--muted)" text-anchor="middle">0%</text><line x1="334.5" x2="334.5" y1="0" y2="312" stroke="var(--rule)" stroke-width="1"/><text x="334.5" y="328" font-size="11" fill="var(--muted)" text-anchor="middle">25%</text><line x1="439.0" x2="439.0" y1="0" y2="312" stroke="var(--rule)" stroke-width="1"/><text x="439.0" y="328" font-size="11" fill="var(--muted)" text-anchor="middle">50%</text><line x1="543.5" x2="543.5" y1="0" y2="312" stroke="var(--rule)" stroke-width="1"/><text x="543.5" y="328" font-size="11" fill="var(--muted)" text-anchor="middle">75%</text><line x1="648.0" x2="648.0" y1="0" y2="312" stroke="var(--rule)" stroke-width="1"/><text x="648.0" y="328" font-size="11" fill="var(--muted)" text-anchor="middle">100%</text><g class="bar"><title>반대 역할 규칙(현재 서버 기본값): PM 부담 0.0%</title><text x="218" y="19.8" font-size="13" fill="var(--ink2)" text-anchor="end">반대 역할 규칙(현재 서버 기본값)</text><rect class="m" x="230" y="4" width="2.0" height="22" rx="4" fill="var(--neutral)"/><text x="239.0" y="19.8" font-size="13" font-weight="650" fill="var(--ink)">0.0%</text></g><g class="bar"><title>전부 PM에게: PM 부담 100.0%</title><text x="218" y="53.8" font-size="13" fill="var(--ink2)" text-anchor="end">전부 PM에게</text><rect class="m" x="230" y="38" width="418.0" height="22" rx="4" fill="var(--neutral)"/><text x="655.0" y="53.8" font-size="13" font-weight="650" fill="var(--ink)">100.0%</text></g><g class="bar"><title>키워드 규칙 + 팀 표: PM 부담 37.6%</title><text x="218" y="87.8" font-size="13" fill="var(--ink2)" text-anchor="end">키워드 규칙 + 팀 표</text><rect class="m" x="230" y="72" width="157.1" height="22" rx="4" fill="var(--neutral)"/><text x="394.1" y="87.8" font-size="13" font-weight="650" fill="var(--ink)">37.6%</text></g><g class="bar"><title>LLM 유형 분류 + 팀 표(haiku): PM 부담 55.5%</title><text x="218" y="121.8" font-size="13" fill="var(--ink2)" text-anchor="end">LLM 유형 분류 + 팀 표(haiku)</text><rect class="m" x="230" y="106" width="232.0" height="22" rx="4" fill="var(--neutral)"/><text x="469.0" y="121.8" font-size="13" font-weight="650" fill="var(--ink)">55.5%</text></g><g class="bar"><title>LLM 유형 분류 + 팀 표(sonnet): PM 부담 60.1%</title><text x="218" y="155.8" font-size="13" fill="var(--ink2)" text-anchor="end">LLM 유형 분류 + 팀 표(sonnet)</text><rect class="m" x="230" y="140" width="251.3" height="22" rx="4" fill="var(--neutral)"/><text x="488.3" y="155.8" font-size="13" font-weight="650" fill="var(--ink)">60.1%</text></g><g class="bar"><title>LLM 직접 지정(haiku): PM 부담 62.4%</title><text x="218" y="189.8" font-size="13" fill="var(--ink2)" text-anchor="end">LLM 직접 지정(haiku)</text><rect class="m" x="230" y="174" width="260.9" height="22" rx="4" fill="var(--neutral)"/><text x="497.9" y="189.8" font-size="13" font-weight="650" fill="var(--ink)">62.4%</text></g><g class="bar"><title>LLM 직접 지정(sonnet): PM 부담 73.4%</title><text x="218" y="223.8" font-size="13" fill="var(--ink2)" text-anchor="end">LLM 직접 지정(sonnet)</text><rect class="m" x="230" y="208" width="306.9" height="22" rx="4" fill="var(--neutral)"/><text x="543.9" y="223.8" font-size="13" font-weight="650" fill="var(--ink)">73.4%</text></g><g class="bar"><title>LLM 직접 지정 v2(haiku): PM 부담 69.4%</title><text x="218" y="257.8" font-size="13" fill="var(--ink2)" text-anchor="end">LLM 직접 지정 v2(haiku)</text><rect class="m" x="230" y="242" width="289.9" height="22" rx="4" fill="var(--neutral)"/><text x="526.9" y="257.8" font-size="13" font-weight="650" fill="var(--ink)">69.4%</text></g><g class="bar"><title>LLM 직접 지정 v2(sonnet): PM 부담 65.9%</title><text x="218" y="291.8" font-size="13" fill="var(--ink2)" text-anchor="end">LLM 직접 지정 v2(sonnet)</text><rect class="m" x="230" y="276" width="275.4" height="22" rx="4" fill="var(--neutral)"/><text x="512.4" y="291.8" font-size="13" font-weight="650" fill="var(--ink)">65.9%</text></g></svg><figcaption>정확도만 보면 "전부 PM에게"도 높게 나온다. PM이 정해도 되는 질문이 많기 때문이다. 대신 모든 질문이 대표 한 사람에게 몰린다. 그래서 두 지표를 함께 본다.</figcaption></figure>
+
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>라우터</th>
+<th>실제 질문</th>
+<th>백엔드 20</th>
+<th>정원 마감</th>
+<th>결제 환불(보류)</th>
+<th>초대 수락(어려운 보류)</th>
+<th>실제 질문 중 PM에게 보낸 비율</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>반대 역할 규칙(현재 서버 기본값)</td>
+<td>13.3%</td>
+<td>70.0%</td>
+<td>41.7%</td>
+<td>37.5%</td>
+<td>30.0%</td>
+<td>0%</td>
+</tr>
+<tr>
+<td>전부 PM에게</td>
+<td>80.3%</td>
+<td>0%</td>
+<td>50.0%</td>
+<td>46.9%</td>
+<td>46.7%</td>
+<td>100%</td>
+</tr>
+<tr>
+<td>키워드 규칙 + 팀 표</td>
+<td>78.0%</td>
+<td>80.0%</td>
+<td>83.3%</td>
+<td>53.1%</td>
+<td>63.3%</td>
+<td>37.6%</td>
+</tr>
+<tr>
+<td>LLM 유형 분류 + 팀 표(haiku)</td>
+<td>93.1%</td>
+<td>80.0%</td>
+<td>83.3%</td>
+<td>-</td>
+<td>-</td>
+<td>55.5%</td>
+</tr>
+<tr>
+<td>LLM 유형 분류 + 팀 표(sonnet)</td>
+<td>93.6%</td>
+<td>85.0%</td>
+<td>87.5%</td>
+<td>-</td>
+<td>-</td>
+<td>60.1%</td>
+</tr>
+<tr>
+<td>LLM 직접 지정 v1(haiku)</td>
+<td>91.3%</td>
+<td>95.0%</td>
+<td>95.8%</td>
+<td>100%</td>
+<td>93.3%</td>
+<td>62.4%</td>
+</tr>
+<tr>
+<td>LLM 직접 지정 v1(sonnet)</td>
+<td>94.2%</td>
+<td>95.0%</td>
+<td>100%</td>
+<td>100%</td>
+<td>96.7%</td>
+<td>73.4%</td>
+</tr>
+<tr>
+<td>LLM 직접 지정 v2(haiku)</td>
+<td>93.6%</td>
+<td>95.0%</td>
+<td>100%</td>
+<td>100%</td>
+<td>96.7%</td>
+<td>69.4%</td>
+</tr>
+<tr>
+<td>LLM 직접 지정 v2(sonnet)</td>
+<td>98.3%</td>
+<td>95.0%</td>
+<td>100%</td>
+<td>96.9%</td>
+<td>100%</td>
+<td>65.9%</td>
+</tr>
+</tbody>
+</table></div>
+<p>실제 질문의 정답 분포에서 PM이 1순위인 비율은 59.5%다.</p>
+<h3 id="s-읽는-법">읽는 법</h3>
+<ul>
+<li><strong>현재 서버 기본값은 실제 질문에서 거의 쓸모가 없다(13.3%).</strong> FE와 BE 질문만 있는 백엔드 20문항에서는 70%였다. 설계 가정이 데이터와 달랐던 것이다.</li>
+<li><strong>키워드 규칙은 익숙한 데이터에서만 통한다.</strong> 실제 질문 78%에서 처음 보는 결제 환불 세트 53%로 떨어졌다. 규칙을 Jazzify 문장에 맞춰 만들었기 때문이다.</li>
+<li><strong>LLM이 owner를 직접 고르는 쪽이 가장 낫다.</strong> v1 sonnet이 실제 질문 94.2%, 백엔드 20문항 95%였다. 우리가 처음 밀었던 "유형 분류 + 팀 표"는 실제 질문에서는 비슷했지만 백엔드 20문항(85%)과 정원 마감(87.5%)에서 뒤졌다. "화면에 어떤 필드가 필요한가요?" 같은 소비자 요구를 API 계약으로 분류해 BE 자기 소관으로 보낸 것이 주된 원인이다.</li>
+<li><strong>v2는 낙관적으로 읽어야 한다.</strong> v2 규칙(소비자 요구는 소비자에게, 응답 모양은 제공자에게, 운영 반영은 무조건 PM에게, 남의 파일은 소유 역할에게, 확신이 없어도 PM으로 몰지 않기)은 실제 질문의 오답을 보고 만들었다. 실제 질문 98.3%는 같은 데이터에서 잰 숫자다. 처음 보는 두 보류 세트(62문항)를 합치면 sonnet은 v1과 v2 모두 61/62로 같았고, haiku만 60/62에서 61/62로 한 문항 나아졌다. 일부러 어렵게 만든 초대 수락 세트에서도 LLM은 93~100%였다. <strong>우리가 만든 합성 질문은 아무리 꼬아도 LLM에게 쉽다.</strong> 진짜 시험대는 맥락에 기대는 실제 팀 질문이고, 그래서 사람 검수와 실제 팀 로그가 필요하다.</li>
+<li><strong>정확도만 보면 "전부 PM에게"도 80%다.</strong> PM이 정해도 되는 질문이 많아서다. 그래서 대표에게 보낸 비율을 같이 봐야 한다. v1 sonnet은 73.4%를 대표에게 보냈고, v2 sonnet은 65.9%로 정답 분포(59.5%)에 가까워졌다.</li>
+</ul>
+<h3 id="s-숫자를-얼마나-믿을-수-있나">숫자를 얼마나 믿을 수 있나</h3>
+<p>표본이 작은 세트가 많아서 95% 신뢰구간(Wilson)과, 같은 문항에서 두 라우터를 짝지어 비교한 검정(McNemar 정확 검정)을 같이 낸다.</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>수치</th>
+<th>95% 구간</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LLM 직접 v1(sonnet), 실제 질문 94.2%</td>
+<td>89.7~96.8%</td>
+</tr>
+<tr>
+<td>LLM 직접 v1(haiku), 실제 질문 91.3%</td>
+<td>86.2~94.7%</td>
+</tr>
+<tr>
+<td>반대 역할 규칙, 실제 질문 13.3%</td>
+<td>9.0~19.2%</td>
+</tr>
+<tr>
+<td>LLM 직접 v1(sonnet), 백엔드 20문항 95.0%</td>
+<td>76.4~99.1%</td>
+</tr>
+<tr>
+<td>반대 역할 규칙, 백엔드 20문항 70.0%</td>
+<td>48.1~85.5%</td>
+</tr>
+</tbody>
+</table></div>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>실제 질문에서 짝지은 비교</th>
+<th>앞쪽만 맞힘</th>
+<th>뒤쪽만 맞힘</th>
+<th>p</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LLM 직접 v1(sonnet) vs 반대 역할 규칙</td>
+<td>149</td>
+<td>9</td>
+<td>0.001 미만</td>
+</tr>
+<tr>
+<td>LLM 직접 v1(sonnet) vs 키워드 규칙</td>
+<td>37</td>
+<td>9</td>
+<td>0.00004</td>
+</tr>
+<tr>
+<td>LLM 직접 v1(sonnet) vs 유형 분류 + 팀 표(sonnet)</td>
+<td>8</td>
+<td>7</td>
+<td>1</td>
+</tr>
+<tr>
+<td>LLM 직접 v1(sonnet) vs LLM 직접 v1(haiku)</td>
+<td>10</td>
+<td>5</td>
+<td>0.30</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>실제 질문에서 LLM이 반대 역할 규칙과 키워드 규칙보다 낫다는 것은 통계적으로 분명하다.</li>
+<li><strong>백엔드 20문항의 "95% 대 70%"는 구간이 겹친다.</strong> 표본이 작아서 이 세트만으로는 차이를 주장할 수 없다.</li>
+<li>직접 지정과 유형 분류의 차이, sonnet과 haiku의 차이는 한 번 돌린 결과로는 실제 질문에서 유의하지 않다.</li>
+<li><strong>다만 haiku는 판정이 흔들린다.</strong> 같은 haiku 라우터를 같은 조건으로 한 번 더 돌리자 실제 질문의 21.4%에서 판정이 바뀌었고, 두 번째 정확도는 86.7%였다(첫 번째 91.3%). 바뀐 판정 대부분(26건)은 PM과 자기 소관 사이였고, 바뀐 질문은 첫 실행 확신이 낮았다(중앙값 0.55, 전체 0.7). 백엔드 20문항에서는 5%만 바뀌었다. 같은 질문이 실행마다 다른 사람에게 가면 받는 사람이 혼란스럽다.</li>
+<li><strong>세 번 판정해 다수결을 내도 정확도는 오르지 않았다.</strong> 세 번 각각 91.3%, 86.7%, 90.8%였고 다수결은 90.8%였다. 판정이 갈릴 때만 sonnet에게 다시 묻는 방식도 90.8%로, sonnet 한 번(94.2%)을 넘지 못했다. 대신 <strong>세 번이 일치하는지가 쓸모 있는 신호였다.</strong> 세 번 모두 같은 판정이 나온 질문(76%)은 93.9%가 맞았고, 갈린 질문(24%)은 81.0%만 맞았다. 갈리는 질문은 모델을 더 불러도 잘 안 풀리는 어려운 질문이라, 받는 사람에게 "확인 필요"로 표시하고 넘기기를 쉽게 해 주는 데 쓰는 게 맞다. 이 측정은 에이전트 한 번에 문항 전체를 판정시킨 방식이라 운영 경로(질문마다 한 번씩)와 다를 수 있어, 기말에 운영 경로로 다시 잰다.</li>
+</ul>
+<h3 id="s-사례로-보기">사례로 보기</h3>
+<p>실제 질문과 백엔드 20문항에서 골랐다. 프로젝트 고유 이름은 일반적인 말로 바꿨다.</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>질문</th>
+<th>물은 쪽</th>
+<th>정답</th>
+<th>반대 역할 규칙</th>
+<th>LLM 직접 v1(sonnet)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>"이 요구사항 문서를 몇 순위(P1~P5)로 올릴까요?"</td>
+<td>FE</td>
+<td>PM</td>
+<td>BE, 틀림</td>
+<td>PM, 맞음(확신 0.9)</td>
+</tr>
+<tr>
+<td>"재생이 안 되는 곳이 정확히 어디인가요?"</td>
+<td>FE</td>
+<td>PM(요청한 사람)</td>
+<td>BE, 틀림</td>
+<td>PM, 맞음(0.65)</td>
+</tr>
+<tr>
+<td>"RAG 서버의 CORS 설정을 어떻게 할까요?"</td>
+<td>FE</td>
+<td>BE</td>
+<td>BE, 맞음</td>
+<td>BE, 맞음(0.9)</td>
+</tr>
+<tr>
+<td>"제가 이미 고친 백엔드 파일 3개를 어떻게 할까요?"</td>
+<td>FE</td>
+<td>BE(파일 소유자)</td>
+<td>BE, 맞음</td>
+<td>SELF, 틀림(0.5)</td>
+</tr>
+<tr>
+<td>"백엔드가 (제목, 연주자) 중복을 거부하는데 저장할 때 제목을 어떻게 구분할까요?"</td>
+<td>FE</td>
+<td>SELF 또는 BE</td>
+<td>BE, 맞음</td>
+<td>PM, 틀림(0.45)</td>
+</tr>
+<tr>
+<td>"탈퇴한 멤버도 목록 화면에 보여 줘야 하나요?"</td>
+<td>BE</td>
+<td>FE(화면 요구)</td>
+<td>FE, 맞음</td>
+<td>PM, 틀림(0.8)</td>
+</tr>
+</tbody>
+</table></div>
+<p>반대 역할 규칙은 FE와 BE 사이의 질문(아래 네 줄)에서는 잘 맞고, 대표에게 가야 할 질문(위 두 줄)에서는 늘 틀린다. LLM은 그 반대다. <strong>실제 질문에서 LLM 직접 v1이 틀린 10개 중 9개는 확신 0.6 이하에서 대표에게 미룬 경우였다.</strong> 모르면 대표에게 보내는 습관이 대표 부하의 원인이다. v2에 "확신이 없어도 대표로 몰지 말고 가장 그럴듯한 쪽을 고른 뒤 확신을 낮게 줘라"를 넣은 이유이고, 파일 소유자 질문은 LLM보다 경로 소유권 규칙이 정확하다.</p>
+<h3 id="s-확신도가-낮으면-대표에게-효과-없음">확신도가 낮으면 대표에게: 효과 없음</h3>
+<p>기획안에는 "LLM의 확신도가 낮으면 사람(대표)에게 일임한다"는 단계가 있었다. 확신도 문턱 아래 질문을 대표에게 보내면 어떻게 되는지 쟀다.</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>라우터</th>
+<th>문턱</th>
+<th>첫 수신자 정확도</th>
+<th>대표 부담</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LLM 직접 지정 v1(sonnet), 문턱 없음</td>
+<td>-</td>
+<td>94.2%</td>
+<td>73.4%</td>
+</tr>
+<tr>
+<td>같은 라우터</td>
+<td>0.6</td>
+<td>93.1%</td>
+<td>84.4%</td>
+</tr>
+<tr>
+<td>같은 라우터</td>
+<td>0.8</td>
+<td>89.6%</td>
+<td>89.6%</td>
+</tr>
+<tr>
+<td>같은 라우터</td>
+<td>0.9</td>
+<td>84.4%</td>
+<td>96.0%</td>
+</tr>
+</tbody>
+</table></div>
+<p>모든 라우터에서 같은 모양이었다. 확신이 낮은 질문도 LLM의 1순위가 대표보다 더 자주 맞았다. 그래서 7절의 제안에서는 확신이 낮을 때 대표에게 몰지 않고 1순위 후보에게 보내되 버튼 하나로 넘길 수 있게 바꿨다.</p>
+<h3 id="s-오류를-5-이하로-지키며-자동으로-보낼-수-있는-몫">오류를 5% 이하로 지키며 자동으로 보낼 수 있는 몫</h3>
+<p>확신도가 높은 순서로 자동 배정하고 나머지는 사람이 나눠 준다고 할 때, 자동 배정한 몫의 오류가 5%를 넘지 않는 최대 비율이다. v1 sonnet 98.3%, v1 haiku 86.1%, 유형 분류 sonnet 83.8%, 유형 분류 haiku 50.3%였다. 작은 모델이 자기 확신도를 덜 정확하게 매긴다는 뜻이다. 비용 때문에 haiku를 쓰려면 확신도 보정이 따로 필요하다.</p>
+<h3 id="s-이전-결과와의-관계">이전 결과와의 관계</h3>
+<p>연구 허브의 M2는 사람 PR 리뷰에서 뽑은 결정 1,984건을 다섯 역할(대표, 백엔드, 프론트엔드, 디자인, 데브옵스) 중 하나로 배정하는 문제였고, haiku 75%, 임베딩 65%, 규칙 60%였다(연구 허브 <code>reports/rq2_routing.md</code>). 이번에는 역할이 셋이고 질문이 에이전트의 실제 문장이라 문제가 더 쉽다. 역할을 늘리면 정확도가 내려간다는 점은 미리 알고 가야 한다.</p>
+<h2 id="s-5-냉정한-판단">5. 냉정한 판단</h2>
+<h3 id="s-새롭지-않은-것">새롭지 않은 것</h3>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>기획안의 아이디어</th>
+<th>이미 있는 것</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PM이 요구사항을 정하고 API 명세를 먼저 만든 뒤 FE와 BE를 병렬로 돌린다</td>
+<td>MetaGPT(ICLR 2024, <a href="https://arxiv.org/abs/2308.00352">arXiv 2308.00352</a>)가 제품 관리자, 설계자, 엔지니어 순서의 표준 작업 절차로 했다. Claude Code agent teams도 FE와 BE 팀원을 예로 든다</td>
+</tr>
+<tr>
+<td>최소 공통 계약을 먼저 합의하고 병렬 개발</td>
+<td>계약 우선 개발(OpenAPI 우선 설계, 소비자 주도 계약 테스트)은 사람 팀에서 오래된 관행이다</td>
+</tr>
+<tr>
+<td>비판 전용 에이전트, ERD 에이전트, 스케줄러 에이전트</td>
+<td>생성과 검증 분리(LLM-as-a-Judge)는 흔하다. 역할을 더 늘리면 토큰은 늘고 이득은 불확실하다(Debate or Vote)</td>
+</tr>
+<tr>
+<td>결정 모델로 owner를 빠르게 고른다</td>
+<td>Jev(TypeSafe AI, 2026-09-15 공개)가 "System 1" 결정 모델로 나왔다. 회사 자체 벤치마크에서 정확도는 최신 LLM보다 몇 점 낮고 대신 빠르고 싸다고 한다(독립 검증 없음, <a href="https://www.datacamp.com/blog/system-one-models-jev">소개 글</a>)</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="s-새로운-것">새로운 것</h3>
+<ul>
+<li><strong>여러 사람이 각자 노트북에서 돌리는 에이전트의 질문을, 서버가 정할 권한이 있는 사람에게 보내고 답을 같은 실행으로 돌려준다.</strong> Claude Code는 한 사람, 한 세션 안에서만 팀을 꾸린다. 사람 팀의 버그 트리아지 연구는 많지만, AI 에이전트의 질문을 역할별 사람에게 보내는 과정을 측정한 공개 데이터는 찾지 못했다(NOMOS 연구 허브 데이터 지도).</li>
+<li><strong>질문, 배정, 답, 대기 시간을 이벤트로 남긴다.</strong> 이 로그가 쌓이면 그 자체로 공개된 적 없는 데이터가 된다.</li>
+</ul>
+<h3 id="s-기술적으로-되는가">기술적으로 되는가</h3>
+<p>된다. 그리고 대부분은 이미 만들었다. NOMOS 백엔드에는 질문 중계가 들어가 있다(마이그레이션 018).</p>
+<ul>
+<li>Executor가 Claude Code를 <code>--permission-prompt-tool</code>로 띄워 AskUserQuestion을 가로채고, 서버가 owner를 정해 답을 받으면 같은 실행에서 이어 간다. 3분 안에 답이 없으면 태스크를 내려놓고, 답이 오면 다시 가져간다. 3일이 지나면 만료되어 대표에게 올라간다.</li>
+<li>답할 역할의 노트북이 자기 코드를 읽기 전용으로 살펴 답 초안을 내는 상담 실행이 있다. 코드에 이미 정해진 답이면 사람을 부르지 않는다. 애매한 레포와 지시 주입 질문으로 만든 시험 26회에서 틀린 확정 0회, 지시 따름 0회, 비밀 유출 0회였다(백엔드 실험 A1, A2).</li>
+<li>라우터는 인터페이스로 분리돼 있어 규칙, LLM, Jev를 바꿔 끼울 수 있다. 라우터가 실패하거나 30초를 넘기면 규칙 라우터로 대체하고 그 사실을 기록한다.</li>
+<li>프로젝트마다 질문 중계를 끌 수 있어서, 끈 상태가 곧 대조군이 된다.</li>
+</ul>
+<h3 id="s-남은-위험">남은 위험</h3>
+<ul>
+<li><strong>3인 팀은 문제가 쉽다.</strong> 무작위로 골라도 33%다. 수천 명 중에서 담당자를 찾는 버그 트리아지와 같은 선상에서 비교하면 안 된다.</li>
+<li><strong>대표가 병목이 된다.</strong> 질문의 60%가 대표 소관이라는 결과는 거꾸로 말하면 대표의 시간이 가장 비싼 자원이라는 뜻이다. owner를 맞히는 것보다 대표에게 가는 질문을 줄이는 쪽(결정 장부 재사용, 추천을 받아들이고 진행 후 확인)이 체감 효과가 더 클 수 있다.</li>
+<li><strong>정답 라벨이 아직 사람 검수 전이다.</strong> 기말까지 팀원 세 명이 블라인드로 다시 붙여 일치도를 내야 숫자를 주장할 수 있다.</li>
+<li><strong>답을 기다리는 시간은 라우팅으로 줄지 않는다.</strong> 맞는 사람에게 가도 그 사람이 자리에 없으면 기다린다. 대기 중앙값 104초, p90 31분이라는 분포가 그 상한을 보여 준다.</li>
+</ul>
+<h2 id="s-6-두-번째-축-공통-계약-위에서-병렬로">6. 두 번째 축: 공통 계약 위에서 병렬로</h2>
+<p>교수님이 짚은 1차 목표는 둘이다. 할당이 맞게 되는가, 그리고 공통 프로토콜을 지키면서 병렬 개발이 되는가. 앞 절들이 첫째를 다뤘다면 이 절은 둘째다.</p>
+<h3 id="s-계약은-생각보다-자주-깨진다">계약은 생각보다 자주 깨진다</h3>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>근거</th>
+<th>결과</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>공개 웹앱 레포 8개의 OpenAPI 스펙 변경 146쌍(NOMOS 연구 허브 M4, oasdiff)</td>
+<td>스펙을 바꾼 커밋의 46%(95% 구간 38~54%)에 깨지는 변경이 하나 이상 있었다</td>
+</tr>
+<tr>
+<td>같은 레포들의 사람 리뷰 코멘트 중 FE와 BE 계약 불일치 언급(M4)</td>
+<td>1.6~8.4%(두 모델 라벨의 범위). 불일치를 깨뜨린 쪽은 백엔드가 74%</td>
+</tr>
+</tbody>
+</table></div>
+<p>계약은 한 번 정하고 끝나는 문서가 아니라 계속 흔들린다. 그리고 흔드는 쪽은 대개 제공자(백엔드)다. FE와 BE 에이전트가 동시에 일하면 이 흔들림이 더 빨라진다.</p>
+<h3 id="s-nomos가-가진-장치와-상태">NOMOS가 가진 장치와 상태</h3>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>장치</th>
+<th>하는 일</th>
+<th>상태</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>최소 계약 먼저(PM 선행 규칙)</td>
+<td>계약만 보고 만들 수 있는 일은 선행을 걸지 않고 병행한다. 계약을 먼저 정해야 하는데 명세에 다 못 적으면 "계약 확정" 태스크로 쪼개고 상대는 그 태스크에만 선행을 건다</td>
+<td>동작(PM 지침)</td>
+</tr>
+<tr>
+<td>결정 기록</td>
+<td>확정된 계약은 DECIDED 노트로 프로젝트 전체에 전달한다. 남의 소관을 가정했으면 DECIDED가 아니라 "가정함, 확인 필요" 노트로 남긴다(지어낸 계약을 DECIDED로 발행한 실험 결과에서 나온 규칙)</td>
+<td>동작</td>
+</tr>
+<tr>
+<td>경로 소유권과 실제 diff 검사(V3)</td>
+<td>남의 영역 파일을 고친 커밋은 제출 단계에서 반려된다. 신고와 실제 diff가 다르면 실패</td>
+<td>동작</td>
+</tr>
+<tr>
+<td>계약 대조(V1A)</td>
+<td>실제 응답의 스키마, 상태 코드, 필드명을 OpenAPI 계약과 기계적으로 비교한다</td>
+<td><strong>비어 있음.</strong> 계약을 담을 테이블이 없어 항상 SKIPPED</td>
+</tr>
+<tr>
+<td>질문 중계</td>
+<td>계약에 없는 결정은 정할 권한이 있는 사람에게 묻는다</td>
+<td>동작(이 문서의 주제)</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="s-판단">판단</h3>
+<ul>
+<li><strong>"최소 계약을 먼저 확정하고 병렬로"는 이미 PM 지침에 들어 있다.</strong> 새로 만들 것은 많지 않다.</li>
+<li><strong>가장 큰 빈칸은 계약 대조(V1A)다.</strong> 이게 꺼져 있으면 에이전트가 계약을 지켰는지 서버가 모르고, 기말 실험의 "결정 재작업" 지표도 사람이 손으로 세야 한다. 연구 허브에 oasdiff 기반 비교가 이미 있으므로, 계약 저장과 응답 대조를 붙이는 일이 기말까지 백엔드 쪽 최우선 과제다.</li>
+<li>깨뜨리는 쪽이 대개 제공자라는 M4 결과는 질문 라우팅과도 이어진다. 계약을 바꾸려는 쪽이 먼저 소비자에게 묻게 하면(BE가 "화면에 이 필드가 필요한가요?"를 FE에게) 깨짐을 미리 막을 수 있다. 이번 실험에서 LLM이 가장 자주 틀린 유형이 바로 이 "소비자 요구" 질문이었다.</li>
+</ul>
+<h2 id="s-7-제안-owner-배정-다섯-단계">7. 제안: owner 배정 다섯 단계</h2>
+<p>실험 결과를 반영해 기획안의 "LLM 확신도가 낮으면 일임" 구조를 아래처럼 바꾼다.</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>단계</th>
+<th>하는 일</th>
+<th>근거</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0. 묻기 전에</td>
+<td>명세, 결정 장부(DECIDED 노트), 코드에 답이 있으면 묻지 않는다. 상담 실행이 이미 이 일을 한다</td>
+<td>상담 실행 26회 오류 0</td>
+</tr>
+<tr>
+<td>1. 결정적 신호 먼저</td>
+<td>경로 소유권(어느 역할이 그 파일을 소유하나), 운영 반영(배포, 운영 DB, 되돌리기 어려운 삭제)은 규칙으로 정한다. 운영 반영은 무조건 대표 승인</td>
+<td>경로 소유권은 서버가 이미 안다. v1 LLM 오답의 상당수가 여기서 나왔다</td>
+</tr>
+<tr>
+<td>2. LLM 라우터</td>
+<td>owner와 확신도를 낸다. 소비자 요구는 소비자에게, 응답 모양은 제공자에게 같은 경계 규칙을 프롬프트에 넣는다</td>
+<td>실제 질문 94%, 백엔드 20문항 95%</td>
+</tr>
+<tr>
+<td>3. 확신이 낮을 때</td>
+<td>대표에게 몰지 않고 1순위 후보에게 보내되, 받은 사람이 버튼 하나로 넘길 수 있게 한다</td>
+<td>"확신 낮으면 PM" 캐스케이드는 정확도를 낮추고 대표 부담만 늘렸다</td>
+</tr>
+<tr>
+<td>4. 기록하고 배운다</td>
+<td>넘기기는 곧 정답 라벨이다. 재배정 기록으로 프롬프트 예시와 팀 표를 고친다. 답은 결정 장부에 남겨 같은 질문에 자동으로 답한다</td>
+<td>버그 트리아지 연구: 재배정 한 번에 평균 50일(Jeong 외, FSE 2009)</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="s-8-더-넣으면-좋을-아이디어">8. 더 넣으면 좋을 아이디어</h2>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>아이디어</th>
+<th>효과</th>
+<th>비용</th>
+<th>판단</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>결정 장부 재사용: 같은 결정을 다시 묻지 않게 답을 검색해 자동 응답</td>
+<td>대표 부담 감소가 가장 크다</td>
+<td>낮음(노트는 이미 있다)</td>
+<td>이번 학기</td>
+</tr>
+<tr>
+<td>질문 묶기: 같은 사람에게 가는 질문을 한 번에 모아 보낸다</td>
+<td>끼어들기 횟수 감소</td>
+<td>낮음</td>
+<td>이번 학기</td>
+</tr>
+<tr>
+<td>추천을 받아들이고 진행, 사후 확인: 추천 수락률 78%를 근거로 낮은 위험 질문은 가정하고 진행한 뒤 확인만 받는다</td>
+<td>대기 시간 제거</td>
+<td>중간(위험도 판정 필요)</td>
+<td>이번 학기, 실험 조건으로</td>
+</tr>
+<tr>
+<td>넘기기 버튼과 재배정 로그</td>
+<td>오배정 비용 측정, 학습 데이터</td>
+<td>낮음</td>
+<td>이번 학기</td>
+</tr>
+<tr>
+<td>대기 시간 기준과 자동 상향: 일정 시간 답이 없으면 대표에게</td>
+<td>멈춘 태스크 감소</td>
+<td>낮음(만료 3일은 있다)</td>
+<td>이번 학기</td>
+</tr>
+<tr>
+<td>Jev 같은 System 1 결정 모델 연결</td>
+<td>지연과 비용 감소</td>
+<td>중간</td>
+<td>기말 비교 실험 하나로만</td>
+</tr>
+<tr>
+<td>판정이 갈리는 질문에 "확인 필요" 표시</td>
+<td>작은 모델로 세 번 판정해 갈리는 24%(정확도 81%)를 골라 받는 사람에게 확인을 요청한다. 다수결 자체는 정확도를 올리지 않았다</td>
+<td>낮음(호출 3배지만 작은 모델)</td>
+<td>이번 학기, 넘기기 버튼과 함께</td>
+</tr>
+<tr>
+<td>질문 품질 검사: 선택지와 추천, 맥락이 빠진 질문은 돌려보낸다</td>
+<td>답하는 사람의 시간 절약</td>
+<td>낮음</td>
+<td>여유가 있으면</td>
+</tr>
+<tr>
+<td>역할 5개 이상으로 확장, 비판, ERD, 스케줄러 에이전트</td>
+<td>불확실</td>
+<td>높음</td>
+<td>보류(교수님 피드백: 고생 대비 임팩트가 작다)</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="s-9-기말까지의-평가-계획">9. 기말까지의 평가 계획</h2>
+<h3 id="s-질문-두-개">질문 두 개</h3>
+<ul>
+<li><strong>할당이 맞게 되는가.</strong> 팀원 세 명이 질문 300개(실제 질문 + 보류 세트 + 실험 중 생긴 질문)에 블라인드로 owner를 붙이고 일치도(카파)를 낸다. 라우터별 첫 수신자 정확도, 대표 부담, 넘기기 횟수, 질문에서 답까지 걸린 시간을 잰다.</li>
+<li><strong>공통 계약 위에서 병렬 개발이 되는가.</strong> 같은 과제를 네 조건으로 돌린다.</li>
+</ul>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>조건</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A</td>
+<td>Claude Code 한 세션, 한 사람</td>
+</tr>
+<tr>
+<td>B</td>
+<td>Claude Code agent teams, FE와 BE 팀원, 한 사람</td>
+</tr>
+<tr>
+<td>C</td>
+<td>NOMOS, 질문 중계 끔(에이전트는 가정하고 진행, 대조군)</td>
+</tr>
+<tr>
+<td>D</td>
+<td>NOMOS, 질문 중계 켬 + owner 라우터 v2 + 최소 계약 먼저</td>
+</tr>
+</tbody>
+</table></div>
+<p>지표는 네 개로 고정한다. 과제 성공(인수 테스트 통과), 끝날 때까지 걸린 시간, 토큰, 결정 때문에 생긴 재작업(계약 위반, 반려 횟수). 질문 관련 지표(정확도, 대표 부담, 대기 시간)는 C와 D 사이에서 본다.</p>
+<h3 id="s-일정-8주">일정(8주)</h3>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>주</th>
+<th>할 일</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1~2</td>
+<td>사람 검수 300문항, 라우터 v2를 서버 라우터 자리에 연결(설정으로 선택), 넘기기 버튼, 계약 대조(V1A) 켜기</td>
+</tr>
+<tr>
+<td>3~4</td>
+<td>과제 3개 확정(정원 마감, 결제 환불, 초대 수락), 조건 A~D 파이프라인과 로그 수집</td>
+</tr>
+<tr>
+<td>5~6</td>
+<td>본 실험, 결정 장부 재사용과 질문 묶기 추가 실험</td>
+</tr>
+<tr>
+<td>7</td>
+<td>분석, Jev 비교 한 번</td>
+</tr>
+<tr>
+<td>8</td>
+<td>기말 발표: 실측 표, 시연</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="s-용어">용어</h2>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>말</th>
+<th>이 문서에서의 뜻</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AskUserQuestion</td>
+<td>Claude Code가 작업 중에 사람에게 선택지를 주고 묻는 도구. 질문 1~4개, 선택지 2~4개</td>
+</tr>
+<tr>
+<td>owner</td>
+<td>그 질문의 답을 정할 권한이 있는 사람. 그 정보를 아는 사람이 아니라 정할 권한이 있는 사람이다</td>
+</tr>
+<tr>
+<td>PM(대표)</td>
+<td>요구사항, 범위, 우선순위, 출시를 정하는 사람. NOMOS 서버에서는 조직 대표(REPRESENTATIVE)</td>
+</tr>
+<tr>
+<td>SELF</td>
+<td>질문한 에이전트의 역할 자신이 정할 일. 남에게 물을 필요가 없다</td>
+</tr>
+<tr>
+<td>라우터</td>
+<td>질문을 받아 owner를 정하는 부분. 규칙으로 정할 수도, LLM에게 물을 수도 있다</td>
+</tr>
+<tr>
+<td>첫 수신자 정확도</td>
+<td>질문이 처음 도착한 사람이 owner인 비율. 이 문서의 기본 정확도</td>
+</tr>
+<tr>
+<td>대표 부담</td>
+<td>라우터가 질문을 대표에게 보낸 비율</td>
+</tr>
+<tr>
+<td>캐스케이드</td>
+<td>확신도가 문턱보다 낮은 질문을 다른 곳(여기서는 대표)으로 넘기는 방식</td>
+</tr>
+<tr>
+<td>보류 세트</td>
+<td>라우터를 고치기 전에 정답을 먼저 고정해 둔 문항. 고친 규칙이 처음 보는 질문에도 통하는지 보려고 쓴다</td>
+</tr>
+<tr>
+<td>haiku, sonnet</td>
+<td>Anthropic의 Claude 모델. haiku는 작고 싸고 빠르며, sonnet은 더 크고 정확하다</td>
+</tr>
+<tr>
+<td>V1A, V3</td>
+<td>NOMOS 서버의 제출 검증 단계. V1A는 실제 응답을 OpenAPI 계약과 비교하고, V3는 커밋의 실제 변경 파일이 소유 규칙에 맞는지 본다</td>
+</tr>
+<tr>
+<td>DECIDED 노트</td>
+<td>확정된 결정(계약 등)을 프로젝트 전체에 알리는 인계 노트</td>
+</tr>
+<tr>
+<td>신뢰구간</td>
+<td>표본이 달랐다면 정확도가 이 범위 안에 있었을 가능성이 95%라는 뜻의 범위</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="s-출처">출처</h2>
+<ul>
+<li>Claude Code 문서: <a href="https://code.claude.com/docs/en/agent-sdk/user-input">Agent SDK 사용자 입력</a>, <a href="https://code.claude.com/docs/en/agent-teams">agent teams</a>, <a href="https://code.claude.com/docs/en/tools-reference">도구 레퍼런스</a> (2026-10-13 확인)</li>
+<li>GitHub 이슈: anthropics/claude-code <a href="https://github.com/anthropics/claude-code/issues/12890">#12890</a>, <a href="https://github.com/anthropics/claude-code/issues/18721">#18721</a>, <a href="https://github.com/anthropics/claude-code/issues/20275">#20275</a>, <a href="https://github.com/anthropics/claude-code/issues/34592">#34592</a>, <a href="https://github.com/anthropics/claude-code/issues/50728">#50728</a>, <a href="https://github.com/anthropics/claude-code/issues/70648">#70648</a>, github/spec-kit <a href="https://github.com/github/spec-kit/issues/2181">#2181</a></li>
+<li>Anthropic, "Measuring AI agent autonomy in practice", 2026-02-18</li>
+<li>Cognition, "Don't Build Multi-Agents", 2025-06-12 / Anthropic, "How we built our multi-agent research system", 2025-06-13 / <a href="https://blog.langchain.com/how-and-when-to-build-multi-agent-systems">LangChain, How and when to build multi-agent systems</a></li>
+<li>Choi, Zhu, Li, "Debate or Vote", NeurIPS 2025, <a href="https://arxiv.org/abs/2508.17536">arXiv 2508.17536</a></li>
+<li>Vijayvargiya 외, Interactive agents to overcome ambiguity in software engineering(Ambig-SWE), ICLR 2026, <a href="https://arxiv.org/abs/2502.13069">arXiv 2502.13069</a></li>
+<li>Wu, Fard, HumanEvalComm, <a href="https://arxiv.org/abs/2406.00215">arXiv 2406.00215</a></li>
+<li>Hong 외, MetaGPT, ICLR 2024, <a href="https://arxiv.org/abs/2308.00352">arXiv 2308.00352</a></li>
+<li>Jeong, Kim, Zimmermann, Improving bug triage with bug tossing graphs, FSE 2009 / Chen 외, An empirical investigation of incident triage, ICSE-SEIP 2019</li>
+<li>Jev: <a href="https://www.datacamp.com/blog/system-one-models-jev">DataCamp 소개</a>, <a href="https://towardsdatascience.com/jev-vs-llms-when-ai-moves-from-generation-to-decision-making/">Towards Data Science</a></li>
+<li>NOMOS 연구 허브(로컬): <code>reports/askuser_data_sources.md</code>, <code>reports/rq2_routing.md</code>, <code>reports/rq4_contract.md</code>, <code>reports/rq6_asking.md</code>, <code>reports/askuser_owner/results.md</code></li>
+<li>NOMOS 백엔드: <code>CLAUDE.md</code> 질문 중계, 검증(V1A~V4), PM 지침 절, <code>src/domain/question/router.ts</code>, <code>scripts/experiments/consult-accuracy.ts</code></li>
+</ul></main></div>
+<footer>이 문서의 숫자는 각 절에 출처를 붙였다. 예시값은 실측처럼 쓰지 않았다. 사람 검수 전 라벨에 기댄 숫자는 그렇게 표시했다.</footer>
+<script>
+const links=[...document.querySelectorAll('nav.toc a')];const hs=links.map(a=>document.getElementById(a.getAttribute('href').slice(1)));
+const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){links.forEach(l=>l.classList.toggle('on',l.getAttribute('href')==='#'+e.target.id))}})},{rootMargin:'0px 0px -75% 0px'});
+hs.forEach(h=>h&&io.observe(h));
+</script></body></html>

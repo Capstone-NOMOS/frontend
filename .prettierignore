@@ -11,3 +11,6 @@ src/shared/api/schema.d.ts
 # next dev가 재생성하는 관리 블록이 있다. 표 패딩 재배치로 diff만 지저분해진다.
 *.md
 docs/*.docx
+
+# 발표 자료 HTML은 nomos-hub 빌더(hub.askuser.build_docs, build_deck)가 만드는 생성물이다. 손으로 고치지 않는다
+docs/midterm/*.html
