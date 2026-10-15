@@ -4,6 +4,7 @@ import { ApiError, apiFetch, type RequestBody, type Schemas } from "@/shared/api
 export const orgKeys = {
   all: ["org"] as const,
   members: (orgId: string) => [...orgKeys.all, "members", orgId] as const,
+  invites: (orgId: string) => [...orgKeys.all, "invites", orgId] as const,
 };
 
 /**
@@ -32,10 +33,49 @@ export function useOrgMembers(orgId: string) {
   });
 }
 
-/** 대표 전용 (그 외 403 NOT_REPRESENTATIVE). 발급 목록 API가 없어 무효화할 쿼리도 없다 */
+/** 대표 전용 (그 외 403 NOT_REPRESENTATIVE). 발급하면 대기 중인 초대 목록에 나타난다 */
 export function useCreateInvite(orgId: string) {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (body: RequestBody<"/orgs/{orgId}/invites", "post">) =>
       apiFetch<Schemas["InviteCreated"]>(`/orgs/${orgId}/invites`, { method: "POST", body }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: orgKeys.invites(orgId) }),
+  });
+}
+
+/** 대표 전용. 쓰이지도 취소되지도 않은 초대 (최신순). 만료된 것은 expired: true로 함께 온다 */
+export function useInvites(orgId: string) {
+  return useQuery({
+    queryKey: orgKeys.invites(orgId),
+    queryFn: () => apiFetch<{ invites: Schemas["PendingInvite"][] }>(`/orgs/${orgId}/invites`),
+    select: (data) => data.invites,
+  });
+}
+
+/** 대표 전용. 취소한 링크는 미리보기 reason: revoked, 수락 410 INVITE_REVOKED. 이미 쓰인 초대는 404 */
+export function useRevokeInvite(orgId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (inviteId: string) =>
+      apiFetch<{ inviteId: string }>(`/orgs/${orgId}/invites/${inviteId}`, { method: "DELETE" }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: orgKeys.invites(orgId) }),
+  });
+}
+
+/**
+ * userId가 나면 탈퇴, 남이면 내보내기(대표). 계정은 남고 조직만 빠진다 — 그 사람의 에이전트도 해제된다.
+ * 탈퇴하면 /me의 orgId가 null이 되어 모든 조회가 달라지므로 전부 다시 읽는다 (AuthGate가 /onboarding으로 보낸다)
+ */
+export function useRemoveMember(orgId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) =>
+      apiFetch<{
+        userId: string;
+        agentIds: string[];
+        unassignedFrom: string[];
+        githubRevocations: Schemas["GithubRevokeResult"][];
+      }>(`/orgs/${orgId}/members/${userId}`, { method: "DELETE" }),
+    onSuccess: () => queryClient.invalidateQueries(),
   });
 }

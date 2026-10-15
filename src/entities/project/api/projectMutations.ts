@@ -33,6 +33,7 @@ const STALE_CODES = new Set([
   "AGENT_ALREADY_ASSIGNED",
   "AGENT_IN_ANOTHER_PROJECT",
   "MEMBER_NOT_FOUND",
+  "PROJECT_NOT_OPEN",
 ]);
 
 function useRefetchOnStale(projectId: string) {
@@ -58,13 +59,19 @@ export function useAssignMember(projectId: string) {
   });
 }
 
-/** 대표 전용. 역할 교체는 해제 후 재배정 (UPDATE 경로가 없다) */
+/**
+ * 대표 전용. 역할 교체는 해제 후 재배정 (UPDATE 경로가 없다). 시작 뒤에도 된다.
+ * 진행 중 태스크를 붙잡고 있으면 409 ACTIVE_TASKS_HELD. 응답 githubRevocations는 그 프로젝트 레포의 접근 회수 결과
+ */
 export function useUnassignMember(projectId: string) {
   return useMutation({
     mutationFn: (agentId: string) =>
-      apiFetch<{ members: Schemas["ProjectMember"][] }>(`/projects/${projectId}/members/${agentId}`, {
-        method: "DELETE",
-      }),
+      apiFetch<{ members: Schemas["ProjectMember"][]; githubRevocations: Schemas["GithubRevokeResult"][] }>(
+        `/projects/${projectId}/members/${agentId}`,
+        {
+          method: "DELETE",
+        },
+      ),
     onSuccess: useInvalidateProject(projectId),
     onError: useRefetchOnStale(projectId),
   });
@@ -83,6 +90,19 @@ export function useResendGithubInvite(projectId: string) {
   });
 }
 
+/**
+ * 대표 전용. 진행 중(planning·active·halted) 프로젝트를 aborted로 닫는다 — 지우지 않는다.
+ * 에이전트·레포가 풀리고, 대기 질문은 만료, 대기 승인은 대기열에서 빠진다. 이미 끝났으면 409 PROJECT_NOT_OPEN
+ */
+export function useAbortProject(projectId: string) {
+  return useMutation({
+    mutationFn: (body: { reason?: string | null }) =>
+      apiFetch<{ project: Schemas["Project"] }>(`/projects/${projectId}/abort`, { method: "POST", body }),
+    onSuccess: useInvalidateProject(projectId),
+    onError: useRefetchOnStale(projectId),
+  });
+}
+
 /** 대표 전용, 시작 전에만 (시작 뒤 403 PROJECT_STARTED). 지금은 질문 중계 스위치뿐이다 */
 export function useUpdateProjectSettings(projectId: string) {
   return useMutation({
@@ -94,7 +114,7 @@ export function useUpdateProjectSettings(projectId: string) {
 }
 
 /**
- * G1. 대표 전용. 이 순간부터 에이전트가 태스크를 가져간다. 시작 후에는 멤버를 바꿀 수 없다.
+ * G1. 대표 전용. 이 순간부터 에이전트가 태스크를 가져간다.
  * 422 PROJECT_START_INVALID는 details에 이유가 전부 온다 (errorDetails)
  */
 export function useStartProject(projectId: string) {

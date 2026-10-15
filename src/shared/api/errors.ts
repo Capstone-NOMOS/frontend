@@ -35,6 +35,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   ROOM_NOT_VISIBLE: "다른 역할의 룸은 볼 수 없습니다.",
   NOT_QUESTION_TARGET: "이 질문에 답할 역할의 담당자나 대표만 답할 수 있습니다.",
   VERIFICATION_STAGE_NOT_REPORTABLE: "보고할 수 없는 검증 단계입니다.",
+  NOT_AGENT_OWNER: "에이전트 주인이나 대표만 연결을 해제할 수 있습니다.",
 
   // 404
   NOT_FOUND: "요청한 주소를 찾을 수 없습니다.",
@@ -48,6 +49,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   PLAN_NOT_FOUND: "계획을 찾을 수 없습니다.",
   APPROVAL_NOT_FOUND: "승인 요청을 찾을 수 없습니다.",
   QUESTION_NOT_FOUND: "질문을 찾을 수 없습니다.",
+  AGENT_NOT_FOUND: "에이전트를 찾을 수 없습니다. 이미 연결이 해제됐을 수 있습니다.",
+  ORG_MEMBER_NOT_FOUND: "이 조직의 멤버가 아닙니다.",
   DEVICE_REQUEST_NOT_FOUND: "연결 요청을 찾을 수 없습니다. 코드를 확인하거나 터미널에서 다시 실행해 주세요.",
 
   // 409
@@ -73,7 +76,10 @@ const ERROR_MESSAGES: Record<string, string> = {
   DEVICE_REQUEST_ALREADY_DECIDED: "이미 승인 또는 거부한 연결 요청입니다.",
   PROJECT_ALREADY_STARTED: "이미 시작된 프로젝트입니다.",
   PROJECT_NOT_STARTED: "프로젝트가 아직 시작되지 않았습니다.",
-  PROJECT_NOT_OPEN: "끝났거나 정지된 프로젝트에는 명세·태스크를 추가할 수 없습니다.",
+  PROJECT_NOT_OPEN: "이미 끝났거나 중단된 프로젝트입니다.",
+  // details에 진행 중 태스크 목록이 온다 (heldTasks)
+  ACTIVE_TASKS_HELD: "진행 중인 태스크가 있어 뺄 수 없습니다. 이 태스크가 끝나거나 멈춘 뒤에 다시 시도하세요.",
+  REPRESENTATIVE_CANNOT_LEAVE: "대표는 조직에서 나가거나 내보낼 수 없습니다.",
   NOTES_UNACKNOWLEDGED: "확인하지 않은 새 인계 노트가 있습니다.",
   PM_PLAN_IN_PROGRESS: "PM이 이미 계획을 작성하고 있습니다. 끝난 뒤 다시 요청해 주세요.",
   PM_BUDGET_EXCEEDED: "PM 예산을 넘어 요청할 수 없습니다.",
@@ -124,5 +130,20 @@ export function errorDetails(error: unknown): ErrorDetail[] {
   return error.details.filter(
     (d): d is ErrorDetail =>
       typeof d === "object" && d !== null && typeof d.where === "string" && typeof d.message === "string",
+  );
+}
+
+export interface HeldTask {
+  taskId: string;
+  title: string;
+  state: string;
+}
+
+/** 409 ACTIVE_TASKS_HELD의 details: [{ taskId, title, state }]. 형식이 다르면 빈 배열 */
+export function heldTasks(error: unknown): HeldTask[] {
+  if (!(error instanceof ApiError) || error.code !== "ACTIVE_TASKS_HELD" || !Array.isArray(error.details)) return [];
+  return error.details.filter(
+    (d): d is HeldTask =>
+      typeof d === "object" && d !== null && typeof d.taskId === "string" && typeof d.title === "string",
   );
 }

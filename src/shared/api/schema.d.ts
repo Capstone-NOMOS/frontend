@@ -5235,6 +5235,372 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{projectId}/contracts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 프로젝트의 API 계약
+         * @description 새 계획 흐름 2단계(023). 기능 명세를 확정하면 API가 필요한 기능마다 계약이 `pending`으로 생기고, BE 노트북의 에이전트가 BE 코드를 읽어 초안(`draft`)을 쓴다.
+         *     BE 담당이 확정(`approved`)하거나 수정 요청한다. 프로젝트를 볼 수 있는 사람 누구나 읽는다. 실시간 신호 토픽은 `contracts`.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @example {{PROJECT_ID}} */
+                    projectId: components["parameters"]["ProjectId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 기능 키 순 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                contracts: components["schemas"]["Contract"][];
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contracts/{contractId}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 계약 확정 (BE 담당, 없으면 대표)
+         * @description 초안(`draft`)만 확정된다(아니면 409 `CONTRACT_NOT_DRAFT`). 확정한 계약은 잠기고 FE·BE 태스크 브리핑에 들어간다.
+         *     확정할 수 있는 사람은 이 프로젝트의 BACKEND 담당(에이전트 주인)이다. BACKEND 담당이 없을 때만 대표가 대신한다(아니면 403 `NOT_CONTRACT_APPROVER`).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    contractId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 확정됨 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["Contract"];
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contracts/{contractId}/revise": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 계약 수정 요청 (BE 담당, 없으면 대표)
+         * @description 초안(`draft`)이나 실패(`failed`)를 다음 회차로 다시 쓰게 한다 — `pending`이 되고 BE 노트북이 다시 쓴다(직전 초안과 피드백을 받는다).
+         *     한 계약에 수정 요청은 3회까지(409 `CONTRACT_REVISION_LIMIT`, details `{ limit, used }`).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    contractId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    /**
+                     * @example {
+                     *       "feedback": "가입일은 memberSince로, 페이지네이션 없이"
+                     *     }
+                     */
+                    "application/json": {
+                        /** @description 무엇을 고칠지(실패를 그대로 다시 시킬 때는 생략) */
+                        feedback?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description 다시 작성 대기 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["Contract"];
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/me/contract-jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * BE 노트북이 쓸 계약 작업 (에이전트)
+         * @description 작성 대기(`pending`) 계약과 그 기능 명세, 앞서 확정한 계약(경로·형식을 맞추게), 읽을 레포(BACKEND 소유). BACKEND 역할이 아니면 빈 목록.
+         *     Executor는 웹소켓 `{ type: 'contracts', targetRole }` 신호나 1분 안전망으로 이걸 읽는다.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 작업 목록 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                contracts: components["schemas"]["ContractJob"][];
+                                approved: {
+                                    featureKey: string;
+                                    title: string;
+                                    schemaYaml: string;
+                                }[];
+                                repos: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    fullName: string;
+                                    cloneUrl: string | null;
+                                    defaultBranch: string;
+                                }[];
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contracts/{contractId}/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 계약 초안 제출 (BE 에이전트)
+         * @description 서버가 OpenAPI 조각 형식을 검사한다(경로는 '/'로 시작, 경로마다 메서드, 메서드마다 응답 상태 코드). 틀리면 422 `CONTRACT_INVALID` + 위반 목록 —
+         *     Executor가 위반을 붙여 한 번 다시 쓴다. `attempt`가 지금 회차가 아니면 409 `CONTRACT_STALE`. BACKEND 에이전트만(403 `NOT_CONTRACT_WRITER`).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    contractId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        attempt: number;
+                        /** @description OpenAPI 조각(paths·components) YAML */
+                        openapiYaml: string;
+                        summary: string;
+                        openQuestions?: string[];
+                    };
+                };
+            };
+            responses: {
+                /** @description 초안으로 저장됨(BE 담당 확인 대기) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["Contract"];
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contracts/{contractId}/failure": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 계약 초안을 못 냈다 (BE 에이전트)
+         * @description 형식을 두 번 다 못 맞췄거나 실행이 실패했다. `failed`가 되고, BE 담당이 수정 요청으로 다시 시킬 수 있다.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    contractId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        attempt: number;
+                        reason: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 실패로 기록됨 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["Contract"];
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{projectId}/pm/features": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 기능 명세 초안 요청 (대표 전용, 새 계획 흐름 1단계)
+         * @description 대표의 자연어 요구로 PM이 **기능 명세** 초안을 만든다(022). 대표가 읽고 판단할 수 있게 화면·동작·수용 기준을 개발 용어 없이 쓰고,
+         *     기능마다 API가 필요한지와 어떤 데이터가 오가야 하는지(사람 말로)를 적는다. API 계약은 쓰지 않는다 — 백엔드 담당이 정한다(2단계).
+         *     응답·폴링·수정 요청(`.../pm/plans/{planId}/revise`)·반려·확정(`.../apply`)은 계획과 같다. 확정하면 명세가 만들어지고 태스크는 만들어지지 않는다.
+         *     진행 중 요청 하나(409 `PM_PLAN_IN_PROGRESS`), 예산(409 `PM_BUDGET_EXCEEDED`), PM 키 없음(503 `PM_UNAVAILABLE`)도 같다.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @example {{PROJECT_ID}} */
+                    projectId: components["parameters"]["ProjectId"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    /**
+                     * @example {
+                     *       "instruction": "스터디 상세 화면에서 멤버 목록을 보고 싶다. 멤버마다 닉네임과 가입한 날짜가 보이면 좋겠다."
+                     *     }
+                     */
+                    "application/json": {
+                        /** @description 대표의 요구(자연어) */
+                        instruction: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 요청됨 — 상태는 pending. GET .../pm/plans/{planId}로 폴링한다 */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["PmPlan"];
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{projectId}/pm/plans": {
         parameters: {
             query?: never;
@@ -5279,10 +5645,14 @@ export interface paths {
         };
         put?: never;
         /**
-         * 계획 초안 요청 (대표 전용)
-         * @description 대표의 지시로 PM(NOMOS 내장)이 명세(API·화면 계약 + 수용 기준)와 태스크 DAG(어느 레포·어느 역할이 무엇을 어떤 순서로) 초안을 만든다.
+         * 태스크 나누기 (대표 전용)
+         * @description 새 계획 흐름 3단계. **확정한 기능 명세와 확정한 API 계약**을 PM(NOMOS 내장)이 태스크 DAG(어느 레포·어느 역할이 무엇을 어떤 순서로)로 나눈다.
+         *     PM은 명세·계약을 만들지 않는다 — 태스크의 `spec`은 확정한 기능 명세의 featureKey이고, 태스크에는 그 명세의 확정한 계약이 붙는다(브리핑 `contract`).
+         *     `instruction`은 선택(버튼만 눌러도 된다). 초안의 `specs`는 항상 빈 배열이다(옛 초안 호환용 필드).
          *     **202로 바로 답하고 PM은 뒤에서 돈다**(수십 초~수 분). `GET .../pm/plans/{planId}`를 몇 초 간격으로 폴링해 `ready`·`failed`를 본다.
          *
+         *     - 확정한 기능 명세가 없으면 409 `NO_FEATURE_SPECS`(먼저 `POST .../pm/features` → 확정)
+         *     - API가 필요한 기능의 계약이 확정되지 않았으면 409 `CONTRACTS_NOT_APPROVED`, details `{ featureKeys }` (BE 담당이 `POST /contracts/{id}/approve`)
          *     - 프로젝트당 진행 중인 요청은 하나(409 `PM_PLAN_IN_PROGRESS`)
          *     - 호출 전에 "누적 PM 비용 + 이번 호출의 최대치 > PM 예산"이면 409 `PM_BUDGET_EXCEEDED` —
          *       설계상 예산 초과는 대표 승인 카드가 떠야 하지만 **승인 경로 미구현**이라 거절만 한다
@@ -5299,15 +5669,16 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody: {
+            requestBody?: {
                 content: {
                     /**
                      * @example {
-                     *       "instruction": "3주 안에 사내 스터디 관리 웹앱. 회원가입, 스터디 개설, 참여신청, 출석체크. 모바일 대응 필수."
+                     *       "instruction": "백엔드 API를 먼저 끝내고 화면은 병행해 주세요"
                      *     }
                      */
                     "application/json": {
-                        instruction: string;
+                        /** @description 나눌 때 덧붙일 지시(선택) */
+                        instruction?: string;
                     };
                 };
             };
@@ -8139,11 +8510,111 @@ export interface components {
                 accepted: true;
             };
         };
+        /** @description API 계약(023). BE 노트북의 에이전트가 BE 코드를 읽고 초안을 쓰고, BE 담당이 확정한다 */
+        Contract: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            projectId: string;
+            /** Format: uuid */
+            specId: string;
+            featureKey: string;
+            specTitle: string;
+            /**
+             * @description pending 작성 대기(BE 노트북이 쓴다) · draft BE 담당 확인 대기 · approved 확정(잠김) · failed 초안을 못 냄(수정 요청으로 다시)
+             * @enum {string}
+             */
+            status: "pending" | "draft" | "approved" | "failed";
+            /** @description 작성 회차 — 수정 요청마다 +1(최대 3회 수정) */
+            attempt: number;
+            /** @description 마지막 수정 요청 */
+            feedback: string | null;
+            /** @description OpenAPI 조각(paths·components) YAML */
+            schemaYaml: string | null;
+            /** @description 사람이 읽는 요약 */
+            summary: string | null;
+            /** @description 작성한 에이전트가 정하지 못한 것 */
+            openQuestions: string[];
+            /** Format: uuid */
+            draftedByAgentId: string | null;
+            /** Format: date-time */
+            draftedAt: string | null;
+            /** Format: uuid */
+            approvedBy: string | null;
+            /** Format: date-time */
+            approvedAt: string | null;
+            errorReason: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        ContractJob: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            projectId: string;
+            /** Format: uuid */
+            specId: string;
+            featureKey: string;
+            specTitle: string;
+            /** @enum {string} */
+            status: "pending";
+            attempt: number;
+            feedback: string | null;
+            schemaYaml: string | null;
+            summary: string | null;
+            openQuestions: string[];
+            /** Format: uuid */
+            draftedByAgentId: string | null;
+            /** Format: date-time */
+            draftedAt: string | null;
+            /** Format: uuid */
+            approvedBy: string | null;
+            /** Format: date-time */
+            approvedAt: string | null;
+            errorReason: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** @description 기능 명세 본문(기능 설명 + 수용 기준) */
+            specContent: string;
+            /** @description 오가야 하는 데이터(사람 말로) */
+            apiNeeds: string | null;
+            /** @description 수정 요청이면 직전 초안 */
+            previous: {
+                schemaYaml: string;
+                summary: string;
+            } | null;
+        };
+        /** @description PM의 기능 명세 초안(022). 대표가 읽고 판단할 수 있게 개발 용어 없이 쓴다. 계약(주소·필드)은 백엔드 담당이 따로 정한다 */
+        FeatureDraft: {
+            summary: string;
+            /** @description 요구가 모호해 가정한 것 — 대표가 확인한다 */
+            assumptions: string[];
+            features: {
+                featureKey: string;
+                title: string;
+                /** @description 누가 어떤 화면에서 무엇을 하고 무엇을 보는지 */
+                description: string;
+                /** @description 확인할 수 있는 수용 기준 */
+                acceptance: string[];
+                needsApi: boolean;
+                /** @description 오가야 하는 데이터(사람 말로) */
+                apiNeeds: string | null;
+            }[];
+        };
         PmPlan: {
             /** Format: uuid */
             id: string;
             /** Format: uuid */
             projectId: string;
+            /**
+             * @description feature = 기능 명세 초안(새 흐름 1단계, featureDraft) · tasks = 태스크 분할 초안(draft)
+             * @enum {string}
+             */
+            kind: "feature" | "tasks";
             /**
              * @description pending이면 PM이 작성 중 — 몇 초 뒤 다시 조회한다. ready에서 적용하면 applied, 반려하면 rejected
              * @enum {string}
@@ -8158,7 +8629,10 @@ export interface components {
              */
             parentPlanId: string | null;
             mode: string | null;
+            /** @description kind=tasks의 초안. feature면 null */
             draft: components["schemas"]["PlanDraft"];
+            /** @description kind=feature의 초안(022). tasks면 null */
+            featureDraft: components["schemas"]["FeatureDraft"];
             error: {
                 /**
                  * @description refused 안전 거절 · truncated 출력 한도 부족 · timeout 시간 제한 · invalid 교정 후에도 검증 실패 · restart 서버 재시작 · budget 예산 · api_error API 오류
@@ -8210,8 +8684,12 @@ export interface components {
             /** @description 프로젝트 안에서 유일(F-05 같은 기능 키) */
             featureKey: string;
             title: string;
-            /** @description EARS 문장 — WHEN … THEN … */
+            /** @description 기능 설명 + 수용 기준(022 이후 PM 명세는 개발 용어 없이). 예전 명세는 계약까지 들어 있다 */
             content: string;
+            /** @description 이 기능에 API가 필요한가(022) — 필요하면 계약 단계로 간다 */
+            needsApi: boolean;
+            /** @description 어떤 데이터가 오가야 하는가(사람 말로). needsApi면 있다 */
+            apiNeeds: string | null;
             version: number;
             /** Format: date-time */
             createdAt: string;
@@ -8245,6 +8723,15 @@ export interface components {
                 cloneUrl: string | null;
             };
             spec: components["schemas"]["TaskSpec"];
+            /** @description 이 태스크 명세의 확정한 API 계약(023). FE·BE 태스크가 같은 계약을 받는다. 계약이 없는 기능이면 null */
+            contract: {
+                /** Format: uuid */
+                id: string;
+                featureKey: string;
+                summary: string;
+                /** @description OpenAPI 조각(paths·components) YAML */
+                schemaYaml: string;
+            } | null;
             notes: components["schemas"]["Note"][];
             notesBlock: string;
             writablePaths: components["schemas"]["BriefingPath"][];

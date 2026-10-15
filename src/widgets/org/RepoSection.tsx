@@ -5,9 +5,16 @@ import { useState } from "react";
 import { ChevronRight, Loader2 } from "lucide-react";
 import { errorMessage, type Schemas } from "@/shared/api";
 import type { TeamRole } from "@/shared/model";
-import { Badge, Button, Input, SectionTitle, Segmented } from "@/shared/ui";
+import { Badge, Button, ConfirmButton, Input, SectionTitle, Segmented } from "@/shared/ui";
 import { cn } from "@/shared/lib/format";
-import { CreateGithubRepo, OwnershipBadge, useConnectRepos, useGithubRepos, useRepos } from "@/entities/repo";
+import {
+  CreateGithubRepo,
+  OwnershipBadge,
+  useConnectRepos,
+  useDisconnectRepo,
+  useGithubRepos,
+  useRepos,
+} from "@/entities/repo";
 import { TeamRoleBadge } from "@/entities/task";
 
 /** "나중에"는 ownerRole을 보내지 않는다. undefined는 아직 고르지 않음 */
@@ -25,6 +32,7 @@ type ConnectItem = { fullName: string; githubRepoId?: number; defaultBranch?: st
 
 export function RepoSection({ orgId, isRep }: { orgId: string; isRep: boolean }) {
   const repos = useRepos(orgId);
+  const disconnect = useDisconnectRepo();
 
   return (
     <section className="card p-5">
@@ -47,10 +55,10 @@ export function RepoSection({ orgId, isRep }: { orgId: string; isRep: boolean })
           ) : (
             <ul className="divide-y divide-ink-100">
               {repos.data.map((r) => (
-                <li key={r.id}>
+                <li key={r.id} className="flex items-center gap-2">
                   <Link
                     href={`/org/repos/${r.id}`}
-                    className="-mx-2 flex flex-wrap items-center gap-2 rounded-lg px-2 py-3 hover:bg-ink-50"
+                    className="-mx-2 flex min-w-0 flex-1 flex-wrap items-center gap-2 rounded-lg px-2 py-3 hover:bg-ink-50"
                   >
                     <span className="font-mono text-[13.5px] font-medium">{r.fullName}</span>
                     <span className="text-[12px] text-ink-500">{r.defaultBranch}</span>
@@ -64,10 +72,21 @@ export function RepoSection({ orgId, isRep }: { orgId: string; isRep: boolean })
                       <ChevronRight size={15} className="text-ink-400" aria-hidden />
                     </span>
                   </Link>
+                  {/* 진행 중 프로젝트가 쓰면 409 REPO_IN_ACTIVE_PROJECT — 버튼을 미리 숨긴다 */}
+                  {isRep && !r.activeProjectId && (
+                    <ConfirmButton
+                      label="연결 해제"
+                      confirm="GitHub 레포는 그대로입니다."
+                      pendingLabel="해제 중…"
+                      pending={disconnect.isPending && disconnect.variables === r.id}
+                      onConfirm={() => disconnect.mutate(r.id)}
+                    />
+                  )}
                 </li>
               ))}
             </ul>
           )}
+          {disconnect.isError && <p className="mt-2 text-[12.5px] text-forbidden">{errorMessage(disconnect.error)}</p>}
           {repos.data.some((r) => !r.ownershipAssigned) && (
             <p className="mt-2 text-[12.5px] text-ink-500">
               소유 역할이 없는 레포는 프로젝트에 넣을 수 없습니다.{" "}
