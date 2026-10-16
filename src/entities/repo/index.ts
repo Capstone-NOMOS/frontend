@@ -3,6 +3,7 @@ export {
   useConnectRepos,
   useCreateGithubRepo,
   useCreatePath,
+  useDisconnectRepo,
   useGithubOrgs,
   useGithubRepos,
   usePaths,

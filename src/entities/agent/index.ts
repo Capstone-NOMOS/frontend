@@ -5,6 +5,7 @@ export {
   CLI_NPX,
   useApproveDeviceRequest,
   useDenyDeviceRequest,
+  useDisconnectAgent,
   useDeviceRequest,
   useOrgAgents,
 } from "./api/agentApi";

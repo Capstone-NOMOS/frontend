@@ -54,7 +54,8 @@ const planPath = (projectId: string, planId: string) => `/projects/${projectId}/
 /** 202 pending. 409 PM_PLAN_IN_PROGRESS·PM_BUDGET_EXCEEDED, 503 PM_UNAVAILABLE */
 export function useRequestPlan(projectId: string) {
   return useMutation({
-    mutationFn: (body: RequestBody<"/projects/{projectId}/pm/plans", "post">) =>
+    // 본문은 선택이라 생성 타입(RequestBody)이 never가 된다 — 직접 적는다
+    mutationFn: (body: { instruction?: string }) =>
       apiFetch<Schemas["PmPlan"]>(`/projects/${projectId}/pm/plans`, { method: "POST", body }),
     onSettled: useInvalidatePlans(projectId),
   });

@@ -5,8 +5,8 @@ import { useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Check, ExternalLink, Link2, Loader2 } from "lucide-react";
 import { ApiError, errorMessage } from "@/shared/api";
-import { Badge, Button, Logo, SectionTitle } from "@/shared/ui";
-import { orgKeys } from "@/entities/org";
+import { Badge, Button, ConfirmButton, Logo, RemovalError, SectionTitle } from "@/shared/ui";
+import { orgKeys, useRemoveMember } from "@/entities/org";
 import { AccountMenu, RotateConnectKey, displayName, useCurrentUser, useGithubDeviceFlow } from "@/entities/user";
 
 export function AccountSettingsView() {
@@ -53,6 +53,11 @@ export function AccountSettingsView() {
         </section>
 
         <GithubSection githubLogin={me.githubLogin} />
+
+        {/* 대표는 나갈 수 없다(409 REPRESENTATIVE_CANNOT_LEAVE) — 버튼을 숨긴다 */}
+        {me.orgId && me.orgRole === "MEMBER" && (
+          <LeaveOrgSection orgId={me.orgId} orgName={me.orgName} userId={me.userId} />
+        )}
       </main>
     </div>
   );
@@ -64,6 +69,32 @@ function Row({ k, children }: { k: string; children: React.ReactNode }) {
       <dt className="w-16 shrink-0 text-ink-500">{k}</dt>
       <dd className="min-w-0 font-medium">{children}</dd>
     </div>
+  );
+}
+
+/** 탈퇴하면 /me의 orgId가 null이 되고 AuthGate가 "조직 없음"(/onboarding)으로 보낸다 */
+function LeaveOrgSection({ orgId, orgName, userId }: { orgId: string; orgName: string | null; userId: string }) {
+  const leave = useRemoveMember(orgId);
+  return (
+    <section className="card p-5">
+      <SectionTitle>조직 나가기</SectionTitle>
+      <p className="mb-3 text-[13px] text-ink-500">
+        계정은 남고 {orgName ?? "조직"}에서만 빠집니다. 내 에이전트는 연결이 해제되고 맡은 프로젝트에서 빠집니다. 지난
+        기록은 그대로 남고, 다른 조직의 초대를 받을 수 있습니다.
+      </p>
+      <ConfirmButton
+        label="조직 나가기"
+        confirm="정말 나갈까요?"
+        pendingLabel="나가는 중…"
+        pending={leave.isPending}
+        onConfirm={() => leave.mutate(userId)}
+      />
+      {leave.isError && (
+        <div className="mt-2">
+          <RemovalError error={leave.error} />
+        </div>
+      )}
+    </section>
   );
 }
 

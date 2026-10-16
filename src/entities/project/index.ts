@@ -2,6 +2,7 @@ export type { Membership, Project, Repo } from "./model/types";
 export { PROJECT_STATUS, fmtUsd } from "./model/api";
 export { projectKeys, useProject, useProjects } from "./api/projectApi";
 export {
+  useAbortProject,
   useAssignMember,
   useCreateProject,
   useResendGithubInvite,

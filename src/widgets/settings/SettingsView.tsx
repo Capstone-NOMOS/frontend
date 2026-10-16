@@ -3,16 +3,17 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Loader2, Lock, Play } from "lucide-react";
+import { Ban, CheckCircle2, Loader2, Lock, Play } from "lucide-react";
 import { errorDetails, errorMessage, type Schemas } from "@/shared/api";
 import type { TeamRole } from "@/shared/model";
-import { Badge, Button, SectionTitle, Segmented } from "@/shared/ui";
+import { Badge, Button, RemovalError, RevocationNotice, SectionTitle, Segmented, Textarea } from "@/shared/ui";
 import { cn, fmtDateTime } from "@/shared/lib/format";
 import { agentKeys, useOrgAgents } from "@/entities/agent";
 import { DECIDER_META, LEVELS, LevelGates, POLICY_TABLE } from "@/entities/policy";
 import {
   ProjectStatusBadge,
   fmtUsd,
+  useAbortProject,
   useAssignMember,
   useProject,
   useResendGithubInvite,
@@ -28,12 +29,16 @@ const ROLES: TeamRole[] = ["FRONTEND", "BACKEND"];
 type Member = Schemas["ProjectMember"];
 type OrgAgent = Schemas["OrgAgent"];
 
+/** 진행 중(planning·active·halted). 끝난 프로젝트(completed·aborted)는 멤버·중단 모두 409 PROJECT_NOT_OPEN */
+const isOpen = (status: Schemas["Project"]["status"]) => status !== "completed" && status !== "aborted";
+
 export function SettingsView({ projectId }: { projectId: string }) {
   // AuthGate·AppShell 안쪽이므로 me와 프로젝트 상세가 있다
   const me = useCurrentUser().me!;
   const isRep = me.orgRole === "REPRESENTATIVE";
   const { project, repos, members } = useProject(projectId).data!;
   const started = project.startedAt !== null;
+  const open = isOpen(project.status);
   // 에이전트 주인 닉네임·배정 후보·접속 상태
   const agents = useOrgAgents(me.orgId);
 
@@ -84,7 +89,7 @@ export function SettingsView({ projectId }: { projectId: string }) {
           members={members}
           agents={agents.data?.agents}
           agentsError={agents.error}
-          started={started}
+          open={open}
           isRep={isRep}
           myUserId={me.userId}
         />
@@ -92,6 +97,8 @@ export function SettingsView({ projectId }: { projectId: string }) {
         <QuestionRelaySection projectId={projectId} project={project} editable={isRep && !started} />
 
         <StartSection projectId={projectId} project={project} members={members} isRep={isRep} />
+
+        {isRep && open && <AbortSection projectId={projectId} />}
 
         <PolicySection level={project.autonomyPreset} />
       </div>
@@ -119,7 +126,7 @@ function MembersSection({
   members,
   agents,
   agentsError,
-  started,
+  open,
   isRep,
   myUserId,
 }: {
@@ -128,7 +135,7 @@ function MembersSection({
   members: Member[];
   agents: OrgAgent[] | undefined;
   agentsError: Error | null;
-  started: boolean;
+  open: boolean;
   isRep: boolean;
   myUserId: string;
 }) {
@@ -137,16 +144,16 @@ function MembersSection({
   const unassign = useUnassignMember(projectId);
   // 배정이 바뀌면 에이전트의 assignment도 바뀐다 (entities끼리 키를 못 쓰므로 위젯에서 무효화)
   const refreshAgents = () => queryClient.invalidateQueries({ queryKey: agentKeys.org(orgId) });
-  const editable = isRep && !started;
+  // 시작 뒤에도 빼고 넣을 수 있다 — 빠진 역할의 태스크는 새로 배정할 때까지 기다린다
+  const editable = isRep && open;
   const busy = assign.isPending || unassign.isPending;
-  const error = assign.error ?? unassign.error;
 
   return (
     <section id="members" className="card scroll-mt-6 p-5">
       <SectionTitle>역할 배정</SectionTitle>
-      {started && (
+      {!open && (
         <p className="mb-3 flex items-center gap-1.5 text-[13px] text-ink-700">
-          <Lock size={13} /> 시작된 프로젝트는 멤버를 바꿀 수 없습니다.
+          <Lock size={13} /> 끝난 프로젝트는 멤버를 바꿀 수 없습니다.
         </p>
       )}
       <ul className="divide-y divide-ink-100">
@@ -214,7 +221,17 @@ function MembersSection({
         </p>
       )}
       {agentsError && <p className="mt-2 text-[12.5px] text-forbidden">{errorMessage(agentsError)}</p>}
-      {error && <p className="mt-2 text-[12.5px] text-forbidden">{errorMessage(error)}</p>}
+      {assign.error && <p className="mt-2 text-[12.5px] text-forbidden">{errorMessage(assign.error)}</p>}
+      {unassign.error && (
+        <div className="mt-2">
+          <RemovalError error={unassign.error} />
+        </div>
+      )}
+      {unassign.data && (
+        <div className="mt-2">
+          <RevocationNotice results={unassign.data.githubRevocations} />
+        </div>
+      )}
       {/* 배정 직후 서버 안내: 에이전트가 토큰을 재발급해야 태스크·노트 API를 쓸 수 있다 */}
       {assign.data && (
         <p className="mt-2 rounded-lg bg-review-bg px-3 py-2 text-[12.5px] text-review">{assign.data.notice}</p>
@@ -426,7 +443,7 @@ function StartSection({
           </p>
           {confirming ? (
             <div className="mt-3 rounded-xl border border-human bg-human-bg p-4">
-              <p className="text-[13.5px] font-medium">시작하면 멤버를 바꿀 수 없습니다.</p>
+              <p className="text-[13.5px] font-medium">시작하면 배정된 에이전트가 바로 태스크를 받습니다.</p>
               <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[12.5px] text-ink-700">
                 지금 배정:
                 {ROLES.map((role) => {
@@ -515,6 +532,53 @@ function StartSection({
           )}
         </div>
       )}
+    </section>
+  );
+}
+
+/** 대표 전용. 지우지 않고 aborted로 닫는다. 실수 방지를 위해 확인 + 사유(선택)를 받는다 */
+function AbortSection({ projectId }: { projectId: string }) {
+  const abort = useAbortProject(projectId);
+  const [confirming, setConfirming] = useState(false);
+  const [reason, setReason] = useState("");
+
+  return (
+    <section className="card p-5">
+      <SectionTitle>프로젝트 중단</SectionTitle>
+      <p className="text-[13px] text-ink-700">
+        에이전트와 레포가 풀려 다른 프로젝트에 쓸 수 있게 됩니다. 기다리던 질문은 만료되고, 대기 중인 승인은 결정할 수
+        없게 됩니다. 기록은 지워지지 않으며 되돌릴 수 없습니다.
+      </p>
+      {confirming ? (
+        <div className="mt-3 space-y-2 rounded-xl border border-forbidden bg-forbidden-bg p-4">
+          <Textarea
+            rows={2}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            disabled={abort.isPending}
+            placeholder="사유 (선택) — 모든 룸과 기록에 남습니다"
+            aria-label="중단 사유"
+          />
+          <div className="flex gap-2">
+            <Button
+              variant="danger"
+              size="sm"
+              disabled={abort.isPending}
+              onClick={() => abort.mutate({ reason: reason.trim() || null })}
+            >
+              {abort.isPending ? "중단하는 중…" : "중단"}
+            </Button>
+            <Button variant="ghost" size="sm" disabled={abort.isPending} onClick={() => setConfirming(false)}>
+              취소
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <Button variant="outline" size="sm" className="mt-3" onClick={() => setConfirming(true)}>
+          <Ban size={14} /> 프로젝트 중단
+        </Button>
+      )}
+      {abort.isError && <p className="mt-2 text-[12.5px] text-forbidden">{errorMessage(abort.error)}</p>}
     </section>
   );
 }

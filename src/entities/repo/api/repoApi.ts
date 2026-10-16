@@ -41,6 +41,19 @@ export function useConnectRepos(orgId: string) {
   });
 }
 
+/**
+ * 대표 전용. 레포 연결 해제 — GitHub의 레포는 그대로다. 다시 연결하면 경로 규칙·소유 역할까지 되살아난다.
+ * 진행 중 프로젝트가 쓰면 409 REPO_IN_ACTIVE_PROJECT
+ */
+export function useDisconnectRepo() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (repoId: string) =>
+      apiFetch<{ repoId: string; fullName: string }>(`/repos/${repoId}`, { method: "DELETE" }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: repoKeys.all }),
+  });
+}
+
 /** 대표 전용. 레포를 만들 수 있는 GitHub 조직 login 목록. 대표가 GitHub를 연결하지 않았으면 409 GITHUB_NOT_LINKED */
 export function useGithubOrgs(orgId: string) {
   return useQuery({

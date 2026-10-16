@@ -12,6 +12,7 @@ import {
 import { cn } from "@/shared/lib/format";
 
 export { Markdown } from "./Markdown";
+export { ConfirmButton, RemovalError, RevocationNotice } from "./RemovalFeedback";
 
 // ---------- Button ----------
 type Variant = "primary" | "secondary" | "ghost" | "danger" | "outline";
