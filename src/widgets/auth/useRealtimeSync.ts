@@ -6,6 +6,7 @@ import { useStreamConnection, useStreamSignal, type StreamSignal } from "@/share
 import { agentKeys } from "@/entities/agent";
 import { approvalKeys } from "@/entities/approval";
 import { artifactKeys } from "@/entities/artifact";
+import { contractKeys } from "@/entities/contract";
 import { eventKeys } from "@/entities/event";
 import { noteKeys } from "@/entities/note";
 import { orgKeys } from "@/entities/org";
@@ -41,6 +42,7 @@ const PROJECT_TOPICS: Record<string, (projectId: string) => QueryKey[]> = {
   notes: (id) => [noteKeys.list(id)],
   events: (id) => [eventKeys.list(id)],
   specs: (id) => [specKeys.list(id)],
+  contracts: (id) => [contractKeys.list(id)],
   room: (id) => [roomKeys.project(id)],
   questions: () => [questionKeys.all],
 };

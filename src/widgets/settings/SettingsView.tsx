@@ -400,6 +400,8 @@ function AssignPicker({
 /** where 값 → 사람이 읽는 이름. 서버 message가 이미 한국어라 이름과 이동 버튼만 붙인다 */
 function whereLabel(where: string) {
   if (where === "tasks") return "태스크";
+  // contracts.F-xx: 그 기능의 API 계약이 확정되지 않았다
+  if (where.startsWith("contracts.")) return `${where.slice("contracts.".length)} API 계약`;
   const role = where.match(/^members\.(FRONTEND|BACKEND)$/)?.[1] as TeamRole | undefined;
   return role ? `${TEAM_ROLE_META[role].label} 배정` : where;
 }
@@ -476,7 +478,7 @@ function StartSection({
                     <>
                       태스크가 없습니다.{" "}
                       <Link href={`/p/${projectId}/rooms/owner`} className="font-medium underline underline-offset-2">
-                        Room 3에서 PM 계획 받기
+                        Room 3에서 계획 받기
                       </Link>
                     </>
                   ) : (
@@ -518,12 +520,20 @@ function StartSection({
                       역할 배정으로
                     </a>
                   )}
+                  {d.where.startsWith("contracts.") && (
+                    <Link
+                      href={`/p/${projectId}/docs/contract`}
+                      className="text-[12.5px] font-medium text-ink-900 underline underline-offset-2"
+                    >
+                      계약 보기
+                    </Link>
+                  )}
                   {d.where === "tasks" && (
                     <Link
                       href={`/p/${projectId}/rooms/owner`}
                       className="text-[12.5px] font-medium text-ink-900 underline underline-offset-2"
                     >
-                      Room 3에서 PM 계획 받기
+                      Room 3에서 계획 받기
                     </Link>
                   )}
                 </li>
