@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { errorMessage } from "@/shared/api";
 import { Badge, Button, EmptyState, MockBadge, SectionTitle } from "@/shared/ui";
 import { cn, fmtKrw, fmtTokens } from "@/shared/lib/format";
+import { useQueryParam } from "@/shared/lib/useQueryParam";
 import { useOrgAgents } from "@/entities/agent";
 import { EventRow, makeEventLookup, useProjectEvents } from "@/entities/event";
 import { NOTE_KIND, NoteItem, useNotes, type NoteKind } from "@/entities/note";
@@ -18,8 +18,10 @@ const TABS: Record<Tab, string> = { events: "활동", notes: "인계 노트", co
 
 export function ActivityView({ projectId }: { projectId: string }) {
   const notes = useNotes(projectId);
-  const [tab, setTab] = useState<Tab>("events");
-  const [kind, setKind] = useState<NoteKind | null>(null);
+  // 뒤로가기로 돌아와도 보던 탭·종류가 남도록 주소에 둔다
+  const [tabParam, setTab] = useQueryParam("tab", Object.keys(TABS) as Tab[]);
+  const tab = tabParam ?? "events";
+  const [kind, setKind] = useQueryParam("kind", Object.keys(NOTE_KIND) as NoteKind[]);
 
   const list = (notes.data ?? []).filter((n) => !kind || n.kind === kind);
 

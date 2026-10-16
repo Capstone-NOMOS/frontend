@@ -17,12 +17,12 @@ const STEPS = [
   {
     n: "02",
     t: "프로젝트 생성 (채팅형)",
-    d: "이름·설명·허용 레벨(L1–L4)·스택을 대화로 정하면 Room 3, PM 에이전트, MCP 문서 페이지, 초대 링크가 만들어집니다.",
+    d: "이름·설명·허용 레벨(L1–L4)·스택을 대화로 정하면 대표 룸, PM 에이전트, MCP 문서 페이지, 초대 링크가 만들어집니다.",
   },
   {
     n: "03",
     t: "초대 → 역할 자동 배정 → Room",
-    d: "FE·BE가 링크로 참여하면 Room 1·2가 열리고 각자 레포를 연결합니다. 각 개발자는 자기 Room만 봅니다.",
+    d: "FE·BE가 링크로 참여하면 FE·BE 룸이 열리고 각자 레포를 연결합니다. 각 개발자는 자기 룸만 봅니다.",
   },
   {
     n: "04",
@@ -162,9 +162,9 @@ export function Landing() {
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               {[
-                { name: "Room 3", who: "대표 + PM", tone: "pm" as const, note: "요구사항 · 승인 · 보고" },
-                { name: "Room 1", who: "FE + FE 에이전트 + PM", tone: "fe" as const, note: "태스크 · 질의응답" },
-                { name: "Room 2", who: "BE + BE 에이전트 + PM", tone: "be" as const, note: "태스크 · 질의응답" },
+                { name: "대표 룸", who: "대표 + PM", tone: "pm" as const, note: "요구사항 · 승인 · 보고" },
+                { name: "FE 룸", who: "FE + FE 에이전트 + PM", tone: "fe" as const, note: "태스크 · 질의응답" },
+                { name: "BE 룸", who: "BE + BE 에이전트 + PM", tone: "be" as const, note: "태스크 · 질의응답" },
               ].map((r) => (
                 <div key={r.name} className="card p-4">
                   <div className="flex items-center gap-2">

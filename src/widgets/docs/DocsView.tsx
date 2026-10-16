@@ -139,7 +139,7 @@ function SpecDocs({ specs, who }: { specs: ReturnType<typeof useSpecs>; who: str
     return (
       <EmptyState
         title="명세가 아직 없습니다"
-        desc="대표가 Room 3에서 PM의 계획 초안을 승인하면 명세와 태스크가 함께 생깁니다."
+        desc="대표가 대표 룸에서 PM의 계획 초안을 승인하면 명세와 태스크가 함께 생깁니다."
       />
     );
   }
@@ -199,7 +199,7 @@ function ContractDocs({ projectId, contracts }: { projectId: string; contracts: 
     return (
       <EmptyState
         title="API 계약이 아직 없습니다"
-        desc="대표가 Room 3에서 기능 명세를 확정하면, 서버 API가 필요한 기능마다 계약이 생기고 BE 에이전트가 초안을 씁니다."
+        desc="대표가 대표 룸에서 기능 명세를 확정하면, 서버 API가 필요한 기능마다 계약이 생기고 BE 에이전트가 초안을 씁니다."
       />
     );
   }
@@ -313,7 +313,7 @@ function MockDoc({
         title={`${current.label} 문서가 아직 없습니다`}
         desc={
           current.type === "CONTRACT"
-            ? "대표가 Room 3에서 명세를 승인하면 v1이 저장됩니다."
+            ? "대표가 대표 룸에서 명세를 승인하면 v1이 저장됩니다."
             : "에이전트가 사람에게 질문하고 답을 받으면 자동으로 추가됩니다."
         }
       />

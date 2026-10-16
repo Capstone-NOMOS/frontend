@@ -1,16 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
 import { FilePlus, FileText, Loader2, Pencil, Search, Terminal, Wrench, type LucideIcon } from "lucide-react";
 import { errorMessage, type Schemas } from "@/shared/api";
 import type { TeamRole } from "@/shared/model";
-import { Badge, Button, EmptyState } from "@/shared/ui";
-import { fmtDate, fmtDateTime, fmtTime, sameDay } from "@/shared/lib/format";
-import { StatusDot } from "@/entities/agent";
+import { AgentMark, Badge, Button, EmptyState } from "@/shared/ui";
+import { cn, fmtDate, fmtDateTime, fmtTime, sameDay } from "@/shared/lib/format";
+import { useOrgMembers } from "@/entities/org";
 import { useProject } from "@/entities/project";
 import { QuestionCard, useProjectQuestions } from "@/entities/question";
-import { ROLE_ROOM, ROOM_META, useRoomFeed, useRooms } from "@/entities/room";
+import { ROLE_ROOM, ROOM_META, RoomParticipants, useRoomFeed, useRooms, type Participant } from "@/entities/room";
 import { TEAM_ROLE_META } from "@/entities/task";
 import { useCurrentUser } from "@/entities/user";
 
@@ -18,7 +18,8 @@ type RoomMessage = Schemas["RoomMessage"];
 type Question = Schemas["AgentQuestion"];
 
 /**
- * 역할 룸(프로젝트 × 역할). Claude Code 확장처럼 에이전트의 말·도구 블록, 서버(PM)의 지시·판정, 질문 카드를 보여 준다.
+ * 역할 룸(프로젝트 × 역할). 에이전트·PM은 왼쪽, 사람(질문에 단 답)은 오른쪽 대화로 그린다.
+ * 에이전트의 말은 말풍선, 도구는 블록, 서버(PM)의 지시·판정은 작은 문장, 질문은 카드다.
  * activity가 없는 줄은 서버가 만든 text를 그대로 찍는다. 팀원은 자기 역할 룸만 본다 (403 ROOM_NOT_VISIBLE)
  */
 export function RoleRoomView({ projectId, role }: { projectId: string; role: TeamRole }) {
@@ -26,13 +27,34 @@ export function RoleRoomView({ projectId, role }: { projectId: string; role: Tea
   const me = useCurrentUser().me!;
   const isRep = me.orgRole === "REPRESENTATIVE";
   const { members } = useProject(projectId).data!;
+  const orgMembers = useOrgMembers(me.orgId!).data ?? [];
   const room = useRooms(projectId).data?.find((r) => r.role === role);
   const feed = useRoomFeed(projectId, role);
   const meta = ROOM_META[ROLE_ROOM[role].type];
+  const roleMeta = TEAM_ROLE_META[role];
   const questions = useProjectQuestions(projectId, "all").data ?? [];
   // 같은 카드가 묻는 쪽 룸(보기 전용)과 답하는 쪽 룸에 나온다. 답할 수 있는 사람은 그 역할의 담당자와 대표다
   const canAnswer = (q: Question) =>
     q.targetRole === role && (isRep || members.some((m) => m.userId === me.userId && m.teamRole === role));
+
+  const nameOf = (userId: string) => {
+    if (userId === me.userId) return "나";
+    const m = orgMembers.find((x) => x.userId === userId);
+    return m?.nickname ?? m?.name ?? m?.loginId ?? "팀원";
+  };
+  const agentName = room?.agent?.agentName ?? `${roleMeta.label} 에이전트`;
+  const owner = members.find((m) => m.teamRole === role);
+  const rep = orgMembers.find((m) => m.orgRole === "REPRESENTATIVE");
+  const people: Participant[] = [
+    { kind: "agent", name: "PM", tone: "pm" },
+    ...(room?.agent
+      ? [{ kind: "agent" as const, name: agentName, tone: roleMeta.tone, online: room.agent.online }]
+      : []),
+    ...(owner ? [{ kind: "human" as const, name: nameOf(owner.userId), note: roleMeta.label }] : []),
+    ...(rep && rep.userId !== owner?.userId
+      ? [{ kind: "human" as const, name: nameOf(rep.userId), note: "대표 · 보기만" }]
+      : []),
+  ];
 
   // API는 최신 줄부터 준다 — 대화처럼 오래된 줄이 위로 가게 뒤집는다
   const messages = [...(feed.data ?? [])].reverse();
@@ -42,7 +64,7 @@ export function RoleRoomView({ projectId, role }: { projectId: string; role: Tea
   const openElsewhere = questions.filter(
     (q) => q.targetRole === role && (q.status === "pending" || q.status === "agent_answered") && !inline.has(q.id),
   );
-  const thinking = useThinking(messages);
+  const thinkingSec = useThinking(messages);
   const newestId = feed.data?.[0]?.id;
   const scrollRef = useRef<HTMLDivElement>(null);
   // 새 줄이 오면 맨 아래로. 이전 줄을 더 불러올 때는 newestId가 그대로라 움직이지 않는다
@@ -53,19 +75,10 @@ export function RoleRoomView({ projectId, role }: { projectId: string; role: Tea
   return (
     <div className="flex h-full flex-col">
       <header className="shrink-0 border-b border-ink-200 px-4 py-3 sm:px-6">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <h1 className="text-[16px] font-semibold tracking-tight">{meta.name}</h1>
-          {room?.agent ? (
-            <span
-              className="inline-flex items-center gap-1.5 text-[12.5px] text-ink-700"
-              title={room.agent.lastSeenAt ? `마지막 확인 ${fmtDateTime(room.agent.lastSeenAt)}` : undefined}
-            >
-              <StatusDot status={room.agent.online ? "online" : "offline"} />
-              {room.agent.agentName} · {room.agent.online ? "접속 중" : "오프라인"}
-            </span>
-          ) : (
-            room && <span className="text-[12.5px] text-ink-500">배정된 에이전트 없음</span>
-          )}
+          <RoomParticipants people={people} />
+          {room && !room.agent && <span className="text-[12.5px] text-ink-500">배정된 에이전트 없음</span>}
         </div>
         {room && room.activeTasks.length > 0 && (
           <ul className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[12.5px]">
@@ -108,41 +121,66 @@ export function RoleRoomView({ projectId, role }: { projectId: string; role: Tea
                   desc="프로젝트가 시작되어 태스크가 지시되면 실행 상태와 검증 결과가 여기에 한 줄씩 쌓입니다."
                 />
               ) : (
-                <ol className="space-y-1.5">
-                  {rows.map(({ message: m, question: q, folded }, i) => (
-                    <Fragment key={m.id}>
-                      {(i === 0 || !sameDay(rows[i - 1].message.ts, m.ts)) && (
-                        <li className="py-2 text-center text-[11.5px] text-ink-400" aria-label="날짜">
-                          {fmtDate(m.ts)}
-                        </li>
-                      )}
-                      {q ? (
-                        <li className="py-1">
-                          <QuestionCard
-                            question={q}
-                            canAnswer={canAnswer(q)}
-                            taskHref={`/p/${projectId}/tasks/${q.taskId}`}
-                            taskTitle={m.taskTitle ?? undefined}
-                          />
-                          {/* 같은 질문의 뒤 줄(답함·내려놓음 등)은 카드 아래로 접는다 */}
-                          <ul className="mt-1 space-y-0.5 pl-3">
-                            {[m, ...folded].map((f) => (
-                              <li key={f.id} className="text-[12px] text-ink-500">
-                                <span className="font-mono tabular-nums text-ink-400">{fmtTime(f.ts)}</span> {f.text}
-                              </li>
-                            ))}
-                          </ul>
-                        </li>
-                      ) : (
-                        <FeedRow message={m} role={role} />
-                      )}
-                    </Fragment>
-                  ))}
-                  {thinking && (
-                    <li className="flex items-center gap-2 pl-[54px] text-[13px] text-ink-500" aria-live="polite">
-                      <Loader2 size={13} className="animate-spin" aria-hidden />
-                      생각 중…
-                    </li>
+                <ol className="space-y-1">
+                  {rows.map(({ message: m, question: q, folded }, i) => {
+                    const prev = rows[i - 1];
+                    const newDay = !prev || !sameDay(prev.message.ts, m.ts);
+                    // 같은 화자가 이어 말하면 마크·이름을 한 번만 그린다. 질문 카드 앞뒤에서는 다시 그린다
+                    const head = newDay || !!q || !!prev.question || prev.message.speaker !== m.speaker;
+                    const who = m.speaker === "agent" ? agentName : m.speaker === "pm" ? "PM" : "NOMOS";
+                    const human = q ? humanAnswer(q) : null;
+                    return (
+                      <Fragment key={m.id}>
+                        {newDay && (
+                          <li className="py-2 text-center text-[11.5px] text-ink-400" aria-label="날짜">
+                            {fmtDate(m.ts)}
+                          </li>
+                        )}
+                        <LeftRow head={head} who={who} tone={m.speaker === "agent" ? roleMeta.tone : "pm"} ts={m.ts}>
+                          {q ? (
+                            <>
+                              <QuestionCard
+                                question={q}
+                                canAnswer={canAnswer(q)}
+                                taskHref={`/p/${projectId}/tasks/${q.taskId}`}
+                                taskTitle={m.taskTitle ?? undefined}
+                              />
+                              {/* 같은 질문의 뒤 줄(답함·내려놓음 등)은 카드 아래로 접는다 */}
+                              <ul className="mt-1 space-y-0.5 pl-1">
+                                {[m, ...folded].map((f) => (
+                                  <li key={f.id} className="text-[12px] text-ink-500">
+                                    <span className="font-mono tabular-nums text-ink-400">{fmtTime(f.ts)}</span>{" "}
+                                    {f.text}
+                                  </li>
+                                ))}
+                              </ul>
+                            </>
+                          ) : (
+                            <FeedBody message={m} />
+                          )}
+                        </LeftRow>
+                        {q && human !== null && q.answeredBy && (
+                          <RightRow who={nameOf(q.answeredBy)} ts={q.answeredAt}>
+                            {human}
+                          </RightRow>
+                        )}
+                      </Fragment>
+                    );
+                  })}
+                  {thinkingSec !== null && (
+                    <LeftRow head who={agentName} tone={roleMeta.tone}>
+                      <span
+                        className="inline-flex items-center gap-2 rounded-2xl rounded-tl-md bg-ink-100 px-3 py-1.5 text-[13px] text-ink-500"
+                        aria-live="polite"
+                      >
+                        <span className="inline-flex gap-1" aria-hidden>
+                          <span className="h-1.5 w-1.5 rounded-full bg-ink-400 pulse-dot" />
+                          <span className="h-1.5 w-1.5 rounded-full bg-ink-400 pulse-dot [animation-delay:150ms]" />
+                          <span className="h-1.5 w-1.5 rounded-full bg-ink-400 pulse-dot [animation-delay:300ms]" />
+                        </span>
+                        생각 중 · <span className="tabular-nums">{fmtElapsed(thinkingSec)}</span>
+                      </span>
+                    </LeftRow>
                   )}
                 </ol>
               )}
@@ -152,7 +190,7 @@ export function RoleRoomView({ projectId, role }: { projectId: string; role: Tea
           {openElsewhere.length > 0 && (
             <section className="mt-6 space-y-2">
               <h2 className="text-[12px] font-semibold uppercase tracking-wide text-ink-500">
-                {TEAM_ROLE_META[role].label}가 답할 질문 · {openElsewhere.length}
+                {roleMeta.label}가 답할 질문 · {openElsewhere.length}
               </h2>
               {openElsewhere.map((q) => (
                 <QuestionCard
@@ -170,6 +208,71 @@ export function RoleRoomView({ projectId, role }: { projectId: string; role: Tea
   );
 }
 
+/** 에이전트·PM·NOMOS 쪽(왼쪽). head면 마크와 이름·시각을 그린다 */
+function LeftRow({
+  head,
+  who,
+  tone,
+  ts,
+  children,
+}: {
+  head: boolean;
+  who: string;
+  tone: "fe" | "be" | "pm";
+  ts?: string;
+  children: ReactNode;
+}) {
+  return (
+    <li className={cn("flex gap-2.5 animate-rise", head && "pt-2")}>
+      <span className="w-7 shrink-0">{head && <AgentMark tone={tone} size={28} />}</span>
+      <div className="min-w-0 flex-1">
+        {head && (
+          <div className="mb-0.5 flex items-baseline gap-1.5 text-[12px]">
+            <span className="font-semibold text-ink-700">{who}</span>
+            {ts && (
+              <span className="font-mono tabular-nums text-ink-400" title={fmtDateTime(ts)}>
+                {fmtTime(ts)}
+              </span>
+            )}
+          </div>
+        )}
+        <div className="max-w-[640px]">{children}</div>
+      </div>
+    </li>
+  );
+}
+
+/** 사람 쪽(오른쪽). 룸에서 사람이 말하는 곳은 질문에 단 답뿐이다 */
+function RightRow({ who, ts, children }: { who: string; ts: string | null; children: ReactNode }) {
+  return (
+    <li className="flex justify-end pt-2 animate-rise">
+      <div className="max-w-[80%]">
+        <div className="mb-0.5 flex items-baseline justify-end gap-1.5 text-[12px]">
+          {ts && (
+            <span className="font-mono tabular-nums text-ink-400" title={fmtDateTime(ts)}>
+              {fmtTime(ts)}
+            </span>
+          )}
+          <span className="font-semibold text-ink-700">{who}</span>
+        </div>
+        <div className="whitespace-pre-wrap rounded-2xl rounded-tr-md bg-ink-900 px-4 py-2.5 text-[14px] leading-6 text-white">
+          {children}
+        </div>
+      </div>
+    </li>
+  );
+}
+
+/** 사람이 답했으면(직접·확인·뒤집기) 답 문장. 질문이 여럿이면 "질문 → 답" 줄로. 에이전트 답이면 null */
+function humanAnswer(q: Question): string | null {
+  if (q.status !== "answered" || !q.answers || !q.answerSource || q.answerSource === "agent") return null;
+  const answers = q.answers;
+  const entries = q.questions.map((x) => [x.question, answers[x.question] ?? ""] as const);
+  return entries.length === 1 ? entries[0][1] : entries.map(([k, v]) => `${k}\n→ ${v}`).join("\n\n");
+}
+
+const fmtElapsed = (sec: number) => (sec < 60 ? `${sec}초` : `${Math.floor(sec / 60)}분 ${sec % 60}초`);
+
 type Activity = NonNullable<RoomMessage["activity"]>;
 
 const TOOL_ICON: Record<Exclude<Activity["kind"], "say">, LucideIcon> = {
@@ -181,38 +284,28 @@ const TOOL_ICON: Record<Exclude<Activity["kind"], "say">, LucideIcon> = {
   other: Wrench,
 };
 
-/** 줄 하나. 에이전트의 말은 문장 블록, 도구는 아이콘 + 대상(고정폭), PM·NOMOS는 작고 흐린 시스템 줄 */
-function FeedRow({ message: m, role }: { message: RoomMessage; role: TeamRole }) {
+/** 줄 내용. 에이전트의 말은 말풍선, 도구는 아이콘 + 대상(고정폭), PM·NOMOS는 작고 흐린 문장 */
+function FeedBody({ message: m }: { message: RoomMessage }) {
   const a = m.activity;
-  const system = m.speaker !== "agent";
-
-  return (
-    <li className="flex items-start gap-2.5 text-[13px] leading-6">
-      <span className="w-11 shrink-0 font-mono text-[11.5px] text-ink-400 tabular-nums" title={fmtDateTime(m.ts)}>
-        {fmtTime(m.ts)}
-      </span>
-      {system ? (
-        <span className="min-w-0 flex-1 whitespace-pre-wrap break-words text-[12px] text-ink-500">
-          <span className="font-semibold">{m.speaker === "pm" ? "PM" : "NOMOS"}</span> · {m.text}
-        </span>
-      ) : a?.kind === "say" ? (
-        <p className="min-w-0 flex-1 whitespace-pre-wrap break-words text-[14px] text-ink-900">{a.target}</p>
-      ) : a ? (
-        <ToolBlock activity={a} />
-      ) : (
-        // 활동 필드가 없는 에이전트 줄(인계 노트 등) — 서버 문장 그대로
-        <span className="min-w-0 flex-1 whitespace-pre-wrap break-words text-ink-900">
-          <Badge tone={TEAM_ROLE_META[role].tone}>에이전트</Badge> {m.text}
-        </span>
-      )}
-    </li>
-  );
+  if (m.speaker !== "agent") {
+    return <p className="whitespace-pre-wrap break-words text-[12.5px] leading-6 text-ink-500">{m.text}</p>;
+  }
+  if (a?.kind === "say") {
+    return (
+      <p className="inline-block whitespace-pre-wrap break-words rounded-2xl rounded-tl-md bg-ink-100 px-3.5 py-2 text-[14px] leading-6 text-ink-900">
+        {a.target}
+      </p>
+    );
+  }
+  if (a) return <ToolBlock activity={a} />;
+  // 활동 필드가 없는 에이전트 줄(인계 노트 등) — 서버 문장 그대로
+  return <p className="whitespace-pre-wrap break-words text-[13px] leading-6 text-ink-900">{m.text}</p>;
 }
 
 function ToolBlock({ activity: a }: { activity: Activity }) {
   const Icon = TOOL_ICON[a.kind as Exclude<Activity["kind"], "say">];
   return (
-    <div className="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-ink-200 bg-ink-50 px-2.5 py-1">
+    <div className="flex min-w-0 items-center gap-2 rounded-lg border border-ink-200 bg-ink-50 px-2.5 py-1">
       <Icon size={13} className="shrink-0 text-ink-500" aria-label={a.kind} />
       <code className="min-w-0 flex-1 truncate font-mono text-[12px] text-ink-800" title={a.target}>
         {a.target}
@@ -252,8 +345,11 @@ function toRows(messages: RoomMessage[], questions: Question[]): Row[] {
 
 const IDLE_MS = 6000;
 
-/** 실행 중(AGENT_RUN_STARTED 뒤 ENDED 없음)인 태스크가 있고 몇 초간 새 줄이 없으면 true. 서버 데이터는 없다 */
-function useThinking(messages: RoomMessage[]) {
+/**
+ * 실행 중(AGENT_RUN_STARTED 뒤 ENDED 없음)인 태스크가 있고 몇 초간 새 줄이 없으면 마지막 줄 뒤로 지난 초, 아니면 null.
+ * 서버 데이터는 없다 — 화면이 매초 센다
+ */
+function useThinking(messages: RoomMessage[]): number | null {
   const running = new Set<string>();
   for (const m of messages) {
     if (!m.taskId) continue;
@@ -268,5 +364,7 @@ function useThinking(messages: RoomMessage[]) {
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, [active]);
-  return active && last !== undefined && now - new Date(last).getTime() > IDLE_MS;
+  if (!active || last === undefined) return null;
+  const idle = now - new Date(last).getTime();
+  return idle > IDLE_MS ? Math.floor(idle / 1000) : null;
 }

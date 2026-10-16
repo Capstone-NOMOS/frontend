@@ -2,11 +2,10 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
   Activity,
   BookOpen,
-  Building2,
   ChevronDown,
   FileText,
   Inbox,
@@ -16,13 +15,11 @@ import {
   Plug,
   Plus,
   RefreshCcw,
-  Search,
   Settings,
-  Users,
   X,
 } from "lucide-react";
 import { useProjectStream, type Schemas } from "@/shared/api";
-import { Avatar, Badge, Kbd, Logo, MockBadge } from "@/shared/ui";
+import { Avatar, Badge, Logo, MockBadge } from "@/shared/ui";
 import { cn } from "@/shared/lib/format";
 import { StatusDot } from "@/entities/agent";
 import { useProjectApprovals } from "@/entities/approval";
@@ -31,25 +28,12 @@ import { useMyQuestions } from "@/entities/question";
 import { ROLE_ROOM, ROOM_META, useRooms } from "@/entities/room";
 import { AccountMenu, RoleBadge, displayName, useCurrentUser } from "@/entities/user";
 import { useApp, useProject as useMockProject } from "@/lib/store";
-import { CommandSearch } from "./CommandSearch";
 
 export function AppShell({ projectId, children }: { projectId: string; children: ReactNode }) {
   const detail = useProject(projectId);
   // 이 프로젝트 화면에 있는 동안 프로젝트 신호(tasks·notes·…)를 받는다 (adr/0009)
   useProjectStream(projectId);
   const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState(false);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        setSearch((v) => !v);
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
 
   if (detail.isPending) return <ShellSkeleton />;
 
@@ -65,7 +49,7 @@ export function AppShell({ projectId, children }: { projectId: string; children:
     <div className="flex h-dvh w-full overflow-hidden bg-white">
       {/* desktop sidebar */}
       <aside className="hidden w-[264px] shrink-0 border-r border-ink-200 bg-ink-50/60 lg:flex lg:flex-col">
-        <SidebarContent projectId={projectId} detail={detail.data} onSearch={() => setSearch(true)} />
+        <SidebarContent projectId={projectId} detail={detail.data} />
       </aside>
 
       {/* mobile drawer */}
@@ -73,15 +57,7 @@ export function AppShell({ projectId, children }: { projectId: string; children:
         <div className="fixed inset-0 z-50 lg:hidden">
           <button aria-label="닫기" className="absolute inset-0 bg-ink-900/30" onClick={() => setOpen(false)} />
           <aside className="absolute inset-y-0 left-0 flex w-[min(300px,85vw)] flex-col bg-white shadow-pop animate-rise">
-            <SidebarContent
-              projectId={projectId}
-              detail={detail.data}
-              onSearch={() => {
-                setOpen(false);
-                setSearch(true);
-              }}
-              onClose={() => setOpen(false)}
-            />
+            <SidebarContent projectId={projectId} detail={detail.data} onClose={() => setOpen(false)} />
           </aside>
         </div>
       )}
@@ -102,13 +78,6 @@ export function AppShell({ projectId, children }: { projectId: string; children:
           <Link href={`/p/${projectId}`} className="min-w-0 flex-1 truncate text-[15px] font-semibold">
             {detail.data.project.name}
           </Link>
-          <button
-            aria-label="검색"
-            onClick={() => setSearch(true)}
-            className="rounded-lg p-2 text-ink-700 hover:bg-ink-100"
-          >
-            <Search size={19} />
-          </button>
           <Link
             href={`/p/${projectId}/inbox`}
             aria-label="받은 편지함"
@@ -119,8 +88,6 @@ export function AppShell({ projectId, children }: { projectId: string; children:
         </header>
         <main className="min-h-0 flex-1 overflow-hidden">{children}</main>
       </div>
-
-      {search && <CommandSearch projectId={projectId} onClose={() => setSearch(false)} />}
     </div>
   );
 }
@@ -173,15 +140,26 @@ function NavItem({
   );
 }
 
+/** 접었다 펼 수 있는 사이드바 묶음. 기본은 펼침 */
+function NavGroup({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <details open className="group">
+      <summary className="mb-1 flex cursor-pointer list-none items-center gap-1 rounded-md px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-ink-500 hover:text-ink-700 [&::-webkit-details-marker]:hidden">
+        <ChevronDown size={12} className="-rotate-90 transition-transform group-open:rotate-0" aria-hidden />
+        {label}
+      </summary>
+      <div className="space-y-0.5">{children}</div>
+    </details>
+  );
+}
+
 function SidebarContent({
   projectId,
   detail,
-  onSearch,
   onClose,
 }: {
   projectId: string;
   detail: Schemas["ProjectDetail"];
-  onSearch: () => void;
   onClose?: () => void;
 }) {
   const onNavigate = onClose;
@@ -269,17 +247,6 @@ function SidebarContent({
         <ProjectStatusBadge status={project.status} />
       </div>
 
-      <div className="px-3 pb-2">
-        <button
-          onClick={onSearch}
-          className="flex h-9 w-full items-center gap-2 rounded-lg border border-ink-200 bg-white px-2.5 text-[13px] text-ink-500 hover:bg-ink-50"
-        >
-          <Search size={15} />
-          <span className="flex-1 text-left">검색</span>
-          <Kbd>⌘K</Kbd>
-        </button>
-      </div>
-
       <nav className="flex-1 space-y-4 overflow-y-auto px-3 pb-3">
         <div className="space-y-0.5">
           <NavItem
@@ -299,76 +266,65 @@ function SidebarContent({
           />
         </div>
 
-        <div>
-          <div className="mb-1 flex items-center justify-between px-2.5 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
-            <span>Rooms</span>
-            <Users size={12} />
-          </div>
-          <div className="space-y-0.5">
-            {/* Room 3(대표 + PM)만 실제 API(내장 PM)로 동작한다. 대표만 들어갈 수 있다 */}
-            {isRep && (
+        <NavGroup label="Rooms">
+          {/* Room 3(대표 + PM)만 실제 API(내장 PM)로 동작한다. 대표만 들어갈 수 있다 */}
+          {isRep && (
+            <NavItem
+              href={`${base}/rooms/owner`}
+              icon={<MessageSquare size={16} />}
+              label={ROOM_META.OWNER.name}
+              active={startsWith(`${base}/rooms/owner`)}
+              onNavigate={onNavigate}
+            />
+          )}
+          {/* 역할 룸: 팀원은 자기 역할 룸만, 대표는 전부 온다 */}
+          {rooms.map((room) => {
+            const href = `${base}/rooms/${ROLE_ROOM[room.role].slug}`;
+            return (
               <NavItem
-                href={`${base}/rooms/owner`}
+                key={room.role}
+                href={href}
                 icon={<MessageSquare size={16} />}
-                label={ROOM_META.OWNER.name}
-                active={startsWith(`${base}/rooms/owner`)}
+                label={ROOM_META[ROLE_ROOM[room.role].type].name}
+                active={startsWith(href)}
                 onNavigate={onNavigate}
+                badge={myQuestions.filter((q) => q.question.targetRole === room.role).length}
+                trailing={room.agent && <StatusDot status={room.agent.online ? "online" : "offline"} />}
               />
-            )}
-            {/* 역할 룸: 팀원은 자기 역할 룸만, 대표는 전부 온다 */}
-            {rooms.map((room) => {
-              const href = `${base}/rooms/${ROLE_ROOM[room.role].slug}`;
-              return (
-                <NavItem
-                  key={room.role}
-                  href={href}
-                  icon={<MessageSquare size={16} />}
-                  label={ROOM_META[ROLE_ROOM[room.role].type].name}
-                  active={startsWith(href)}
-                  onNavigate={onNavigate}
-                  badge={myQuestions.filter((q) => q.question.targetRole === room.role).length}
-                  trailing={room.agent && <StatusDot status={room.agent.online ? "online" : "offline"} />}
-                />
-              );
-            })}
-          </div>
-        </div>
+            );
+          })}
+        </NavGroup>
 
-        <div>
-          <div className="mb-1 flex items-center gap-1.5 px-2.5 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
-            문서 (MCP) <MockBadge />
-          </div>
-          <div className="space-y-0.5">
-            <NavItem
-              href={`${base}/docs/constitution`}
-              icon={<BookOpen size={16} />}
-              label="헌법"
-              active={is(`${base}/docs/constitution`)}
-              onNavigate={onNavigate}
-            />
-            <NavItem
-              href={`${base}/docs/spec`}
-              icon={<FileText size={16} />}
-              label="명세"
-              active={is(`${base}/docs/spec`)}
-              onNavigate={onNavigate}
-            />
-            <NavItem
-              href={`${base}/docs/contract`}
-              icon={<FileText size={16} />}
-              label="API 계약"
-              active={is(`${base}/docs/contract`)}
-              onNavigate={onNavigate}
-            />
-            <NavItem
-              href={`${base}/docs/adr`}
-              icon={<FileText size={16} />}
-              label="결정기록"
-              active={is(`${base}/docs/adr`)}
-              onNavigate={onNavigate}
-            />
-          </div>
-        </div>
+        <NavGroup label="문서 (MCP)">
+          <NavItem
+            href={`${base}/docs/constitution`}
+            icon={<BookOpen size={16} />}
+            label="헌법"
+            active={is(`${base}/docs/constitution`)}
+            onNavigate={onNavigate}
+          />
+          <NavItem
+            href={`${base}/docs/spec`}
+            icon={<FileText size={16} />}
+            label="명세"
+            active={is(`${base}/docs/spec`)}
+            onNavigate={onNavigate}
+          />
+          <NavItem
+            href={`${base}/docs/contract`}
+            icon={<FileText size={16} />}
+            label="API 계약"
+            active={is(`${base}/docs/contract`)}
+            onNavigate={onNavigate}
+          />
+          <NavItem
+            href={`${base}/docs/adr`}
+            icon={<FileText size={16} />}
+            label="결정기록"
+            active={is(`${base}/docs/adr`)}
+            onNavigate={onNavigate}
+          />
+        </NavGroup>
 
         <div className="space-y-0.5">
           <NavItem
@@ -385,7 +341,6 @@ function SidebarContent({
             active={is(`${base}/settings`)}
             onNavigate={onNavigate}
           />
-          <NavItem href="/org" icon={<Building2 size={16} />} label="조직" active={false} onNavigate={onNavigate} />
         </div>
       </nav>
 
