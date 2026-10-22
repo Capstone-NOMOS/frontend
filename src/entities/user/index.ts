@@ -5,3 +5,4 @@ export { userKeys, useLogin, useLogout, useMe, useRotateConnectKey, useSignup } 
 export { displayName, useCurrentUser, type AuthStatus } from "./model/session";
 export { RotateConnectKey } from "./ui/RotateConnectKey";
 export { useGithubDeviceFlow, type GithubDeviceState } from "./model/githubDevice";
+export { GithubConnect } from "./ui/GithubConnect";

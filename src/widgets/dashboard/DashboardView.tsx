@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import {
   AlertTriangle,
   ArrowRight,
@@ -17,6 +17,7 @@ import type { TeamRole } from "@/shared/model";
 import { AgentMark, Badge, Button, EmptyState, MockBadge, SectionTitle } from "@/shared/ui";
 import { errorMessage } from "@/shared/api";
 import { cn, fmtDateTime, fmtKrw, fmtTokens, relTime } from "@/shared/lib/format";
+import { useQueryParam } from "@/shared/lib/useQueryParam";
 import { StatusDot, useOrgAgents } from "@/entities/agent";
 import { useProjectApprovals } from "@/entities/approval";
 import { EventRow, makeEventLookup, useProjectEvents } from "@/entities/event";
@@ -37,7 +38,9 @@ const ROLE_FILTERS: { value: TeamRole | undefined; label: string }[] = [
 export function DashboardView({ projectId }: { projectId: string }) {
   // AppShell이 불러온 뒤에만 그려진다
   const { project, members, repos } = useProject(projectId).data!;
-  const [teamRole, setTeamRole] = useState<TeamRole | undefined>();
+  // 뒤로가기(태스크 상세 → 대시보드)에도 칸반 필터가 남도록 주소에 둔다
+  const [roleParam, setRoleParam] = useQueryParam("role", ["FRONTEND", "BACKEND"] as TeamRole[]);
+  const teamRole = roleParam ?? undefined;
   const me = useCurrentUser().me;
   const isRep = me?.orgRole === "REPRESENTATIVE";
   // 접속 상태(online)를 보려고 조직 에이전트 목록을 폴링한다
@@ -300,7 +303,7 @@ export function DashboardView({ projectId }: { projectId: string }) {
                     {ROLE_FILTERS.map((f) => (
                       <button
                         key={f.label}
-                        onClick={() => setTeamRole(f.value)}
+                        onClick={() => setRoleParam(f.value ?? null)}
                         aria-pressed={teamRole === f.value}
                         className={cn(
                           "h-6 rounded-md px-2.5 text-[12px] font-medium",
@@ -324,7 +327,7 @@ export function DashboardView({ projectId }: { projectId: string }) {
               ) : taskList.length === 0 ? (
                 <EmptyState
                   title="아직 태스크가 없습니다"
-                  desc="대표가 Room 3에서 PM의 계획 초안을 승인하면 태스크가 생성됩니다."
+                  desc="대표가 대표 룸에서 PM의 계획 초안을 승인하면 태스크가 생성됩니다."
                   action={
                     isRep && (
                       <Button href={`/p/${projectId}/rooms/owner`} size="sm">

@@ -9,6 +9,7 @@ import { cn, fmtDateTime } from "@/shared/lib/format";
 import { errorMessage } from "@/shared/api";
 import { CLI_NPX, useOrgAgents } from "@/entities/agent";
 import { AccountMenu, RotateConnectKey, useCurrentUser } from "@/entities/user";
+import { GITHUB_STEP, StepLabel } from "./steps";
 
 // Executor는 오리진만 받는다 (/api는 스스로 붙인다)
 const API_ORIGIN = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "").replace(/\/api\/?$/, "");
@@ -60,7 +61,10 @@ const CLIS = [
   { id: "gemini", name: "Gemini CLI", supported: false, note: "v2" },
 ];
 
-/** joined: 초대 수락 직후. 이미 연결한 에이전트가 있으면 안내를 건너뛰고 프로젝트로 보낸다 */
+/**
+ * 가입 흐름 3단계: 에이전트 연결. 다음은 GitHub 연동(/connect/github)이다.
+ * joined: 초대 수락 직후. 이미 연결한 에이전트가 있으면 이 단계를 건너뛴다
+ */
 export function ConnectAgentView({ joined = false }: { joined?: boolean }) {
   const router = useRouter();
   // AuthGate 안에서만 그려지므로 me가 있다
@@ -68,11 +72,10 @@ export function ConnectAgentView({ joined = false }: { joined?: boolean }) {
   // 터미널에서 연결을 마치면 새로고침 없이 목록에 나타나게 한다
   const agents = useOrgAgents(me.orgId, { poll: true });
   const myAgents = agents.data?.agents.filter((a) => a.userId === me.userId) ?? [];
-  const nextHref = me.orgId ? "/projects" : "/onboarding";
   const skip = joined && myAgents.length > 0;
 
   useEffect(() => {
-    if (skip) router.replace("/projects");
+    if (skip) router.replace(GITHUB_STEP);
   }, [skip, router]);
 
   return (
@@ -81,12 +84,7 @@ export function ConnectAgentView({ joined = false }: { joined?: boolean }) {
         <Link href="/" aria-label="NOMOS 홈">
           <Logo />
         </Link>
-        <div className="flex items-center gap-4">
-          <Link href={nextHref} className="text-[13px] font-medium text-ink-600 hover:text-ink-900">
-            나중에 하기
-          </Link>
-          <AccountMenu />
-        </div>
+        <AccountMenu />
       </header>
       <main className="mx-auto max-w-[720px] px-4 pb-16 pt-4 sm:px-6">
         <div className="card p-6 sm:p-8 animate-rise">
@@ -95,6 +93,7 @@ export function ConnectAgentView({ joined = false }: { joined?: boolean }) {
               {me.orgName ?? "조직"}에 합류했습니다. 에이전트를 연결하세요.
             </p>
           )}
+          <StepLabel step={3} />
           <h1 className="text-[22px] font-semibold tracking-tight">에이전트 연결</h1>
           <p className="mt-1 text-[13.5px] text-ink-500">
             내 노트북의 코딩 에이전트를 NOMOS에 연결합니다. 프로젝트에 배정되기 전까지 에이전트는 어떤 태스크도 받지
@@ -193,7 +192,7 @@ export function ConnectAgentView({ joined = false }: { joined?: boolean }) {
             )}
           </section>
 
-          <Button size="lg" className="mt-6" onClick={() => router.push(nextHref)}>
+          <Button size="lg" className="mt-6" onClick={() => router.push(GITHUB_STEP)}>
             다음 <ArrowRight size={16} />
           </Button>
         </div>

@@ -3,6 +3,7 @@ export {
   useConnectRepos,
   useCreateGithubRepo,
   useCreatePath,
+  useDisconnectRepo,
   useGithubOrgs,
   useGithubRepos,
   usePaths,
@@ -20,3 +21,4 @@ export {
 } from "./model/paths";
 export { OwnershipBadge } from "./ui/OwnershipBadge";
 export { CreateGithubRepo } from "./ui/CreateGithubRepo";
+export { ConnectRepos } from "./ui/ConnectRepos";

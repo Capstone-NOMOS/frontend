@@ -54,7 +54,10 @@ export function RepoPathsView({ repoId }: { repoId: string }) {
 
       <main className="mx-auto max-w-[960px] space-y-4 px-4 pb-16 pt-4 sm:px-6">
         <div>
-          <Link href="/org" className="inline-flex items-center gap-1 text-[13px] text-ink-500 hover:text-ink-900">
+          <Link
+            href="/settings/org"
+            className="inline-flex items-center gap-1 text-[13px] text-ink-500 hover:text-ink-900"
+          >
             <ArrowLeft size={14} /> 조직
           </Link>
           <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -75,7 +78,7 @@ export function RepoPathsView({ repoId }: { repoId: string }) {
             <p className="text-[13px] text-ink-700">{errorMessage(paths.error)}</p>
             {/* 403(다른 조직)·404는 다시 시도해도 같다 */}
             {paths.error instanceof ApiError && (paths.error.status === 403 || paths.error.status === 404) ? (
-              <Button href="/org" variant="outline" size="sm" className="mt-3">
+              <Button href="/settings/org" variant="outline" size="sm" className="mt-3">
                 조직으로
               </Button>
             ) : (

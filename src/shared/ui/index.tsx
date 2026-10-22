@@ -12,6 +12,7 @@ import {
 import { cn } from "@/shared/lib/format";
 
 export { Markdown } from "./Markdown";
+export { ConfirmButton, RemovalError, RevocationNotice } from "./RemovalFeedback";
 
 // ---------- Button ----------
 type Variant = "primary" | "secondary" | "ghost" | "danger" | "outline";
@@ -257,6 +258,27 @@ export function SectionTitle({ children, action }: { children: ReactNode; action
       <h3 className="text-[13px] font-semibold uppercase tracking-wide text-ink-500">{children}</h3>
       {action}
     </div>
+  );
+}
+
+/** 주소로 바뀌는 탭 줄. 뒤로가기로 이전 탭에 돌아올 수 있게 탭마다 링크다 */
+export function TabLinks({ tabs }: { tabs: { href: string; label: string; active: boolean }[] }) {
+  return (
+    <nav className="flex gap-1 border-b border-ink-200" aria-label="탭">
+      {tabs.map((t) => (
+        <Link
+          key={t.href}
+          href={t.href}
+          aria-current={t.active ? "page" : undefined}
+          className={cn(
+            "-mb-px border-b-2 px-3 py-2 text-[13.5px] font-medium transition-colors",
+            t.active ? "border-ink-900 text-ink-900" : "border-transparent text-ink-500 hover:text-ink-900",
+          )}
+        >
+          {t.label}
+        </Link>
+      ))}
+    </nav>
   );
 }
 

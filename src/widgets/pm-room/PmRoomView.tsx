@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowUp, Loader2, Lock } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { errorMessage } from "@/shared/api";
-import { AgentMark, Avatar, Badge, Button, CopyField, EmptyState } from "@/shared/ui";
+import { AgentMark, Badge, Button, CopyField, EmptyState } from "@/shared/ui";
 import { cn, fmtDateTime } from "@/shared/lib/format";
 import { CLI_NPX } from "@/entities/agent";
 import {
@@ -13,20 +13,23 @@ import {
   isSuperseded,
   usePlans,
   usePmStatus,
-  useRequestPlan,
+  useRequestFeatures,
   type PmStatus,
 } from "@/entities/plan";
 import { useProject } from "@/entities/project";
-import { ROOM_META } from "@/entities/room";
+import { contractKeys } from "@/entities/contract";
+import { ROOM_META, RoomParticipants } from "@/entities/room";
+import { specKeys } from "@/entities/spec";
 import { taskKeys } from "@/entities/task";
 import { displayName, useCurrentUser } from "@/entities/user";
 import { PlanCard } from "./PlanCard";
+import { TaskSplitStep } from "./TaskSplitStep";
 
 const MAX_INSTRUCTION = 8000;
 
 /**
- * Room 3 (대표 + PM). 명세 F-09·S-5: 대표가 요구사항을 쓰면 PM이 명세·태스크 초안을 내고, 승인 카드로 승인·수정 요청한다.
- * Room API가 아직 없어 대화는 PM 계획 이력(GET …/pm/plans)으로 그린다. PM API는 전부 대표 전용
+ * Room 3 (대표 + PM). 계획은 세 단계다: 요구사항 → 기능 명세 초안(확정) → BE 담당의 API 계약 확정 → 태스크 나누기(확정) → 시작.
+ * 대화는 PM 계획 이력(GET …/pm/plans, kind feature·tasks)으로 그린다. PM API는 전부 대표 전용
  */
 export function PmRoomView({ projectId }: { projectId: string }) {
   const me = useCurrentUser().me!;
@@ -36,8 +39,8 @@ export function PmRoomView({ projectId }: { projectId: string }) {
     return (
       <div className="flex h-full items-center justify-center p-6">
         <EmptyState
-          title="403 · 이 Room에 접근할 수 없습니다"
-          desc={`${ROOM_META.OWNER.name}는 ${ROOM_META.OWNER.who}의 공간입니다. FE·BE는 자기 Room만 볼 수 있습니다.`}
+          title="403 · 이 룸에 접근할 수 없습니다"
+          desc={`${ROOM_META.OWNER.name}는 ${ROOM_META.OWNER.who}의 공간입니다. FE·BE는 자기 룸만 볼 수 있습니다.`}
           action={
             <Button href={`/p/${projectId}`} variant="outline">
               대시보드로
@@ -55,7 +58,7 @@ function Room({ projectId, meName }: { projectId: string; meName: string }) {
   const project = useProject(projectId).data!.project;
   const status = usePmStatus(projectId);
   const plans = usePlans(projectId);
-  const request = useRequestPlan(projectId);
+  const request = useRequestFeatures(projectId);
   const [draft, setDraft] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -79,9 +82,14 @@ function Room({ projectId, meName }: { projectId: string; meName: string }) {
   return (
     <div className="flex h-full min-w-0 flex-col">
       <header className="flex h-14 shrink-0 items-center gap-3 border-b border-ink-200 px-4 sm:px-6">
-        <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1">
           <h1 className="truncate text-[15px] font-semibold">{ROOM_META.OWNER.name}</h1>
-          <div className="truncate text-[12px] text-ink-500">{ROOM_META.OWNER.who}</div>
+          <RoomParticipants
+            people={[
+              { kind: "agent", name: "PM", tone: "pm" },
+              { kind: "human", name: meName, note: "대표" },
+            ]}
+          />
         </div>
         {pending ? (
           <Badge tone="info">PM 작성 중</Badge>
@@ -90,10 +98,6 @@ function Room({ projectId, meName }: { projectId: string; meName: string }) {
         ) : (
           <Badge tone="pm">PM 대기 중</Badge>
         )}
-        <div className="hidden items-center -space-x-1.5 md:flex">
-          <Avatar name={meName} size={26} className="ring-2 ring-white" />
-          <AgentMark tone="pm" size={26} className="ring-2 ring-white" />
-        </div>
       </header>
 
       <StatusBar status={status.data} error={status.error} />
@@ -101,8 +105,9 @@ function Room({ projectId, meName }: { projectId: string; meName: string }) {
       <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto max-w-[860px] space-y-5 px-4 py-6 sm:px-6">
           <PmLine>
-            요구사항을 적어주시면 명세(API·화면 계약 + 수용 기준)와 태스크 배분 초안을 만들어 드립니다. 승인하면 명세와
-            태스크가 생기고, 멤버를 확인한 뒤 프로젝트를 시작하면 에이전트가 일을 받습니다.
+            만들 기능을 적어주시면 기능 명세 초안(무엇을 하고 무엇이 보이는지 + 수용 기준)을 만들어 드립니다. 확정하면
+            서버 API가 필요한 기능은 백엔드 담당이 API 계약을 확인하고, 그다음 태스크를 나눕니다. 태스크를 확정하고
+            프로젝트를 시작하면 에이전트가 일을 받습니다.
           </PmLine>
 
           {plans.isPending ? (
@@ -121,7 +126,7 @@ function Room({ projectId, meName }: { projectId: string; meName: string }) {
                       {plan.feedback}
                     </>
                   ) : (
-                    plan.instruction
+                    (plan.instruction ?? (plan.kind === "tasks" ? "태스크 나누기" : ""))
                   )}
                 </MeLine>
                 <PlanCard
@@ -130,11 +135,17 @@ function Room({ projectId, meName }: { projectId: string; meName: string }) {
                   plans={list}
                   started={project.startedAt !== null}
                   onRetry={(text) => setDraft(text)}
-                  onApplied={() => queryClient.invalidateQueries({ queryKey: taskKeys.all })}
+                  // 기능 명세 확정은 명세·계약을, 태스크 확정은 태스크를 만든다. 다른 엔티티의 키라 위젯에서 무효화
+                  onApplied={() =>
+                    [taskKeys.all, specKeys.all, contractKeys.all].forEach(
+                      (queryKey) => void queryClient.invalidateQueries({ queryKey }),
+                    )
+                  }
                 />
               </div>
             ))
           )}
+          {plans.isSuccess && <TaskSplitStep projectId={projectId} blocked={blocked} />}
         </div>
       </div>
 
@@ -157,7 +168,7 @@ function Room({ projectId, meName }: { projectId: string; meName: string }) {
               placeholder={
                 pending || s?.pendingPlanId
                   ? "PM이 계획을 작성하고 있습니다"
-                  : "요구사항을 적어주세요. PM이 명세와 태스크로 정리합니다"
+                  : "만들 기능을 적어주세요. PM이 기능 명세로 정리합니다"
               }
               aria-label="PM에게 보낼 요구사항"
               className="block max-h-[180px] w-full resize-none bg-transparent px-4 pt-3 text-[14.5px] leading-6 text-ink-900 outline-none placeholder:text-ink-400 disabled:opacity-60"
@@ -170,7 +181,7 @@ function Room({ projectId, meName }: { projectId: string; meName: string }) {
                 type="button"
                 onClick={send}
                 disabled={!draft.trim() || blocked}
-                aria-label="계획 받기"
+                aria-label="기능 명세 받기"
                 className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-ink-900 text-white transition hover:bg-ink-700 disabled:bg-ink-200"
               >
                 {request.isPending ? <Loader2 size={15} className="animate-spin" /> : <ArrowUp size={16} />}

@@ -1291,6 +1291,97 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/orgs/{orgId}/members/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * 조직에서 멤버 내보내기 · 본인 탈퇴
+         * @description 대표가 다른 멤버를 내보내거나, `userId`가 나 자신이면 탈퇴다(021). **계정은 남고 조직만 빠진다** — 다른 조직의 초대를 받을 수 있고, 지난 기록(이벤트·노트·제출)은 그대로 남는다.
+         *     그 사람의 에이전트는 맡은 진행 중 프로젝트에서 빠지고 연결이 해제된다. 진행 중 태스크를 붙잡고 있으면 409 `ACTIVE_TASKS_HELD`.
+         *     대표는 나갈 수도 내보낼 수도 없다(409 `REPRESENTATIVE_CANNOT_LEAVE`). 대표가 아닌 사람이 남을 내보내면 403 `NOT_REPRESENTATIVE`.
+         *     빠진 사람의 화면 스트림(`/api/stream`)은 4403 `NOT_IN_ORG`로 끊긴다.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @example {{ORG_ID}} */
+                    orgId: components["parameters"]["OrgId"];
+                    userId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 빠짐. 함께 해제된 에이전트와 빠진 프로젝트 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** Format: uuid */
+                                userId: string;
+                                /** @description 연결 해제된 에이전트 */
+                                agentIds: string[];
+                                /** @description 배정이 풀린 프로젝트 */
+                                unassignedFrom: string[];
+                                /** @description 조직의 GitHub 레포 전부에서 접근 회수 결과 */
+                                githubRevocations: components["schemas"]["GithubRevokeResult"][];
+                            };
+                        };
+                    };
+                };
+                /** @description 이 조직의 멤버가 아님 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "ORG_MEMBER_NOT_FOUND",
+                         *         "message": "user is not a member of this organization"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+                /** @description 대표 · 진행 중 태스크를 붙잡고 있음 */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "REPRESENTATIVE_CANNOT_LEAVE",
+                         *         "message": "the representative cannot leave or be removed from the organization"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/orgs/{orgId}/agents": {
         parameters: {
             query?: never;
@@ -1568,7 +1659,57 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * 레포 연결 해제 (대표 전용)
+         * @description 조직에서 레포 연결을 끊는다(021). 진행 중(planning·active·halted) 프로젝트가 쓰고 있으면 409 `REPO_IN_ACTIVE_PROJECT`(details에 프로젝트).
+         *     GitHub의 레포는 그대로다. 행과 경로 규칙은 지우지 않는다(끝난 프로젝트의 태스크·검증이 가리킨다) — 같은 레포를 다시 연결하면 경로 규칙·소유권과 함께 되살아난다.
+         *     해제된 레포는 목록·프로젝트 생성·경로 API에서 없는 것(404 `REPO_NOT_FOUND`)으로 본다.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    repoId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 해제됨 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** Format: uuid */
+                                repoId: string;
+                                fullName: string;
+                            };
+                        };
+                    };
+                };
+                /** @description 진행 중 프로젝트가 사용 중 */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "REPO_IN_ACTIVE_PROJECT",
+                         *         "message": "acme/app is used by an active project; finish or abort it first"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+            };
+        };
         options?: never;
         head?: never;
         /**
@@ -1977,7 +2118,37 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * 보낸 초대 목록 (대표 전용)
+         * @description 아직 쓰이지도 취소되지도 않은 초대. 만료된 것도 expired=true로 함께 나온다(화면이 만료 표시·취소). 링크를 다시 복사할 때도 쓴다.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @example {{ORG_ID}} */
+                    orgId: components["parameters"]["OrgId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 초대 목록(최신순) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                invites: components["schemas"]["PendingInvite"][];
+                            };
+                        };
+                    };
+                };
+            };
+        };
         put?: never;
         /**
          * 초대 링크 발급 (대표 전용)
@@ -2018,6 +2189,7 @@ export interface paths {
                         /**
                          * @example {
                          *       "data": {
+                         *         "inviteId": "4b0c7c2e-9a3f-4d1e-8c55-1f2a3b4c5d6e",
                          *         "token": "{{INVITE_TOKEN}}",
                          *         "url": "http://localhost:3001/invites/{{INVITE_TOKEN}}",
                          *         "expiresAt": "2026-09-25T00:00:00.000Z",
@@ -2050,6 +2222,72 @@ export interface paths {
             };
         };
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/orgs/{orgId}/invites/{inviteId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * 초대 취소 (대표 전용)
+         * @description 취소한 링크로는 가입할 수 없다(수락 410 `INVITE_REVOKED`, 미리보기 `reason: revoked`). 이미 쓰인 초대는 취소할 수 없다(404) —
+         *     들어온 사람을 빼려면 멤버 내보내기(`DELETE /orgs/{orgId}/members/{userId}`)를 쓴다.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @example {{ORG_ID}} */
+                    orgId: components["parameters"]["OrgId"];
+                    inviteId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 취소됨 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** Format: uuid */
+                                inviteId: string;
+                            };
+                        };
+                    };
+                };
+                /** @description 대기 중인 초대가 아님(없음·이미 쓰임·이미 취소·다른 조직) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "INVITE_NOT_FOUND",
+                         *         "message": "no pending invite"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+            };
+        };
         options?: never;
         head?: never;
         patch?: never;
@@ -4468,7 +4706,7 @@ export interface paths {
          *     응답의 `notice`에도 같은 안내가 들어 있다.
          *
          *     프로젝트당 역할은 **하나씩만** 배정된다(`uq_project_members_role`). 실험 통제를 위해서다.
-         *     **G1(`started_at`) 이후에는 멤버를 바꿀 수 없다** — 도중에 바뀌면 통제가 흔들린다.
+         *     시작(G1) 뒤에도 배정할 수 있다(021) — 빠진 역할을 채울 때 쓴다. 끝난 프로젝트(completed·aborted)는 409 `PROJECT_NOT_OPEN`. 연결 해제된 에이전트는 배정할 수 없다(403 `AGENT_NOT_IN_ORG`).
          *
          *     **GitHub 협업자 자동 초대**: 배정과 함께 그 에이전트 주인을 프로젝트의 GitHub 레포(`githubRepoId`가 있는 것)마다
          *     push 권한 협업자로 초대한다(대표의 GitHub 토큰). 결과는 `githubInvites`(레포마다 한 줄). 초대가 실패해도 배정은 유효하다 —
@@ -4539,7 +4777,7 @@ export interface paths {
                         };
                     };
                 };
-                /** @description 대표가 아님 · 다른 조직의 에이전트 · G1 이후 */
+                /** @description 대표가 아님 · 다른 조직(또는 연결 해제된) 에이전트 */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -4662,6 +4900,85 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{projectId}/abort": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 프로젝트 중단 (대표 전용)
+         * @description 진행 중(planning·active·halted)인 프로젝트를 중단한다(021). **지우지 않고 `aborted`로 닫는다** — 이벤트·태스크·노트가 가리킨다.
+         *     - 에이전트가 풀린다(다른 프로젝트에 배정 가능). 실행 중인 CLI는 배정이 풀린 것을 보고 다시 배정을 기다린다.
+         *     - 레포를 다른 프로젝트에 쓸 수 있게 된다. 대기 질문은 만료로 닫히고, 대기 승인 카드는 대기열에서 빠지며 결정할 수 없다(409 `PROJECT_NOT_OPEN`).
+         *     - 룸에 "프로젝트가 중단되었습니다"가 모든 역할에 나온다. GitHub 협업자 권한은 회수하지 않는다(레포와 코드는 팀의 것).
+         *     이미 끝난 프로젝트(completed·aborted)는 409 `PROJECT_NOT_OPEN`.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @example {{PROJECT_ID}} */
+                    projectId: components["parameters"]["ProjectId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    /**
+                     * @example {
+                     *       "reason": "범위가 바뀌어 다시 계획한다"
+                     *     }
+                     */
+                    "application/json": {
+                        /** @description 룸·기록에 남는 사유(선택) */
+                        reason?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description 중단됨 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                project: components["schemas"]["Project"];
+                            };
+                        };
+                    };
+                };
+                /** @description 이미 끝난 프로젝트 */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "PROJECT_NOT_OPEN",
+                         *         "message": "project is completed; only an ongoing project can be aborted"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{projectId}/members/{agentId}": {
         parameters: {
             query?: never;
@@ -4675,7 +4992,8 @@ export interface paths {
         /**
          * 배정 해제 (대표 전용)
          * @description **역할 교체는 해제 후 재배정으로 한다.** UPDATE 경로를 두면 한 역할에 둘이 잠깐 겹칠 수 있다.
-         *     G1(`started_at`) 이후에는 해제도 막힌다.
+         *     시작(G1) 뒤에도 된다(021) — 단 그 에이전트가 진행 중 태스크(CLAIMED·IN_PROGRESS·VERIFYING)를 붙잡고 있으면 409 `ACTIVE_TASKS_HELD`(details에 태스크 목록).
+         *     빠진 역할의 태스크는 새 사람을 배정할 때까지 READY로 기다린다. 끝난 프로젝트(completed·aborted)는 409 `PROJECT_NOT_OPEN`.
          */
         delete: {
             parameters: {
@@ -4691,7 +5009,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description 해제됨. 남은 멤버 목록을 준다. */
+                /** @description 해제됨. 남은 멤버 목록과, 빠진 사람의 GitHub 레포 접근 회수 결과 */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -4700,18 +5018,21 @@ export interface paths {
                         /**
                          * @example {
                          *       "data": {
-                         *         "members": []
+                         *         "members": [],
+                         *         "githubRevocations": []
                          *       }
                          *     }
                          */
                         "application/json": {
                             data: {
                                 members: components["schemas"]["ProjectMember"][];
+                                /** @description 빠진 사람의 GitHub 레포 접근 회수 결과(대표 토큰). 대표 본인·GitHub 레포가 없으면 빈 배열 */
+                                githubRevocations: components["schemas"]["GithubRevokeResult"][];
                             };
                         };
                     };
                 };
-                /** @description 대표가 아니거나 G1 이후 */
+                /** @description 대표가 아님 */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -4720,8 +5041,8 @@ export interface paths {
                         /**
                          * @example {
                          *       "error": {
-                         *         "code": "PROJECT_STARTED",
-                         *         "message": "project has started; members are frozen"
+                         *         "code": "NOT_REPRESENTATIVE",
+                         *         "message": "this action requires the organization representative"
                          *       }
                          *     }
                          */
@@ -4739,6 +5060,116 @@ export interface paths {
                          *       "error": {
                          *         "code": "MEMBER_NOT_FOUND",
                          *         "message": "agent is not a member of this project"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+                /** @description 진행 중 태스크를 붙잡고 있음 · 끝난 프로젝트 */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "ACTIVE_TASKS_HELD",
+                         *         "message": "agent still holds 1 task(s) in progress; finish or stop them first"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * 에이전트 연결 해제
+         * @description 노트북 CLI 연결을 끊는다(021) — 그 에이전트의 주인이나 같은 조직의 대표가 한다(아니면 403 `NOT_AGENT_OWNER`).
+         *     맡은 진행 중 프로젝트에서 빠지고(진행 중 태스크가 있으면 409 `ACTIVE_TASKS_HELD`), refresh token이 폐기되며, 남은 access token도 401 `AGENT_DISCONNECTED`로 거부된다.
+         *     실행 중인 CLI의 태스크 스트림도 끊긴다. 목록(`GET /orgs/{orgId}/agents`)에서 빠진다.
+         *     같은 노트북에서 같은 이름으로 다시 `connect`하면 그 에이전트가 되살아난다.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @example {{AGENT_BE}} */
+                    agentId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 해제됨 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** Format: uuid */
+                                agentId: string;
+                                /** Format: date-time */
+                                disconnectedAt: string;
+                                /**
+                                 * Format: uuid
+                                 * @description 배정이 풀린 프로젝트(없으면 null)
+                                 */
+                                unassignedFrom: string | null;
+                                /** @description 빠진 사람의 GitHub 레포 접근 회수 결과(대표 토큰). 대표 본인·GitHub 레포가 없으면 빈 배열 */
+                                githubRevocations: components["schemas"]["GithubRevokeResult"][];
+                            };
+                        };
+                    };
+                };
+                /** @description 주인도 대표도 아님 */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "NOT_AGENT_OWNER",
+                         *         "message": "only the agent owner or the representative can disconnect it"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+                /** @description 없거나 이미 해제된 에이전트 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "AGENT_NOT_FOUND",
+                         *         "message": "agent not found"
                          *       }
                          *     }
                          */
@@ -4804,6 +5235,372 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{projectId}/contracts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 프로젝트의 API 계약
+         * @description 새 계획 흐름 2단계(023). 기능 명세를 확정하면 API가 필요한 기능마다 계약이 `pending`으로 생기고, BE 노트북의 에이전트가 BE 코드를 읽어 초안(`draft`)을 쓴다.
+         *     BE 담당이 확정(`approved`)하거나 수정 요청한다. 프로젝트를 볼 수 있는 사람 누구나 읽는다. 실시간 신호 토픽은 `contracts`.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @example {{PROJECT_ID}} */
+                    projectId: components["parameters"]["ProjectId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 기능 키 순 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                contracts: components["schemas"]["Contract"][];
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contracts/{contractId}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 계약 확정 (BE 담당, 없으면 대표)
+         * @description 초안(`draft`)만 확정된다(아니면 409 `CONTRACT_NOT_DRAFT`). 확정한 계약은 잠기고 FE·BE 태스크 브리핑에 들어간다.
+         *     확정할 수 있는 사람은 이 프로젝트의 BACKEND 담당(에이전트 주인)이다. BACKEND 담당이 없을 때만 대표가 대신한다(아니면 403 `NOT_CONTRACT_APPROVER`).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    contractId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 확정됨 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["Contract"];
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contracts/{contractId}/revise": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 계약 수정 요청 (BE 담당, 없으면 대표)
+         * @description 초안(`draft`)이나 실패(`failed`)를 다음 회차로 다시 쓰게 한다 — `pending`이 되고 BE 노트북이 다시 쓴다(직전 초안과 피드백을 받는다).
+         *     한 계약에 수정 요청은 3회까지(409 `CONTRACT_REVISION_LIMIT`, details `{ limit, used }`).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    contractId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    /**
+                     * @example {
+                     *       "feedback": "가입일은 memberSince로, 페이지네이션 없이"
+                     *     }
+                     */
+                    "application/json": {
+                        /** @description 무엇을 고칠지(실패를 그대로 다시 시킬 때는 생략) */
+                        feedback?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description 다시 작성 대기 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["Contract"];
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/me/contract-jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * BE 노트북이 쓸 계약 작업 (에이전트)
+         * @description 작성 대기(`pending`) 계약과 그 기능 명세, 앞서 확정한 계약(경로·형식을 맞추게), 읽을 레포(BACKEND 소유). BACKEND 역할이 아니면 빈 목록.
+         *     Executor는 웹소켓 `{ type: 'contracts', targetRole }` 신호나 1분 안전망으로 이걸 읽는다.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 작업 목록 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                contracts: components["schemas"]["ContractJob"][];
+                                approved: {
+                                    featureKey: string;
+                                    title: string;
+                                    schemaYaml: string;
+                                }[];
+                                repos: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    fullName: string;
+                                    cloneUrl: string | null;
+                                    defaultBranch: string;
+                                }[];
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contracts/{contractId}/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 계약 초안 제출 (BE 에이전트)
+         * @description 서버가 OpenAPI 조각 형식을 검사한다(경로는 '/'로 시작, 경로마다 메서드, 메서드마다 응답 상태 코드). 틀리면 422 `CONTRACT_INVALID` + 위반 목록 —
+         *     Executor가 위반을 붙여 한 번 다시 쓴다. `attempt`가 지금 회차가 아니면 409 `CONTRACT_STALE`. BACKEND 에이전트만(403 `NOT_CONTRACT_WRITER`).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    contractId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        attempt: number;
+                        /** @description OpenAPI 조각(paths·components) YAML */
+                        openapiYaml: string;
+                        summary: string;
+                        openQuestions?: string[];
+                    };
+                };
+            };
+            responses: {
+                /** @description 초안으로 저장됨(BE 담당 확인 대기) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["Contract"];
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contracts/{contractId}/failure": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 계약 초안을 못 냈다 (BE 에이전트)
+         * @description 형식을 두 번 다 못 맞췄거나 실행이 실패했다. `failed`가 되고, BE 담당이 수정 요청으로 다시 시킬 수 있다.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    contractId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        attempt: number;
+                        reason: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 실패로 기록됨 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["Contract"];
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{projectId}/pm/features": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 기능 명세 초안 요청 (대표 전용, 새 계획 흐름 1단계)
+         * @description 대표의 자연어 요구로 PM이 **기능 명세** 초안을 만든다(022). 대표가 읽고 판단할 수 있게 화면·동작·수용 기준을 개발 용어 없이 쓰고,
+         *     기능마다 API가 필요한지와 어떤 데이터가 오가야 하는지(사람 말로)를 적는다. API 계약은 쓰지 않는다 — 백엔드 담당이 정한다(2단계).
+         *     응답·폴링·수정 요청(`.../pm/plans/{planId}/revise`)·반려·확정(`.../apply`)은 계획과 같다. 확정하면 명세가 만들어지고 태스크는 만들어지지 않는다.
+         *     진행 중 요청 하나(409 `PM_PLAN_IN_PROGRESS`), 예산(409 `PM_BUDGET_EXCEEDED`), PM 키 없음(503 `PM_UNAVAILABLE`)도 같다.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @example {{PROJECT_ID}} */
+                    projectId: components["parameters"]["ProjectId"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    /**
+                     * @example {
+                     *       "instruction": "스터디 상세 화면에서 멤버 목록을 보고 싶다. 멤버마다 닉네임과 가입한 날짜가 보이면 좋겠다."
+                     *     }
+                     */
+                    "application/json": {
+                        /** @description 대표의 요구(자연어) */
+                        instruction: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 요청됨 — 상태는 pending. GET .../pm/plans/{planId}로 폴링한다 */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["PmPlan"];
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{projectId}/pm/plans": {
         parameters: {
             query?: never;
@@ -4848,10 +5645,14 @@ export interface paths {
         };
         put?: never;
         /**
-         * 계획 초안 요청 (대표 전용)
-         * @description 대표의 지시로 PM(NOMOS 내장)이 명세(API·화면 계약 + 수용 기준)와 태스크 DAG(어느 레포·어느 역할이 무엇을 어떤 순서로) 초안을 만든다.
+         * 태스크 나누기 (대표 전용)
+         * @description 새 계획 흐름 3단계. **확정한 기능 명세와 확정한 API 계약**을 PM(NOMOS 내장)이 태스크 DAG(어느 레포·어느 역할이 무엇을 어떤 순서로)로 나눈다.
+         *     PM은 명세·계약을 만들지 않는다 — 태스크의 `spec`은 확정한 기능 명세의 featureKey이고, 태스크에는 그 명세의 확정한 계약이 붙는다(브리핑 `contract`).
+         *     `instruction`은 선택(버튼만 눌러도 된다). 초안의 `specs`는 항상 빈 배열이다(옛 초안 호환용 필드).
          *     **202로 바로 답하고 PM은 뒤에서 돈다**(수십 초~수 분). `GET .../pm/plans/{planId}`를 몇 초 간격으로 폴링해 `ready`·`failed`를 본다.
          *
+         *     - 확정한 기능 명세가 없으면 409 `NO_FEATURE_SPECS`(먼저 `POST .../pm/features` → 확정)
+         *     - API가 필요한 기능의 계약이 확정되지 않았으면 409 `CONTRACTS_NOT_APPROVED`, details `{ featureKeys }` (BE 담당이 `POST /contracts/{id}/approve`)
          *     - 프로젝트당 진행 중인 요청은 하나(409 `PM_PLAN_IN_PROGRESS`)
          *     - 호출 전에 "누적 PM 비용 + 이번 호출의 최대치 > PM 예산"이면 409 `PM_BUDGET_EXCEEDED` —
          *       설계상 예산 초과는 대표 승인 카드가 떠야 하지만 **승인 경로 미구현**이라 거절만 한다
@@ -4868,15 +5669,16 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody: {
+            requestBody?: {
                 content: {
                     /**
                      * @example {
-                     *       "instruction": "3주 안에 사내 스터디 관리 웹앱. 회원가입, 스터디 개설, 참여신청, 출석체크. 모바일 대응 필수."
+                     *       "instruction": "백엔드 API를 먼저 끝내고 화면은 병행해 주세요"
                      *     }
                      */
                     "application/json": {
-                        instruction: string;
+                        /** @description 나눌 때 덧붙일 지시(선택) */
+                        instruction?: string;
                     };
                 };
             };
@@ -6351,8 +7153,8 @@ export interface paths {
         put?: never;
         /**
          * 실행 중 도구 사용 보고 (Executor)
-         * @description Executor가 Claude 출력에서 도구 사용을 뽑아 2초마다 묶어 보낸다(최대 50줄). **도구 종류와 대상(작업공간 기준 경로·명령 첫 줄, 300자)만** 받는다 —
-         *     파일 내용·명령 결과·모델 설명은 받지 않는다(설명은 인계 노트의 몫). 열린 실행에만 붙는다(409 `RUN_NOT_OPEN`).
+         * @description Executor가 Claude 출력에서 도구 사용과 에이전트의 말을 뽑아 2초마다 묶어 보낸다(최대 50줄). 받는 것: 도구 종류·대상(작업공간 기준 경로·명령 첫 줄, 300자)·
+         *     성공 여부·수정 줄 수, 에이전트의 말(`say`, 500자 — 020). **파일 내용·diff·명령 출력은 받지 않는다.** 열린 실행에만 붙는다(409 `RUN_NOT_OPEN`).
          *     이벤트가 아니라 `agent_activity`에 쌓이고, 화면 스트림에는 `room` 토픽으로 알린다.
          */
         post: {
@@ -6371,25 +7173,44 @@ export interface paths {
                      * @example {
                      *       "items": [
                      *         {
+                     *           "kind": "say",
+                     *           "target": "레포 구조를 먼저 살펴보겠습니다."
+                     *         },
+                     *         {
                      *           "kind": "read",
-                     *           "target": "src/routes/auth.ts"
+                     *           "target": "src/routes/auth.ts",
+                     *           "ok": true
                      *         },
                      *         {
                      *           "kind": "edit",
-                     *           "target": "src/routes/auth.ts"
+                     *           "target": "src/routes/auth.ts",
+                     *           "ok": true,
+                     *           "added": 12,
+                     *           "removed": 3
                      *         },
                      *         {
                      *           "kind": "run",
-                     *           "target": "npm test"
+                     *           "target": "npm test",
+                     *           "ok": false
                      *         }
                      *       ]
                      *     }
                      */
                     "application/json": {
                         items: {
-                            /** @enum {string} */
-                            kind: "read" | "edit" | "write" | "run" | "search" | "other";
+                            /**
+                             * @description say = 에이전트의 말(020)
+                             * @enum {string}
+                             */
+                            kind: "read" | "edit" | "write" | "run" | "search" | "other" | "say";
+                            /** @description 도구 대상(경로·명령 첫 줄) 300자, say면 그 말 500자 */
                             target: string;
+                            /** @description 도구 결과가 오류가 아니었는가. 결과를 못 받았으면 생략 */
+                            ok?: boolean | null;
+                            /** @description 수정·작성으로 더한 줄 수(내용은 보내지 않는다) */
+                            added?: number | null;
+                            /** @description 수정으로 뺀 줄 수 */
+                            removed?: number | null;
                         }[];
                     };
                 };
@@ -7105,10 +7926,10 @@ export interface components {
              */
             expiresAt: string | null;
             /**
-             * @description valid=false일 때만 있다
+             * @description valid=false일 때만 있다. revoked = 대표가 취소한 초대
              * @enum {string}
              */
-            reason?: "expired" | "used" | "not_found";
+            reason?: "expired" | "used" | "revoked" | "not_found";
         };
         SignupResult: {
             /** Format: uuid */
@@ -7226,6 +8047,21 @@ export interface components {
             /** @description V3가 커밋을 읽을 곳. 자동으로 채워진다 */
             cloneUrl: string;
         };
+        GithubRevokeResult: {
+            /** Format: uuid */
+            repoId: string;
+            fullName: string;
+            /**
+             * @description - removed: 협업자에서 뺐다
+             *     - invitation_cancelled: 아직 수락하지 않은 초대를 취소했다
+             *     - not_collaborator: 원래 협업자가 아니었다
+             *     - skipped: 멤버나 대표가 GitHub를 연결하지 않았다(reason) — GitHub에서 직접 정리
+             *     - failed: GitHub 호출 실패(reason). 해제 자체는 이미 끝났다
+             * @enum {string}
+             */
+            status: "removed" | "invitation_cancelled" | "not_collaborator" | "skipped" | "failed";
+            reason?: string;
+        };
         GithubInviteResult: {
             /** Format: uuid */
             repoId: string;
@@ -7252,13 +8088,31 @@ export interface components {
              * @enum {string}
              */
             speaker: "pm" | "nomos" | "agent";
-            /** @description 원본 이벤트 타입(TASK_DISPATCHED 등) 또는 ACTIVITY_READ·ACTIVITY_EDIT·ACTIVITY_WRITE·ACTIVITY_RUN·ACTIVITY_SEARCH·ACTIVITY_OTHER. 아이콘용 */
+            /** @description 원본 이벤트 타입(TASK_DISPATCHED 등) 또는 ACTIVITY_READ·ACTIVITY_EDIT·ACTIVITY_WRITE·ACTIVITY_RUN·ACTIVITY_SEARCH·ACTIVITY_OTHER·ACTIVITY_SAY(에이전트의 말). 아이콘용 */
             type: string;
             /** Format: uuid */
             taskId: string | null;
             taskTitle: string | null;
             /** @description 화면에 그대로 보여 줄 문장(서버가 만든다) */
             text: string;
+            /**
+             * Format: uuid
+             * @description 질문 줄(QUESTION_*·TASK_BLOCKED_ON_QUESTION)이면 그 질문의 id — GET /projects/{projectId}/questions의 같은 id로 질문 카드(선택지·답)를 그린다. 그 외 null
+             */
+            questionId: string | null;
+            /** @description 활동 줄(ACTIVITY_*)이면 원본 값 — Claude Code처럼 도구 블록으로 그릴 때 쓴다. 이벤트 줄이면 null */
+            activity: {
+                /** @enum {string} */
+                kind: "read" | "edit" | "write" | "run" | "search" | "other" | "say";
+                /** @description 도구 대상(작업공간 기준 경로·명령 첫 줄) 또는 에이전트의 말 */
+                target: string;
+                /** @description false면 도구가 실패했다(예: 시험 실패). 결과를 모르면 null */
+                ok: boolean | null;
+                /** @description 수정·작성으로 더한 줄 수 */
+                added: number | null;
+                /** @description 수정으로 뺀 줄 수 */
+                removed: number | null;
+            } | null;
         };
         RoomSummary: {
             /** @enum {string} */
@@ -7312,6 +8166,11 @@ export interface components {
             createdAt: string;
         };
         InviteCreated: {
+            /**
+             * Format: uuid
+             * @description 취소(DELETE /orgs/{orgId}/invites/{inviteId})할 때 쓴다
+             */
+            inviteId: string;
             token: string;
             /** @description {FRONTEND_BASE_URL}/invites/{token} */
             url: string;
@@ -7319,6 +8178,20 @@ export interface components {
             expiresAt: string;
             /** @enum {string|null} */
             teamRole: "FRONTEND" | "BACKEND" | null;
+        };
+        PendingInvite: {
+            /** Format: uuid */
+            inviteId: string;
+            /** @description {FRONTEND_BASE_URL}/invites/{token} — 다시 복사할 수 있다 */
+            url: string;
+            /** @enum {string|null} */
+            teamRole: "FRONTEND" | "BACKEND" | null;
+            /** Format: date-time */
+            expiresAt: string;
+            /** @description 만료됐으면 true(수락 불가). 취소는 된다 */
+            expired: boolean;
+            /** Format: date-time */
+            createdAt: string;
         };
         InviteAccepted: {
             /** Format: uuid */
@@ -7637,11 +8510,111 @@ export interface components {
                 accepted: true;
             };
         };
+        /** @description API 계약(023). BE 노트북의 에이전트가 BE 코드를 읽고 초안을 쓰고, BE 담당이 확정한다 */
+        Contract: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            projectId: string;
+            /** Format: uuid */
+            specId: string;
+            featureKey: string;
+            specTitle: string;
+            /**
+             * @description pending 작성 대기(BE 노트북이 쓴다) · draft BE 담당 확인 대기 · approved 확정(잠김) · failed 초안을 못 냄(수정 요청으로 다시)
+             * @enum {string}
+             */
+            status: "pending" | "draft" | "approved" | "failed";
+            /** @description 작성 회차 — 수정 요청마다 +1(최대 3회 수정) */
+            attempt: number;
+            /** @description 마지막 수정 요청 */
+            feedback: string | null;
+            /** @description OpenAPI 조각(paths·components) YAML */
+            schemaYaml: string | null;
+            /** @description 사람이 읽는 요약 */
+            summary: string | null;
+            /** @description 작성한 에이전트가 정하지 못한 것 */
+            openQuestions: string[];
+            /** Format: uuid */
+            draftedByAgentId: string | null;
+            /** Format: date-time */
+            draftedAt: string | null;
+            /** Format: uuid */
+            approvedBy: string | null;
+            /** Format: date-time */
+            approvedAt: string | null;
+            errorReason: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        ContractJob: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            projectId: string;
+            /** Format: uuid */
+            specId: string;
+            featureKey: string;
+            specTitle: string;
+            /** @enum {string} */
+            status: "pending";
+            attempt: number;
+            feedback: string | null;
+            schemaYaml: string | null;
+            summary: string | null;
+            openQuestions: string[];
+            /** Format: uuid */
+            draftedByAgentId: string | null;
+            /** Format: date-time */
+            draftedAt: string | null;
+            /** Format: uuid */
+            approvedBy: string | null;
+            /** Format: date-time */
+            approvedAt: string | null;
+            errorReason: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** @description 기능 명세 본문(기능 설명 + 수용 기준) */
+            specContent: string;
+            /** @description 오가야 하는 데이터(사람 말로) */
+            apiNeeds: string | null;
+            /** @description 수정 요청이면 직전 초안 */
+            previous: {
+                schemaYaml: string;
+                summary: string;
+            } | null;
+        };
+        /** @description PM의 기능 명세 초안(022). 대표가 읽고 판단할 수 있게 개발 용어 없이 쓴다. 계약(주소·필드)은 백엔드 담당이 따로 정한다 */
+        FeatureDraft: {
+            summary: string;
+            /** @description 요구가 모호해 가정한 것 — 대표가 확인한다 */
+            assumptions: string[];
+            features: {
+                featureKey: string;
+                title: string;
+                /** @description 누가 어떤 화면에서 무엇을 하고 무엇을 보는지 */
+                description: string;
+                /** @description 확인할 수 있는 수용 기준 */
+                acceptance: string[];
+                needsApi: boolean;
+                /** @description 오가야 하는 데이터(사람 말로) */
+                apiNeeds: string | null;
+            }[];
+        };
         PmPlan: {
             /** Format: uuid */
             id: string;
             /** Format: uuid */
             projectId: string;
+            /**
+             * @description feature = 기능 명세 초안(새 흐름 1단계, featureDraft) · tasks = 태스크 분할 초안(draft)
+             * @enum {string}
+             */
+            kind: "feature" | "tasks";
             /**
              * @description pending이면 PM이 작성 중 — 몇 초 뒤 다시 조회한다. ready에서 적용하면 applied, 반려하면 rejected
              * @enum {string}
@@ -7656,7 +8629,10 @@ export interface components {
              */
             parentPlanId: string | null;
             mode: string | null;
+            /** @description kind=tasks의 초안. feature면 null */
             draft: components["schemas"]["PlanDraft"];
+            /** @description kind=feature의 초안(022). tasks면 null */
+            featureDraft: components["schemas"]["FeatureDraft"];
             error: {
                 /**
                  * @description refused 안전 거절 · truncated 출력 한도 부족 · timeout 시간 제한 · invalid 교정 후에도 검증 실패 · restart 서버 재시작 · budget 예산 · api_error API 오류
@@ -7708,8 +8684,12 @@ export interface components {
             /** @description 프로젝트 안에서 유일(F-05 같은 기능 키) */
             featureKey: string;
             title: string;
-            /** @description EARS 문장 — WHEN … THEN … */
+            /** @description 기능 설명 + 수용 기준(022 이후 PM 명세는 개발 용어 없이). 예전 명세는 계약까지 들어 있다 */
             content: string;
+            /** @description 이 기능에 API가 필요한가(022) — 필요하면 계약 단계로 간다 */
+            needsApi: boolean;
+            /** @description 어떤 데이터가 오가야 하는가(사람 말로). needsApi면 있다 */
+            apiNeeds: string | null;
             version: number;
             /** Format: date-time */
             createdAt: string;
@@ -7743,6 +8723,15 @@ export interface components {
                 cloneUrl: string | null;
             };
             spec: components["schemas"]["TaskSpec"];
+            /** @description 이 태스크 명세의 확정한 API 계약(023). FE·BE 태스크가 같은 계약을 받는다. 계약이 없는 기능이면 null */
+            contract: {
+                /** Format: uuid */
+                id: string;
+                featureKey: string;
+                summary: string;
+                /** @description OpenAPI 조각(paths·components) YAML */
+                schemaYaml: string;
+            } | null;
             notes: components["schemas"]["Note"][];
             notesBlock: string;
             writablePaths: components["schemas"]["BriefingPath"][];

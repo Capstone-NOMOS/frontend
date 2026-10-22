@@ -6,14 +6,23 @@ import { BookOpen, FileText, History, Loader2, Lock, TerminalSquare } from "luci
 import { errorMessage, type Schemas } from "@/shared/api";
 import { Badge, EmptyState, Markdown, MockBadge } from "@/shared/ui";
 import { cn, fmtDateTime } from "@/shared/lib/format";
+import { ContractCard, useContracts } from "@/entities/contract";
 import type { DocType } from "@/entities/document";
+import { useProject as useProjectDetail } from "@/entities/project";
 import { useSpecs } from "@/entities/spec";
+import { useCurrentUser } from "@/entities/user";
 import { useProject } from "@/lib/store";
 
 const TYPES: { slug: string; type: DocType; label: string; who: string; icon: React.ReactNode }[] = [
   { slug: "constitution", type: "CONSTITUTION", label: "헌법", who: "쓰기: 대표만", icon: <BookOpen size={15} /> },
   { slug: "spec", type: "SPEC", label: "명세", who: "쓰기: PM (대표 승인 후)", icon: <FileText size={15} /> },
-  { slug: "contract", type: "CONTRACT", label: "계약", who: "쓰기: PM (대표 승인 후)", icon: <FileText size={15} /> },
+  {
+    slug: "contract",
+    type: "CONTRACT",
+    label: "API 계약",
+    who: "쓰기: BE 에이전트 · 확정: BE 담당",
+    icon: <FileText size={15} />,
+  },
   { slug: "adr", type: "ADR", label: "결정기록", who: "쓰기: 서버 자동 (추가만)", icon: <FileText size={15} /> },
 ];
 
@@ -27,10 +36,11 @@ const TOOLS = [
   ["report_blocker(task_id, reason)", "막힘 신고"],
 ];
 
-/** 명세는 API(`GET /projects/{id}/specs`), 헌법·계약·결정기록은 API가 없어 목업 스토어를 읽는다 */
+/** 명세·계약은 API(`GET /projects/{id}/specs`·`/contracts`), 헌법·결정기록은 API가 없어 목업 스토어를 읽는다 */
 export function DocsView({ projectId, slug }: { projectId: string; slug: string }) {
   const { docs } = useProject(projectId);
   const specs = useSpecs(projectId);
+  const contracts = useContracts(projectId);
   const current = TYPES.find((t) => t.slug === slug) ?? TYPES[1];
   const [sel, setSel] = useState<number | null>(null);
 
@@ -59,7 +69,13 @@ export function DocsView({ projectId, slug }: { projectId: string; slug: string 
                   <span className="flex-1">{t.label}</span>
                   {t.type === "SPEC"
                     ? specs.data && <span className="text-[11px] text-ink-400">{specs.data.length}개</span>
-                    : latest && <span className="text-[11px] text-ink-400">v{latest.version}</span>}
+                    : t.type === "CONTRACT"
+                      ? contracts.data && (
+                          <span className="text-[11px] text-ink-400">
+                            {contracts.data.filter((c) => c.status === "approved").length}/{contracts.data.length}
+                          </span>
+                        )
+                      : latest && <span className="text-[11px] text-ink-400">v{latest.version}</span>}
                 </Link>
               </li>
             );
@@ -85,6 +101,8 @@ export function DocsView({ projectId, slug }: { projectId: string; slug: string 
         <div className="mx-auto max-w-[820px] px-4 py-6 sm:px-8">
           {current.type === "SPEC" ? (
             <SpecDocs specs={specs} who={current.who} />
+          ) : current.type === "CONTRACT" ? (
+            <ContractDocs projectId={projectId} contracts={contracts} />
           ) : (
             <MockDoc projectId={projectId} current={current} sel={sel} onSelect={setSel} />
           )}
@@ -121,7 +139,7 @@ function SpecDocs({ specs, who }: { specs: ReturnType<typeof useSpecs>; who: str
     return (
       <EmptyState
         title="명세가 아직 없습니다"
-        desc="대표가 Room 3에서 PM의 계획 초안을 승인하면 명세와 태스크가 함께 생깁니다."
+        desc="대표가 대표 룸에서 PM의 계획 초안을 승인하면 명세와 태스크가 함께 생깁니다."
       />
     );
   }
@@ -159,6 +177,58 @@ function SpecDocs({ specs, who }: { specs: ReturnType<typeof useSpecs>; who: str
   );
 }
 
+/**
+ * 새 계획 흐름 2단계. 확정·수정 요청은 이 프로젝트의 BACKEND 담당(에이전트 주인)만, BE 담당이 없을 때만 대표가 한다.
+ * 버튼은 미리 가릴 뿐 판정은 서버(403 NOT_CONTRACT_APPROVER)
+ */
+function ContractDocs({ projectId, contracts }: { projectId: string; contracts: ReturnType<typeof useContracts> }) {
+  const me = useCurrentUser().me!;
+  const members = useProjectDetail(projectId).data?.members ?? [];
+  const be = members.find((m) => m.teamRole === "BACKEND");
+  const canDecide = be ? be.userId === me.userId : me.orgRole === "REPRESENTATIVE";
+
+  if (contracts.isPending) {
+    return (
+      <div className="flex justify-center py-10 text-ink-400" aria-busy="true">
+        <Loader2 size={20} className="animate-spin" aria-label="불러오는 중" />
+      </div>
+    );
+  }
+  if (contracts.isError) return <EmptyState title={errorMessage(contracts.error)} />;
+  if (contracts.data.length === 0) {
+    return (
+      <EmptyState
+        title="API 계약이 아직 없습니다"
+        desc="대표가 대표 룸에서 기능 명세를 확정하면, 서버 API가 필요한 기능마다 계약이 생기고 BE 에이전트가 초안을 씁니다."
+      />
+    );
+  }
+  const approved = contracts.data.filter((c) => c.status === "approved").length;
+
+  return (
+    <>
+      <div className="border-b border-ink-100 pb-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 className="text-[20px] font-semibold tracking-tight">API 계약</h1>
+          <Badge tone={approved === contracts.data.length ? "success" : "warn"}>
+            {approved}/{contracts.data.length} 확정
+          </Badge>
+        </div>
+        <p className="mt-1 text-[12.5px] text-ink-500">
+          {canDecide
+            ? "초안을 읽고 확정하거나 수정을 요청하세요. 모두 확정돼야 대표가 태스크를 나눌 수 있습니다."
+            : `${be ? "백엔드 담당" : "대표"}이 확정합니다. 모두 확정돼야 태스크를 나눌 수 있습니다.`}
+        </p>
+      </div>
+      <div className="mt-4 space-y-3">
+        {contracts.data.map((c) => (
+          <ContractCard key={c.id} projectId={projectId} contract={c} canDecide={canDecide} />
+        ))}
+      </div>
+    </>
+  );
+}
+
 function SpecSection({ spec: s }: { spec: Schemas["Spec"] }) {
   return (
     <section id={`spec-${s.featureKey}`} className="scroll-mt-4 py-6">
@@ -166,8 +236,14 @@ function SpecSection({ spec: s }: { spec: Schemas["Spec"] }) {
         <span className="font-mono text-[13px] font-semibold text-brand-600">{s.featureKey}</span>
         <h2 className="text-[16px] font-semibold">{s.title}</h2>
         <Badge>v{s.version}</Badge>
+        {s.needsApi && <Badge tone="info">API 필요</Badge>}
         <span className="text-[12px] text-ink-500">{fmtDateTime(s.createdAt)}</span>
       </div>
+      {s.needsApi && s.apiNeeds && (
+        <p className="mt-2 rounded-lg bg-review-bg px-3 py-2 text-[12.5px] text-ink-700">
+          <span className="font-medium text-review">오가야 하는 데이터</span> · {s.apiNeeds}
+        </p>
+      )}
       <div className="pt-3">
         <Markdown content={s.content} />
       </div>
@@ -237,7 +313,7 @@ function MockDoc({
         title={`${current.label} 문서가 아직 없습니다`}
         desc={
           current.type === "CONTRACT"
-            ? "대표가 Room 3에서 명세를 승인하면 v1이 저장됩니다."
+            ? "대표가 대표 룸에서 명세를 승인하면 v1이 저장됩니다."
             : "에이전트가 사람에게 질문하고 답을 받으면 자동으로 추가됩니다."
         }
       />

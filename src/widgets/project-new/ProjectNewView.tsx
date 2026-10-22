@@ -5,20 +5,23 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ArrowUp, Check, Loader2 } from "lucide-react";
 import { ApiError, errorMessage, type Schemas } from "@/shared/api";
-import { AgentMark, Badge, Button, Input, Logo } from "@/shared/ui";
-import { cn } from "@/shared/lib/format";
-import type { Level } from "@/shared/model";
+import { AgentMark, Badge, Button, CopyField, Input, Logo } from "@/shared/ui";
+import { cn, fmtDateTime } from "@/shared/lib/format";
+import type { Level, TeamRole } from "@/shared/model";
+import { useCreateInvite } from "@/entities/org";
 import { LEVELS, LevelGates } from "@/entities/policy";
 import { useCreateProject } from "@/entities/project";
-import { CreateGithubRepo, OwnershipBadge, useRepos } from "@/entities/repo";
+import { ConnectRepos, CreateGithubRepo, OwnershipBadge, useRepos } from "@/entities/repo";
+import { TEAM_ROLE_META, TeamRoleBadge } from "@/entities/task";
 import { useCurrentUser } from "@/entities/user";
 
-type Step = "name" | "repos" | "level" | "pmBudget" | "extras";
+type Step = "name" | "repos" | "invite" | "level" | "pmBudget" | "extras";
 type Line = { from: "nomos" | "me"; text: ReactNode };
 
 const STEPS: { key: Step; label: string }[] = [
   { key: "name", label: "이름" },
   { key: "repos", label: "레포" },
+  { key: "invite", label: "초대" },
   { key: "level", label: "레벨" },
   { key: "pmBudget", label: "PM 예산" },
   { key: "extras", label: "선택" },
@@ -27,6 +30,8 @@ const STEPS: { key: Step; label: string }[] = [
 const PROMPTS: Record<Step, string> = {
   name: "새 프로젝트를 만들어볼까요? 이름이 뭔가요?",
   repos: "이 프로젝트에서 쓸 레포를 골라주세요. 소유 역할(FE·BE)이 지정된 레포만 넣을 수 있습니다.",
+  invite:
+    "같이 일할 FE·BE 개발자에게 보낼 초대 링크를 만들 수 있습니다. 이미 조직에 있는 사람은 건너뛰세요. 링크는 나중에 설정 > 조직에서도 만들 수 있습니다.",
   level:
     "에이전트 허용 레벨을 정해주세요. 레벨은 자율성이 아니라 '행동마다 누가 승인하는가'를 정한 표입니다. 기본값은 L2입니다.",
   pmBudget: "PM 예산(USD)을 정해주세요. PM은 NOMOS 키로 돌기 때문에 상한이 꼭 필요합니다.",
@@ -152,9 +157,16 @@ export function ProjectNewView() {
               orgId={orgId}
               onDone={(repos) => {
                 setForm((f) => ({ ...f, repoIds: repos.map((r) => r.id) }));
-                answer(repos.map((r) => r.fullName).join(", "), returning ? "extras" : "level");
+                answer(repos.map((r) => r.fullName).join(", "), returning ? "extras" : "invite");
                 setReturning(false);
               }}
+            />
+          ) : step === "invite" ? (
+            <InviteStep
+              orgId={orgId}
+              onDone={(made) =>
+                answer(made.length > 0 ? `${made.join("·")} 초대 링크를 만들었어요` : "초대는 나중에 할게요", "level")
+              }
             />
           ) : step === "level" ? (
             <LevelPicker
@@ -240,24 +252,48 @@ const selectable = (r: Schemas["RepoListItem"]) => r.ownershipAssigned && r.acti
 function RepoPicker({ orgId, onDone }: { orgId: string; onDone: (repos: { id: string; fullName: string }[]) => void }) {
   const repos = useRepos(orgId);
   const [picked, setPicked] = useState<Set<string>>(new Set());
-  const [creating, setCreating] = useState(false);
-  // 이 화면은 대표 전용이라 "새 레포 만들기"를 항상 보여 준다. 만든 레포는 소유 역할이 있어 바로 고를 수 있다
-  const createRepo = creating ? (
-    <div className="mt-3">
-      <CreateGithubRepo
-        orgId={orgId}
-        onClose={() => setCreating(false)}
-        onCreated={(repo) => {
-          setPicked((prev) => new Set(prev).add(repo.id));
-          setCreating(false);
-        }}
-      />
-    </div>
-  ) : (
-    <Button variant="outline" size="sm" className="mt-3" onClick={() => setCreating(true)}>
-      새 레포 만들기
-    </Button>
-  );
+  const [adding, setAdding] = useState<"connect" | "create" | null>(null);
+  // 이 화면은 대표 전용이라 기존 레포 연결·새 레포 만들기를 이 자리에서 바로 한다 (조직 설정에 다녀오지 않게).
+  // 소유 역할이 정해진 채 들어온 레포는 바로 고른다
+  const addRepo =
+    adding === "create" ? (
+      <div className="mt-3">
+        <CreateGithubRepo
+          orgId={orgId}
+          onClose={() => setAdding(null)}
+          onCreated={(repo) => {
+            setPicked((prev) => new Set(prev).add(repo.id));
+            setAdding(null);
+          }}
+        />
+      </div>
+    ) : adding === "connect" ? (
+      <div className="mt-3">
+        <ConnectRepos
+          orgId={orgId}
+          isRep
+          connected={repos.data ?? []}
+          onClose={() => setAdding(null)}
+          onConnected={(connected) => {
+            setPicked((prev) => {
+              const next = new Set(prev);
+              for (const r of connected) if (r.rootOwnerRole) next.add(r.id);
+              return next;
+            });
+            setAdding(null);
+          }}
+        />
+      </div>
+    ) : (
+      <div className="mt-3 flex gap-2">
+        <Button variant="outline" size="sm" onClick={() => setAdding("connect")}>
+          기존 레포 연결
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => setAdding("create")}>
+          새 레포 만들기
+        </Button>
+      </div>
+    );
 
   if (repos.isPending) {
     return (
@@ -279,13 +315,9 @@ function RepoPicker({ orgId, onDone }: { orgId: string; onDone: (repos: { id: st
     return (
       <ChatCard>
         <p className="text-[13.5px] text-ink-700">
-          연결된 레포가 없습니다. 새 레포를 만들거나{" "}
-          <Link href="/org" className="font-medium text-ink-900 underline underline-offset-2">
-            조직에서 기존 레포를 연결
-          </Link>
-          하세요.
+          연결된 레포가 없습니다. GitHub의 기존 레포를 연결하거나 새 레포를 만드세요.
         </p>
-        {createRepo}
+        {addRepo}
       </ChatCard>
     );
   }
@@ -328,7 +360,12 @@ function RepoPicker({ orgId, onDone }: { orgId: string; onDone: (repos: { id: st
               !r.ownershipAssigned && (
                 <p className="mt-1 pl-6 text-[12px] text-ink-500">
                   소유 역할을 먼저 지정하세요 ·{" "}
-                  <Link href={`/org/repos/${r.id}`} className="font-medium text-ink-900 underline underline-offset-2">
+                  {/* 새 탭으로 연다 — 이 대화(화면 상태)를 잃지 않게. 돌아오면 창 포커스로 레포 목록을 다시 읽는다 */}
+                  <Link
+                    href={`/org/repos/${r.id}`}
+                    target="_blank"
+                    className="font-medium text-ink-900 underline underline-offset-2"
+                  >
                     지정하러 가기
                   </Link>
                 </p>
@@ -337,18 +374,74 @@ function RepoPicker({ orgId, onDone }: { orgId: string; onDone: (repos: { id: st
           </li>
         ))}
       </ul>
-      {createRepo}
+      {addRepo}
       <div>
         <Button
           size="sm"
           className="mt-3"
-          disabled={picked.size === 0 || creating}
+          disabled={picked.size === 0 || adding !== null}
           onClick={() => onDone(repos.data.filter((r) => picked.has(r.id)))}
         >
           {picked.size > 0 ? `${picked.size}개 선택` : "선택"}
         </Button>
       </div>
     </ChatCard>
+  );
+}
+
+const INVITE_ROLES: TeamRole[] = ["FRONTEND", "BACKEND"];
+
+/** 레포를 고른 직후 FE·BE 초대 링크를 만든다. 초대는 조직 단위라 프로젝트가 생기기 전에 만들어도 된다. 건너뛸 수 있다 */
+function InviteStep({ orgId, onDone }: { orgId: string; onDone: (made: string[]) => void }) {
+  const [made, setMade] = useState<string[]>([]);
+  return (
+    <ChatCard>
+      <ul className="space-y-4">
+        {INVITE_ROLES.map((role) => (
+          <InviteRow
+            key={role}
+            orgId={orgId}
+            role={role}
+            onMade={() => setMade((m) => [...m, TEAM_ROLE_META[role].label])}
+          />
+        ))}
+      </ul>
+      <p className="mt-4 text-[12px] text-ink-500">
+        링크는 한 번 쓰면 만료되고 7일 뒤에도 만료됩니다. 들어온 사람의 에이전트는 프로젝트 설정에서 역할에 배정합니다.
+      </p>
+      <Button size="sm" className="mt-3" onClick={() => onDone(made)}>
+        {made.length > 0 ? "다음" : "건너뛰기"}
+      </Button>
+    </ChatCard>
+  );
+}
+
+function InviteRow({ orgId, role, onMade }: { orgId: string; role: TeamRole; onMade: () => void }) {
+  const invite = useCreateInvite(orgId);
+  return (
+    <li>
+      <div className="flex items-center gap-2">
+        <TeamRoleBadge role={role} />
+        <span className="flex-1 text-[13.5px] font-medium">{TEAM_ROLE_META[role].label} 개발자 초대</span>
+        {!invite.data && (
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={invite.isPending}
+            onClick={() => invite.mutate({ teamRole: role, expiresInDays: 7 }, { onSuccess: onMade })}
+          >
+            {invite.isPending ? "만드는 중…" : "링크 만들기"}
+          </Button>
+        )}
+      </div>
+      {invite.isError && <p className="mt-1.5 text-[12.5px] text-forbidden">{errorMessage(invite.error)}</p>}
+      {invite.data && (
+        <div className="mt-2 space-y-1">
+          <CopyField value={invite.data.url} />
+          <p className="text-[12px] text-ink-500">{fmtDateTime(invite.data.expiresAt)}까지</p>
+        </div>
+      )}
+    </li>
   );
 }
 
@@ -444,7 +537,7 @@ function Extras({
           {error instanceof ApiError && error.code === "REPO_OWNERSHIP_NOT_SET" ? (
             <>
               {errorMessage(error)} ·{" "}
-              <Link href="/org" className="font-medium underline underline-offset-2">
+              <Link href="/settings/org" className="font-medium underline underline-offset-2">
                 조직에서 지정
               </Link>
             </>

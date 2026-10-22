@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, CalendarDays, Loader2, Plus } from "lucide-react";
+import { ArrowRight, CalendarDays, Loader2, Plus, Settings } from "lucide-react";
 import { ApiError, errorMessage } from "@/shared/api";
 import { Badge, Button, Logo } from "@/shared/ui";
+import { cn } from "@/shared/lib/format";
 import { useOrgAgents } from "@/entities/agent";
 import { LEVELS } from "@/entities/policy";
 import { ProjectStatusBadge, fmtUsd, useProjects } from "@/entities/project";
@@ -51,10 +52,16 @@ export function ProjectListView() {
               </>
             )}
           </span>
-          <Link href="/org" className="text-[13px] font-medium text-ink-600 hover:text-ink-900">
-            조직
-          </Link>
-          <AccountMenu />
+          <AccountMenu>
+            <Link
+              href="/settings/org"
+              aria-label="설정"
+              title="설정"
+              className="rounded-lg p-0.5 text-ink-500 hover:bg-ink-100 hover:text-ink-900"
+            >
+              <Settings size={16} />
+            </Link>
+          </AccountMenu>
         </div>
       </header>
 
@@ -86,34 +93,43 @@ export function ProjectListView() {
           </div>
         ) : (
           <ul className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {projects.data.map((p) => {
-              const level = LEVELS.find((l) => l.id === p.autonomyPreset);
-              return (
-                <li key={p.id}>
-                  <Link href={`/p/${p.id}`} className="card block p-5 transition hover:border-ink-300 animate-rise">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex min-w-0 items-center gap-2">
-                        <span className="truncate text-[17px] font-semibold">{p.name}</span>
-                        <ProjectStatusBadge status={p.status} />
-                      </div>
-                      <ArrowRight size={16} className="mt-1 shrink-0 text-ink-400" />
-                    </div>
-                    <div className="mt-4 flex flex-wrap items-center gap-2 text-[12px] text-ink-500">
-                      <Badge tone="brand">
-                        {p.autonomyPreset}
-                        {level && ` · ${level.title}`}
-                      </Badge>
-                      <span>PM 예산 {fmtUsd(p.pmBudgetUsd)}</span>
-                      {p.deadline && (
-                        <span className="inline-flex items-center gap-1">
-                          <CalendarDays size={12} /> {p.deadline}
-                        </span>
+            {/* 중단된 프로젝트는 지워지지 않는다 — 뒤로 보내고 흐리게 */}
+            {[...projects.data]
+              .sort((a, b) => Number(a.status === "aborted") - Number(b.status === "aborted"))
+              .map((p) => {
+                const level = LEVELS.find((l) => l.id === p.autonomyPreset);
+                return (
+                  <li key={p.id}>
+                    <Link
+                      href={`/p/${p.id}`}
+                      className={cn(
+                        "card block p-5 transition hover:border-ink-300 animate-rise",
+                        p.status === "aborted" && "opacity-60",
                       )}
-                    </div>
-                  </Link>
-                </li>
-              );
-            })}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <span className="truncate text-[17px] font-semibold">{p.name}</span>
+                          <ProjectStatusBadge status={p.status} />
+                        </div>
+                        <ArrowRight size={16} className="mt-1 shrink-0 text-ink-400" />
+                      </div>
+                      <div className="mt-4 flex flex-wrap items-center gap-2 text-[12px] text-ink-500">
+                        <Badge tone="brand">
+                          {p.autonomyPreset}
+                          {level && ` · ${level.title}`}
+                        </Badge>
+                        <span>PM 예산 {fmtUsd(p.pmBudgetUsd)}</span>
+                        {p.deadline && (
+                          <span className="inline-flex items-center gap-1">
+                            <CalendarDays size={12} /> {p.deadline}
+                          </span>
+                        )}
+                      </div>
+                    </Link>
+                  </li>
+                );
+              })}
             {projects.data.length === 0 && (
               <li className="col-span-full rounded-xl border border-dashed border-ink-200 bg-white/70 px-6 py-10 text-center">
                 {isRep ? (

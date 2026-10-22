@@ -21,6 +21,23 @@ export function useOrgAgents(orgId: string | null, { poll = false }: { poll?: bo
   });
 }
 
+/**
+ * 연결 해제 (에이전트 주인·대표). 맡은 진행 중 프로젝트에서도 빠지고 GitHub 접근을 회수한다.
+ * 진행 중 태스크를 붙잡고 있으면 409 ACTIVE_TASKS_HELD. 같은 노트북에서 다시 connect하면 되살아난다
+ */
+export function useDisconnectAgent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (agentId: string) =>
+      apiFetch<{
+        agentId: string;
+        unassignedFrom: string | null;
+        githubRevocations: Schemas["GithubRevokeResult"][];
+      }>(`/agents/${agentId}`, { method: "DELETE" }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: agentKeys.all }),
+  });
+}
+
 const devicePath = (userCode: string) => `/agents/device/requests/${encodeURIComponent(userCode)}`;
 
 /** CLI가 연 승인 링크의 요청. 승인 결과는 CLI가 폴링으로 가져가므로 화면은 폴링하지 않는다 */

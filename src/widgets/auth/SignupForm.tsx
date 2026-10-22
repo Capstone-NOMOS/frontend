@@ -10,7 +10,7 @@ import { ApiError, errorMessage } from "@/shared/api";
 import { useLogin, useSignup } from "@/entities/user";
 import { safeNext } from "./safeNext";
 
-const STEPS = ["계정", "연결 키", "에이전트 연결"];
+const STEPS = ["계정", "연결 키", "에이전트 연결", "GitHub 연동"];
 
 function validate({ loginId, password, nickname }: { loginId: string; password: string; nickname: string }) {
   if (loginId.length < 3 || loginId.length > 64) return "아이디는 3~64자로 입력해 주세요.";
@@ -55,7 +55,7 @@ export function SignupForm({ next }: { next?: string }) {
 
   return (
     <div className="w-full max-w-[460px] animate-rise">
-      <ol className="mb-4 flex items-center gap-2 text-[12px]">
+      <ol className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[12px]">
         {STEPS.map((s, i) => (
           <li key={s} className="flex items-center gap-2">
             <span
@@ -67,7 +67,7 @@ export function SignupForm({ next }: { next?: string }) {
               {i < step ? <Check size={11} /> : i + 1}
             </span>
             <span className={cn(i === step ? "font-medium text-ink-900" : "text-ink-500")}>{s}</span>
-            {i < STEPS.length - 1 && <span className="h-px w-6 bg-ink-200" />}
+            {i < STEPS.length - 1 && <span className="h-px w-3 bg-ink-200 sm:w-6" />}
           </li>
         ))}
       </ol>
