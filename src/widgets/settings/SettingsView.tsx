@@ -42,66 +42,65 @@ export function SettingsView({ projectId }: { projectId: string }) {
   // 에이전트 주인 닉네임·배정 후보·접속 상태
   const agents = useOrgAgents(me.orgId);
 
+  // 스크롤·여백·탭은 설정 페이지가 그린다
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="mx-auto max-w-[960px] space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-        <div>
-          <h1 className="text-[22px] font-semibold tracking-tight">프로젝트 설정</h1>
-          <p className="mt-1 text-[14px] text-ink-500">
-            {isRep
-              ? "에이전트 역할을 배정하고 프로젝트를 시작합니다."
-              : "대표가 역할을 배정하고 프로젝트를 시작합니다. 현재 설정을 확인하세요."}
-          </p>
-        </div>
-
-        <section className="card p-5">
-          <SectionTitle action={<span className="text-[12px] text-ink-400">변경 기능은 준비 중입니다</span>}>
-            기본 정보
-          </SectionTitle>
-          <dl className="grid grid-cols-1 gap-x-8 gap-y-3 text-[13.5px] sm:grid-cols-2">
-            <Row k="이름">{project.name}</Row>
-            <Row k="상태">
-              <ProjectStatusBadge status={project.status} />
-            </Row>
-            <Row k="레벨">
-              {project.autonomyPreset} · {LEVELS.find((l) => l.id === project.autonomyPreset)?.title}
-            </Row>
-            <Row k="PM 예산">{fmtUsd(project.pmBudgetUsd)}</Row>
-            <Row k="전체 예산">{project.budgetUsd ? fmtUsd(project.budgetUsd) : "상한 없음"}</Row>
-            <Row k="마감일">{project.deadline ?? "없음"}</Row>
-            <Row k="레포">
-              {repos.length > 0 ? (
-                <span className="flex flex-col gap-0.5 font-mono text-[13px]">
-                  {repos.map((r) => (
-                    <span key={r.id}>{r.fullName}</span>
-                  ))}
-                </span>
-              ) : (
-                "없음"
-              )}
-            </Row>
-          </dl>
-        </section>
-
-        <MembersSection
-          projectId={projectId}
-          orgId={me.orgId!}
-          members={members}
-          agents={agents.data?.agents}
-          agentsError={agents.error}
-          open={open}
-          isRep={isRep}
-          myUserId={me.userId}
-        />
-
-        <QuestionRelaySection projectId={projectId} project={project} editable={isRep && !started} />
-
-        <StartSection projectId={projectId} project={project} members={members} isRep={isRep} />
-
-        {isRep && open && <AbortSection projectId={projectId} />}
-
-        <PolicySection level={project.autonomyPreset} />
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-[22px] font-semibold tracking-tight">프로젝트 설정</h1>
+        <p className="mt-1 text-[14px] text-ink-500">
+          {isRep
+            ? "에이전트 역할을 배정하고 프로젝트를 시작합니다."
+            : "대표가 역할을 배정하고 프로젝트를 시작합니다. 현재 설정을 확인하세요."}
+        </p>
       </div>
+
+      <section className="card p-5">
+        <SectionTitle action={<span className="text-[12px] text-ink-400">변경 기능은 준비 중입니다</span>}>
+          기본 정보
+        </SectionTitle>
+        <dl className="grid grid-cols-1 gap-x-8 gap-y-3 text-[13.5px] sm:grid-cols-2">
+          <Row k="이름">{project.name}</Row>
+          <Row k="상태">
+            <ProjectStatusBadge status={project.status} />
+          </Row>
+          <Row k="레벨">
+            {project.autonomyPreset} · {LEVELS.find((l) => l.id === project.autonomyPreset)?.title}
+          </Row>
+          <Row k="PM 예산">{fmtUsd(project.pmBudgetUsd)}</Row>
+          <Row k="전체 예산">{project.budgetUsd ? fmtUsd(project.budgetUsd) : "상한 없음"}</Row>
+          <Row k="마감일">{project.deadline ?? "없음"}</Row>
+          <Row k="레포">
+            {repos.length > 0 ? (
+              <span className="flex flex-col gap-0.5 font-mono text-[13px]">
+                {repos.map((r) => (
+                  <span key={r.id}>{r.fullName}</span>
+                ))}
+              </span>
+            ) : (
+              "없음"
+            )}
+          </Row>
+        </dl>
+      </section>
+
+      <MembersSection
+        projectId={projectId}
+        orgId={me.orgId!}
+        members={members}
+        agents={agents.data?.agents}
+        agentsError={agents.error}
+        open={open}
+        isRep={isRep}
+        myUserId={me.userId}
+      />
+
+      <QuestionRelaySection projectId={projectId} project={project} editable={isRep && !started} />
+
+      <StartSection projectId={projectId} project={project} members={members} isRep={isRep} />
+
+      {isRep && open && <AbortSection projectId={projectId} />}
+
+      <PolicySection level={project.autonomyPreset} />
     </div>
   );
 }
@@ -478,7 +477,7 @@ function StartSection({
                     <>
                       태스크가 없습니다.{" "}
                       <Link href={`/p/${projectId}/rooms/owner`} className="font-medium underline underline-offset-2">
-                        Room 3에서 계획 받기
+                        대표 룸에서 계획 받기
                       </Link>
                     </>
                   ) : (
@@ -533,7 +532,7 @@ function StartSection({
                       href={`/p/${projectId}/rooms/owner`}
                       className="text-[12.5px] font-medium text-ink-900 underline underline-offset-2"
                     >
-                      Room 3에서 계획 받기
+                      대표 룸에서 계획 받기
                     </Link>
                   )}
                 </li>

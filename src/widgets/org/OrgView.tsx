@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { ArrowLeft, Bot, Loader2 } from "lucide-react";
+import { Bot, Loader2 } from "lucide-react";
 import { errorMessage } from "@/shared/api";
 import type { TeamRole } from "@/shared/model";
 import {
@@ -11,7 +11,6 @@ import {
   Button,
   ConfirmButton,
   CopyField,
-  Logo,
   RemovalError,
   RevocationNotice,
   SectionTitle,
@@ -29,7 +28,7 @@ import {
   useRevokeInvite,
 } from "@/entities/org";
 import { TeamRoleBadge } from "@/entities/task";
-import { AccountMenu, useCurrentUser } from "@/entities/user";
+import { useCurrentUser } from "@/entities/user";
 import { RepoSection } from "./RepoSection";
 
 export function OrgView() {
@@ -38,30 +37,16 @@ export function OrgView() {
   const orgId = me.orgId!;
   const isRep = me.orgRole === "REPRESENTATIVE";
 
+  // 페이지 틀(머리글·탭)은 부르는 쪽이 그린다 — /settings/org와 프로젝트 설정의 조직 탭
   return (
-    <div className="min-h-dvh dots-bg">
-      <header className="flex h-16 items-center justify-between px-5 sm:px-8">
-        <Link href="/" aria-label="NOMOS 홈">
-          <Logo />
-        </Link>
-        <AccountMenu />
-      </header>
+    <div className="space-y-4">
+      <h2 className="text-[18px] font-semibold tracking-tight">{me.orgName ?? "조직"}</h2>
+      <Members orgId={orgId} myUserId={me.userId} isRep={isRep} />
+      <Agents orgId={orgId} myUserId={me.userId} isRep={isRep} />
+      {/* 대표 전용 UI는 팀원에게 렌더하지 않는다. 최종 판정은 API의 403 NOT_REPRESENTATIVE */}
+      {isRep && <InvitePanel orgId={orgId} />}
 
-      <main className="mx-auto max-w-[880px] space-y-4 px-4 pb-16 pt-4 sm:px-6">
-        <div>
-          <Link href="/projects" className="inline-flex items-center gap-1 text-[13px] text-ink-500 hover:text-ink-900">
-            <ArrowLeft size={14} /> 프로젝트
-          </Link>
-          <h1 className="mt-2 text-[24px] font-semibold tracking-tight">{me.orgName ?? "조직"}</h1>
-        </div>
-
-        <Members orgId={orgId} myUserId={me.userId} isRep={isRep} />
-        <Agents orgId={orgId} myUserId={me.userId} isRep={isRep} />
-        {/* 대표 전용 UI는 팀원에게 렌더하지 않는다. 최종 판정은 API의 403 NOT_REPRESENTATIVE */}
-        {isRep && <InvitePanel orgId={orgId} />}
-
-        <RepoSection orgId={orgId} isRep={isRep} />
-      </main>
+      <RepoSection orgId={orgId} isRep={isRep} />
     </div>
   );
 }

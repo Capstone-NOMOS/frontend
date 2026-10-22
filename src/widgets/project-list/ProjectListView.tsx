@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, CalendarDays, Loader2, Plus } from "lucide-react";
+import { ArrowRight, CalendarDays, Loader2, Plus, Settings } from "lucide-react";
 import { ApiError, errorMessage } from "@/shared/api";
 import { Badge, Button, Logo } from "@/shared/ui";
 import { cn } from "@/shared/lib/format";
@@ -52,10 +52,16 @@ export function ProjectListView() {
               </>
             )}
           </span>
-          <Link href="/org" className="text-[13px] font-medium text-ink-600 hover:text-ink-900">
-            조직
-          </Link>
-          <AccountMenu />
+          <AccountMenu>
+            <Link
+              href="/settings/org"
+              aria-label="설정"
+              title="설정"
+              className="rounded-lg p-0.5 text-ink-500 hover:bg-ink-100 hover:text-ink-900"
+            >
+              <Settings size={16} />
+            </Link>
+          </AccountMenu>
         </div>
       </header>
 

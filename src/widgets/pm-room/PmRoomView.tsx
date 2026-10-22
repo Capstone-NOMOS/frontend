@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowUp, Loader2, Lock } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { errorMessage } from "@/shared/api";
-import { AgentMark, Avatar, Badge, Button, CopyField, EmptyState } from "@/shared/ui";
+import { AgentMark, Badge, Button, CopyField, EmptyState } from "@/shared/ui";
 import { cn, fmtDateTime } from "@/shared/lib/format";
 import { CLI_NPX } from "@/entities/agent";
 import {
@@ -18,7 +18,7 @@ import {
 } from "@/entities/plan";
 import { useProject } from "@/entities/project";
 import { contractKeys } from "@/entities/contract";
-import { ROOM_META } from "@/entities/room";
+import { ROOM_META, RoomParticipants } from "@/entities/room";
 import { specKeys } from "@/entities/spec";
 import { taskKeys } from "@/entities/task";
 import { displayName, useCurrentUser } from "@/entities/user";
@@ -39,8 +39,8 @@ export function PmRoomView({ projectId }: { projectId: string }) {
     return (
       <div className="flex h-full items-center justify-center p-6">
         <EmptyState
-          title="403 · 이 Room에 접근할 수 없습니다"
-          desc={`${ROOM_META.OWNER.name}는 ${ROOM_META.OWNER.who}의 공간입니다. FE·BE는 자기 Room만 볼 수 있습니다.`}
+          title="403 · 이 룸에 접근할 수 없습니다"
+          desc={`${ROOM_META.OWNER.name}는 ${ROOM_META.OWNER.who}의 공간입니다. FE·BE는 자기 룸만 볼 수 있습니다.`}
           action={
             <Button href={`/p/${projectId}`} variant="outline">
               대시보드로
@@ -82,9 +82,14 @@ function Room({ projectId, meName }: { projectId: string; meName: string }) {
   return (
     <div className="flex h-full min-w-0 flex-col">
       <header className="flex h-14 shrink-0 items-center gap-3 border-b border-ink-200 px-4 sm:px-6">
-        <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1">
           <h1 className="truncate text-[15px] font-semibold">{ROOM_META.OWNER.name}</h1>
-          <div className="truncate text-[12px] text-ink-500">{ROOM_META.OWNER.who}</div>
+          <RoomParticipants
+            people={[
+              { kind: "agent", name: "PM", tone: "pm" },
+              { kind: "human", name: meName, note: "대표" },
+            ]}
+          />
         </div>
         {pending ? (
           <Badge tone="info">PM 작성 중</Badge>
@@ -93,10 +98,6 @@ function Room({ projectId, meName }: { projectId: string; meName: string }) {
         ) : (
           <Badge tone="pm">PM 대기 중</Badge>
         )}
-        <div className="hidden items-center -space-x-1.5 md:flex">
-          <Avatar name={meName} size={26} className="ring-2 ring-white" />
-          <AgentMark tone="pm" size={26} className="ring-2 ring-white" />
-        </div>
       </header>
 
       <StatusBar status={status.data} error={status.error} />
