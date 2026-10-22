@@ -57,6 +57,11 @@ body {
   height: 100%;
 }
 
+/* 스크롤바 유무로 페이지 폭이 바뀌어 탭 전환 시 내용·헤더가 좌우로 흔들리지 않게 자리를 늘 비워 둔다 */
+html {
+  scrollbar-gutter: stable;
+}
+
 body {
   background: #ffffff;
   color: var(--color-ink-900);

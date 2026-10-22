@@ -11,7 +11,7 @@ import { AccountMenu, GithubConnect, useCurrentUser } from "@/entities/user";
 import { StepLabel } from "./steps";
 
 /**
- * 온보딩 2단계: GitHub 연동. 건너뛸 수 없다 — 연동해야 대표는 레포를 고르고 만들 수 있고, 팀원은 레포 협업자로 초대된다.
+ * 가입 흐름 4단계: GitHub 연동. 건너뛸 수 없다 — 연동해야 대표는 레포를 고르고 만들 수 있고, 팀원은 레포 협업자로 초대된다.
  * 조직이 없으면(가입 직후 대표) 다음은 조직 만들기
  */
 export function ConnectGithubView() {
@@ -42,7 +42,7 @@ export function ConnectGithubView() {
           >
             <ArrowLeft size={14} /> 에이전트 연결
           </Link>
-          <StepLabel step={2} />
+          <StepLabel step={4} />
           <h1 className="text-[22px] font-semibold tracking-tight">GitHub 연동</h1>
           <p className="mt-1 text-[13.5px] text-ink-500">
             {me.orgRole === "MEMBER"

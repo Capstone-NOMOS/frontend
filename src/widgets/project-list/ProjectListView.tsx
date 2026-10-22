@@ -52,10 +52,16 @@ export function ProjectListView() {
               </>
             )}
           </span>
-          <Button href="/settings/org" variant="outline" size="sm">
-            <Settings size={14} /> 설정
-          </Button>
-          <AccountMenu />
+          <AccountMenu>
+            <Link
+              href="/settings/org"
+              aria-label="설정"
+              title="설정"
+              className="rounded-lg p-0.5 text-ink-500 hover:bg-ink-100 hover:text-ink-900"
+            >
+              <Settings size={16} />
+            </Link>
+          </AccountMenu>
         </div>
       </header>
 

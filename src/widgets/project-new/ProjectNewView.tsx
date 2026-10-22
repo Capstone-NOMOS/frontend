@@ -11,7 +11,7 @@ import type { Level, TeamRole } from "@/shared/model";
 import { useCreateInvite } from "@/entities/org";
 import { LEVELS, LevelGates } from "@/entities/policy";
 import { useCreateProject } from "@/entities/project";
-import { CreateGithubRepo, OwnershipBadge, useRepos } from "@/entities/repo";
+import { ConnectRepos, CreateGithubRepo, OwnershipBadge, useRepos } from "@/entities/repo";
 import { TEAM_ROLE_META, TeamRoleBadge } from "@/entities/task";
 import { useCurrentUser } from "@/entities/user";
 
@@ -252,24 +252,48 @@ const selectable = (r: Schemas["RepoListItem"]) => r.ownershipAssigned && r.acti
 function RepoPicker({ orgId, onDone }: { orgId: string; onDone: (repos: { id: string; fullName: string }[]) => void }) {
   const repos = useRepos(orgId);
   const [picked, setPicked] = useState<Set<string>>(new Set());
-  const [creating, setCreating] = useState(false);
-  // 이 화면은 대표 전용이라 "새 레포 만들기"를 항상 보여 준다. 만든 레포는 소유 역할이 있어 바로 고를 수 있다
-  const createRepo = creating ? (
-    <div className="mt-3">
-      <CreateGithubRepo
-        orgId={orgId}
-        onClose={() => setCreating(false)}
-        onCreated={(repo) => {
-          setPicked((prev) => new Set(prev).add(repo.id));
-          setCreating(false);
-        }}
-      />
-    </div>
-  ) : (
-    <Button variant="outline" size="sm" className="mt-3" onClick={() => setCreating(true)}>
-      새 레포 만들기
-    </Button>
-  );
+  const [adding, setAdding] = useState<"connect" | "create" | null>(null);
+  // 이 화면은 대표 전용이라 기존 레포 연결·새 레포 만들기를 이 자리에서 바로 한다 (조직 설정에 다녀오지 않게).
+  // 소유 역할이 정해진 채 들어온 레포는 바로 고른다
+  const addRepo =
+    adding === "create" ? (
+      <div className="mt-3">
+        <CreateGithubRepo
+          orgId={orgId}
+          onClose={() => setAdding(null)}
+          onCreated={(repo) => {
+            setPicked((prev) => new Set(prev).add(repo.id));
+            setAdding(null);
+          }}
+        />
+      </div>
+    ) : adding === "connect" ? (
+      <div className="mt-3">
+        <ConnectRepos
+          orgId={orgId}
+          isRep
+          connected={repos.data ?? []}
+          onClose={() => setAdding(null)}
+          onConnected={(connected) => {
+            setPicked((prev) => {
+              const next = new Set(prev);
+              for (const r of connected) if (r.rootOwnerRole) next.add(r.id);
+              return next;
+            });
+            setAdding(null);
+          }}
+        />
+      </div>
+    ) : (
+      <div className="mt-3 flex gap-2">
+        <Button variant="outline" size="sm" onClick={() => setAdding("connect")}>
+          기존 레포 연결
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => setAdding("create")}>
+          새 레포 만들기
+        </Button>
+      </div>
+    );
 
   if (repos.isPending) {
     return (
@@ -291,13 +315,9 @@ function RepoPicker({ orgId, onDone }: { orgId: string; onDone: (repos: { id: st
     return (
       <ChatCard>
         <p className="text-[13.5px] text-ink-700">
-          연결된 레포가 없습니다. 새 레포를 만들거나{" "}
-          <Link href="/settings/org" target="_blank" className="font-medium text-ink-900 underline underline-offset-2">
-            조직에서 기존 레포를 연결
-          </Link>
-          하세요.
+          연결된 레포가 없습니다. GitHub의 기존 레포를 연결하거나 새 레포를 만드세요.
         </p>
-        {createRepo}
+        {addRepo}
       </ChatCard>
     );
   }
@@ -354,12 +374,12 @@ function RepoPicker({ orgId, onDone }: { orgId: string; onDone: (repos: { id: st
           </li>
         ))}
       </ul>
-      {createRepo}
+      {addRepo}
       <div>
         <Button
           size="sm"
           className="mt-3"
-          disabled={picked.size === 0 || creating}
+          disabled={picked.size === 0 || adding !== null}
           onClick={() => onDone(repos.data.filter((r) => picked.has(r.id)))}
         >
           {picked.size > 0 ? `${picked.size}개 선택` : "선택"}

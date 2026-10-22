@@ -62,7 +62,7 @@ const CLIS = [
 ];
 
 /**
- * 온보딩 1단계: 에이전트 연결. 다음은 GitHub 연동(/connect/github)이다.
+ * 가입 흐름 3단계: 에이전트 연결. 다음은 GitHub 연동(/connect/github)이다.
  * joined: 초대 수락 직후. 이미 연결한 에이전트가 있으면 이 단계를 건너뛴다
  */
 export function ConnectAgentView({ joined = false }: { joined?: boolean }) {
@@ -93,7 +93,7 @@ export function ConnectAgentView({ joined = false }: { joined?: boolean }) {
               {me.orgName ?? "조직"}에 합류했습니다. 에이전트를 연결하세요.
             </p>
           )}
-          <StepLabel step={1} />
+          <StepLabel step={3} />
           <h1 className="text-[22px] font-semibold tracking-tight">에이전트 연결</h1>
           <p className="mt-1 text-[13.5px] text-ink-500">
             내 노트북의 코딩 에이전트를 NOMOS에 연결합니다. 프로젝트에 배정되기 전까지 에이전트는 어떤 태스크도 받지

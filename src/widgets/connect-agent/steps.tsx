@@ -1,6 +1,6 @@
 export const GITHUB_STEP = "/connect/github";
 
-/** 온보딩 단계 표시: 1 에이전트 연결 → 2 GitHub 연동 */
-export function StepLabel({ step }: { step: 1 | 2 }) {
-  return <p className="mb-1 text-[12px] font-semibold text-ink-500">{step} / 2단계</p>;
+/** 가입 흐름 단계 표시: 1 계정 → 2 연결 키 → 3 에이전트 연결 → 4 GitHub 연동 (SignupForm STEPS와 맞출 것) */
+export function StepLabel({ step }: { step: 3 | 4 }) {
+  return <p className="mb-1 text-[12px] font-semibold text-ink-500">{step} / 4단계</p>;
 }
