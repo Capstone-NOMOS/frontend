@@ -5,6 +5,7 @@ import { Scissors } from "lucide-react";
 import { ApiError, errorMessage } from "@/shared/api";
 import { Badge, Button } from "@/shared/ui";
 import { CONTRACT_STATUS, useContracts } from "@/entities/contract";
+import { ROLE_ROOM } from "@/entities/room";
 import { useRequestPlan } from "@/entities/plan";
 import { useSpecs } from "@/entities/spec";
 
@@ -16,7 +17,7 @@ function pendingFeatureKeys(error: unknown): string[] {
 }
 
 /**
- * 새 계획 흐름 2·3단계. 기능 명세가 확정된 뒤에만 보인다: API 계약 현황(확정은 BE 담당이 문서 화면에서) + 태스크 나누기.
+ * 새 계획 흐름 2·3단계. 기능 명세가 확정된 뒤에만 보인다: API 계약 현황(확정은 BE 담당이 BE 룸에서) + 태스크 나누기.
  * 미리 막지 않는다 — 계약이 덜 끝났으면 서버의 409 CONTRACTS_NOT_APPROVED를 그대로 안내한다
  */
 export function TaskSplitStep({ projectId, blocked }: { projectId: string; blocked: boolean }) {
@@ -27,7 +28,8 @@ export function TaskSplitStep({ projectId, blocked }: { projectId: string; block
 
   const open = contracts.filter((c) => c.status !== "approved");
   const missing = pendingFeatureKeys(split.error);
-  const contractsHref = `/p/${projectId}/docs/contract`;
+  // 계약 확정은 BE 룸에서 한다 (adr/0013)
+  const contractsHref = `/p/${projectId}/rooms/${ROLE_ROOM.BACKEND.slug}`;
 
   return (
     <div className="flex gap-2.5">
@@ -43,7 +45,7 @@ export function TaskSplitStep({ projectId, blocked }: { projectId: string; block
               {" "}
               · API 계약 {contracts.length - open.length}/{contracts.length} 확정 ·{" "}
               <Link href={contractsHref} className="font-medium underline underline-offset-2">
-                계약 보기
+                BE 룸에서 확정
               </Link>
             </>
           ) : (
@@ -76,7 +78,7 @@ export function TaskSplitStep({ projectId, blocked }: { projectId: string; block
               <p className="mt-0.5 text-ink-700">
                 확정되지 않은 기능: <span className="font-mono">{missing.join(", ")}</span> ·{" "}
                 <Link href={contractsHref} className="font-medium underline underline-offset-2">
-                  계약 보기
+                  BE 룸에서 확정
                 </Link>
               </p>
             )}

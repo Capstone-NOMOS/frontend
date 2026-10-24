@@ -2,18 +2,20 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { BookOpen, FileText, History, Loader2, Lock, TerminalSquare } from "lucide-react";
+import { BookOpen, FileText, History, Loader2, Lock, NotebookPen, TerminalSquare } from "lucide-react";
 import { errorMessage, type Schemas } from "@/shared/api";
 import { Badge, EmptyState, Markdown, MockBadge } from "@/shared/ui";
+import { useQueryParam } from "@/shared/lib/useQueryParam";
 import { cn, fmtDateTime } from "@/shared/lib/format";
 import { ContractCard, useContracts } from "@/entities/contract";
 import type { DocType } from "@/entities/document";
-import { useProject as useProjectDetail } from "@/entities/project";
+import { NOTE_KIND, NoteItem, useNotes, type NoteKind } from "@/entities/note";
+import { ROLE_ROOM } from "@/entities/room";
 import { useSpecs } from "@/entities/spec";
-import { useCurrentUser } from "@/entities/user";
 import { useProject } from "@/lib/store";
 
-const TYPES: { slug: string; type: DocType; label: string; who: string; icon: React.ReactNode }[] = [
+// NOTES는 에이전트가 남긴 인계 노트 — 문서 서버가 에이전트에게 함께 주는 기록이라 여기서 읽는다
+const TYPES: { slug: string; type: DocType | "NOTES"; label: string; who: string; icon: React.ReactNode }[] = [
   { slug: "constitution", type: "CONSTITUTION", label: "헌법", who: "쓰기: 대표만", icon: <BookOpen size={15} /> },
   { slug: "spec", type: "SPEC", label: "명세", who: "쓰기: PM (대표 승인 후)", icon: <FileText size={15} /> },
   {
@@ -24,6 +26,7 @@ const TYPES: { slug: string; type: DocType; label: string; who: string; icon: Re
     icon: <FileText size={15} />,
   },
   { slug: "adr", type: "ADR", label: "결정기록", who: "쓰기: 서버 자동 (추가만)", icon: <FileText size={15} /> },
+  { slug: "notes", type: "NOTES", label: "인계 노트", who: "쓰기: 에이전트", icon: <NotebookPen size={15} /> },
 ];
 
 const TOOLS = [
@@ -103,6 +106,8 @@ export function DocsView({ projectId, slug }: { projectId: string; slug: string 
             <SpecDocs specs={specs} who={current.who} />
           ) : current.type === "CONTRACT" ? (
             <ContractDocs projectId={projectId} contracts={contracts} />
+          ) : current.type === "NOTES" ? (
+            <NoteDocs projectId={projectId} />
           ) : (
             <MockDoc projectId={projectId} current={current} sel={sel} onSelect={setSel} />
           )}
@@ -177,16 +182,8 @@ function SpecDocs({ specs, who }: { specs: ReturnType<typeof useSpecs>; who: str
   );
 }
 
-/**
- * 새 계획 흐름 2단계. 확정·수정 요청은 이 프로젝트의 BACKEND 담당(에이전트 주인)만, BE 담당이 없을 때만 대표가 한다.
- * 버튼은 미리 가릴 뿐 판정은 서버(403 NOT_CONTRACT_APPROVER)
- */
+/** 새 계획 흐름 2단계. 문서는 읽기 전용이다 — 확정·수정 요청은 BE 룸에서 한다 (adr/0013) */
 function ContractDocs({ projectId, contracts }: { projectId: string; contracts: ReturnType<typeof useContracts> }) {
-  const me = useCurrentUser().me!;
-  const members = useProjectDetail(projectId).data?.members ?? [];
-  const be = members.find((m) => m.teamRole === "BACKEND");
-  const canDecide = be ? be.userId === me.userId : me.orgRole === "REPRESENTATIVE";
-
   if (contracts.isPending) {
     return (
       <div className="flex justify-center py-10 text-ink-400" aria-busy="true">
@@ -215,14 +212,19 @@ function ContractDocs({ projectId, contracts }: { projectId: string; contracts: 
           </Badge>
         </div>
         <p className="mt-1 text-[12.5px] text-ink-500">
-          {canDecide
-            ? "초안을 읽고 확정하거나 수정을 요청하세요. 모두 확정돼야 대표가 태스크를 나눌 수 있습니다."
-            : `${be ? "백엔드 담당" : "대표"}이 확정합니다. 모두 확정돼야 태스크를 나눌 수 있습니다.`}
+          확정·수정 요청은{" "}
+          <Link
+            href={`/p/${projectId}/rooms/${ROLE_ROOM.BACKEND.slug}`}
+            className="font-medium underline underline-offset-2"
+          >
+            BE 룸
+          </Link>
+          에서 합니다(BE 담당, 없으면 대표). 모두 확정돼야 태스크를 나눌 수 있습니다.
         </p>
       </div>
       <div className="mt-4 space-y-3">
         {contracts.data.map((c) => (
-          <ContractCard key={c.id} projectId={projectId} contract={c} canDecide={canDecide} />
+          <ContractCard key={c.id} projectId={projectId} contract={c} canDecide={false} />
         ))}
       </div>
     </>
@@ -365,6 +367,55 @@ function MockDoc({
       <div className="pt-5">
         <Markdown content={doc.content} />
       </div>
+    </>
+  );
+}
+
+/** 에이전트가 남긴 인계 노트. 노트는 자기 보고이며, 검증 결과는 태스크 상세에서 확인한다 */
+function NoteDocs({ projectId }: { projectId: string }) {
+  const notes = useNotes(projectId);
+  // 뒤로가기로 돌아와도 보던 종류가 남도록 주소에 둔다
+  const [kind, setKind] = useQueryParam("kind", Object.keys(NOTE_KIND) as NoteKind[]);
+  const list = (notes.data ?? []).filter((n) => !kind || n.kind === kind);
+
+  return (
+    <>
+      <div className="border-b border-ink-100 pb-4">
+        <h1 className="text-[20px] font-semibold tracking-tight">인계 노트</h1>
+        <p className="mt-1 text-[12.5px] text-ink-500">
+          에이전트가 남긴 자기 보고입니다. 검증 결과는 태스크 상세에서 확인합니다.
+        </p>
+      </div>
+      <div className="mb-3 mt-4 flex flex-wrap gap-1.5">
+        {([null, ...(Object.keys(NOTE_KIND) as NoteKind[])] as const).map((k) => (
+          <button
+            key={k ?? "all"}
+            onClick={() => setKind(k)}
+            className={cn(
+              "h-7 rounded-full border px-2.5 text-[12px] font-medium",
+              kind === k ? "border-ink-900 bg-ink-900 text-white" : "border-ink-200 text-ink-600 hover:bg-ink-50",
+            )}
+          >
+            {k ? NOTE_KIND[k].label : "전체"}
+          </button>
+        ))}
+      </div>
+      {notes.isPending ? (
+        <div className="flex justify-center py-10 text-ink-400" aria-busy="true">
+          <Loader2 size={20} className="animate-spin" aria-label="불러오는 중" />
+        </div>
+      ) : notes.isError ? (
+        <EmptyState title={errorMessage(notes.error)} />
+      ) : (
+        <ol className="card divide-y divide-ink-100">
+          {list.map((n) => (
+            <li key={n.id} className="px-4 py-3">
+              <NoteItem note={n} notes={notes.data} />
+            </li>
+          ))}
+          {list.length === 0 && <li className="px-4 py-8 text-center text-[13px] text-ink-500">노트가 없습니다</li>}
+        </ol>
+      )}
     </>
   );
 }

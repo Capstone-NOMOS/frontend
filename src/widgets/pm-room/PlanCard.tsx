@@ -19,7 +19,9 @@ import {
   useRejectPlan,
   useRevisePlan,
 } from "@/entities/plan";
+import { ROLE_ROOM } from "@/entities/room";
 import { TeamRoleBadge } from "@/entities/task";
+import { StartProject } from "./StartProject";
 
 type PmPlan = Schemas["PmPlan"];
 type Draft = NonNullable<PmPlan["draft"]>;
@@ -45,6 +47,8 @@ export function PlanCard({
 }) {
   const depth = revisionDepth(plan, plans);
   const superseded = isSuperseded(plan, plans);
+  // 시작 버튼은 마지막으로 확정한 태스크 계획에만 둔다
+  const latestTasks = plans.filter((p) => p.kind === "tasks" && p.status === "applied").at(-1)?.id === plan.id;
   const feature = plan.kind === "feature";
   const base = feature ? "기능 명세 초안" : "태스크 초안";
   const title = depth > 0 ? `${base} · 수정 ${depth}` : base;
@@ -83,10 +87,13 @@ export function PlanCard({
           </p>
           <p className="mt-1 text-ink-700">
             서버 API가 필요한 기능은 백엔드 담당이{" "}
-            <Link href={`/p/${projectId}/docs/contract`} className="font-medium underline underline-offset-2">
-              API 계약
+            <Link
+              href={`/p/${projectId}/rooms/${ROLE_ROOM.BACKEND.slug}`}
+              className="font-medium underline underline-offset-2"
+            >
+              BE 룸
             </Link>
-            을 확정한 뒤 태스크를 나눌 수 있습니다.
+            에서 API 계약을 확정한 뒤 태스크를 나눌 수 있습니다.
           </p>
         </div>
       )}
@@ -97,18 +104,11 @@ export function PlanCard({
             만들어졌습니다.
           </p>
           <p className="mt-1 text-ink-700">
-            {started ? (
-              "프로젝트가 진행 중이라 배정된 에이전트가 바로 가져갈 수 있습니다."
-            ) : (
-              <>
-                멤버를 확인하고{" "}
-                <Link href={`/p/${projectId}/settings#start`} className="font-medium underline underline-offset-2">
-                  프로젝트를 시작
-                </Link>
-                하면 에이전트가 태스크를 받습니다.
-              </>
-            )}
+            {started
+              ? "프로젝트가 진행 중이라 배정된 에이전트가 바로 가져갈 수 있습니다."
+              : "프로젝트를 시작하면 배정된 에이전트가 태스크를 받습니다."}
           </p>
+          {!started && latestTasks && <StartProject projectId={projectId} />}
         </div>
       )}
       {plan.status === "rejected" && (

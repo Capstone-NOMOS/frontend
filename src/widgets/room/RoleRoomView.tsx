@@ -7,12 +7,14 @@ import { errorMessage, type Schemas } from "@/shared/api";
 import type { TeamRole } from "@/shared/model";
 import { AgentMark, Badge, Button, EmptyState } from "@/shared/ui";
 import { cn, fmtDate, fmtDateTime, fmtTime, sameDay } from "@/shared/lib/format";
+import { ContractCard, useContracts } from "@/entities/contract";
 import { useOrgMembers } from "@/entities/org";
 import { useProject } from "@/entities/project";
 import { QuestionCard, useProjectQuestions } from "@/entities/question";
 import { ROLE_ROOM, ROOM_META, RoomParticipants, useRoomFeed, useRooms, type Participant } from "@/entities/room";
 import { TEAM_ROLE_META } from "@/entities/task";
 import { useCurrentUser } from "@/entities/user";
+import { Composer } from "./Composer";
 
 type RoomMessage = Schemas["RoomMessage"];
 type Question = Schemas["AgentQuestion"];
@@ -67,6 +69,13 @@ export function RoleRoomView({ projectId, role }: { projectId: string; role: Tea
   const openElsewhere = questions.filter(
     (q) => q.targetRole === role && (q.status === "pending" || q.status === "agent_answered") && !inline.has(q.id),
   );
+  // API 계약은 BE 룸에서 확정한다(문서 탭은 읽기 전용). 확정자는 BE 담당, 없으면 대표 — 판정은 서버(403 NOT_CONTRACT_APPROVER)
+  const contracts = useContracts(projectId).data ?? [];
+  const openContracts =
+    role === "BACKEND" ? contracts.filter((c) => c.status === "draft" || c.status === "failed") : [];
+  const canDecideContract = owner ? owner.userId === me.userId : isRep;
+  // 내 에이전트에게 말하기는 그 역할 담당만 (BE API 연결 전이라 아직 보내지 않는다)
+  const isOwner = owner?.userId === me.userId;
   const thinkingSec = useThinking(messages);
   const newestId = feed.data?.[0]?.id;
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -191,6 +200,17 @@ export function RoleRoomView({ projectId, role }: { projectId: string; role: Tea
             </>
           )}
 
+          {openContracts.length > 0 && (
+            <section className="mt-6 space-y-2">
+              <h2 className="text-[12px] font-semibold uppercase tracking-wide text-ink-500">
+                확정할 API 계약 · {openContracts.length}
+              </h2>
+              {openContracts.map((c) => (
+                <ContractCard key={c.id} projectId={projectId} contract={c} canDecide={canDecideContract} />
+              ))}
+            </section>
+          )}
+
           {openElsewhere.length > 0 && (
             <section className="mt-6 space-y-2">
               <h2 className="text-[12px] font-semibold uppercase tracking-wide text-ink-500">
@@ -209,6 +229,20 @@ export function RoleRoomView({ projectId, role }: { projectId: string; role: Tea
           )}
         </div>
       </div>
+
+      {isOwner && room?.agent && (
+        <div className="shrink-0 border-t border-ink-100 bg-white safe-bottom">
+          <div className="mx-auto max-w-[860px] px-3 py-3 sm:px-6">
+            {/* ponytail: 사람 → 에이전트 메시지 API가 BE에 없어 막아 둔다. API가 생기면 onSend를 연결 */}
+            <Composer
+              disabled
+              mention={agentName}
+              placeholder="내 에이전트에게 지시하기 — 서버 연결 준비 중입니다"
+              onSend={() => {}}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
