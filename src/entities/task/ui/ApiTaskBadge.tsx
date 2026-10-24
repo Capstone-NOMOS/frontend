@@ -13,6 +13,7 @@ export const API_TASK_META: Record<
   BLOCKED: { label: "BLOCKED", tone: "warn" },
   ESCALATED: { label: "ESCALATED", tone: "danger" },
   DONE: { label: "DONE", tone: "success" },
+  CANCELLED: { label: "취소됨", tone: "neutral" },
 };
 
 export function ApiTaskBadge({ state }: { state: ApiTaskState }) {

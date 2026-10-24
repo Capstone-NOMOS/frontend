@@ -27,7 +27,7 @@ export function useTasks(projectId: string, filters: TaskFilters = {}) {
 }
 
 /**
- * 대표 전용. 에이전트가 제출 없이 멈춘 태스크(BLOCKED · AGENT_STOPPED)를 READY로 되돌린다. 재시도 횟수는 오르지 않는다.
+ * 대표 전용. 멈춘 태스크(BLOCKED · AGENT_STOPPED, 재시도 횟수 그대로)나 재시도를 다 쓴 태스크(ESCALATED, 재시도 0으로)를 READY로 되돌린다.
  * 409 TASK_NOT_STOPPED도 상태가 바뀐 것이라 성공·실패 모두 목록을 다시 읽는다
  */
 export function useResumeTask() {
@@ -35,6 +35,29 @@ export function useResumeTask() {
   return useMutation({
     mutationFn: ({ taskId, note }: { taskId: string; note?: string }) =>
       apiFetch<Schemas["Task"]>(`/tasks/${taskId}/resume`, { method: "POST", body: note ? { note } : {} }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: taskKeys.all }),
+  });
+}
+
+/** 대표 전용. READY · BLOCKED · ESCALATED만 취소할 수 있다 (CANCELLED). 사유는 룸에 보인다 */
+export function useCancelTask() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ taskId, reason }: { taskId: string; reason: string }) =>
+      apiFetch<Schemas["Task"]>(`/tasks/${taskId}/cancel`, { method: "POST", body: { reason } }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: taskKeys.all }),
+  });
+}
+
+/**
+ * 그 역할 담당 · 대표. 사람이 태스크 브랜치에 직접 커밋한 것을 완료로 넘긴다 (DONE).
+ * 서버가 V3로 실제 diff와 대조해 어긋나면 422 MANUAL_COMPLETION_INVALID — 아무것도 바뀌지 않는다
+ */
+export function useCompleteTaskManually() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ taskId, ...body }: { taskId: string; commitSha: string; changedPaths: string[]; note?: string }) =>
+      apiFetch<Schemas["Task"]>(`/tasks/${taskId}/manual-completion`, { method: "POST", body }),
     onSettled: () => queryClient.invalidateQueries({ queryKey: taskKeys.all }),
   });
 }

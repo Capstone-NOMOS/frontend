@@ -5,5 +5,5 @@ export const TASK_BOARD: { key: string; label: string; states: ApiTaskState[] }[
   { key: "waiting", label: "대기", states: ["READY", "CLAIMED"] },
   { key: "progress", label: "진행", states: ["IN_PROGRESS", "VERIFYING"] },
   { key: "human", label: "사람 필요", states: ["AWAITING_APPROVAL", "BLOCKED", "ESCALATED"] },
-  { key: "done", label: "완료", states: ["DONE"] },
+  { key: "done", label: "완료", states: ["DONE", "CANCELLED"] },
 ];

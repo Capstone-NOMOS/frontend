@@ -4,17 +4,26 @@ import Link from "next/link";
 import { useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { errorMessage, type Schemas } from "@/shared/api";
-import type { TeamRole } from "@/shared/model";
-import { Badge, Button, Textarea } from "@/shared/ui";
+import { Badge, Button, Input, Textarea } from "@/shared/ui";
 import { cn, fmtDateTime, relTime } from "@/shared/lib/format";
-import { useAnswerQuestion } from "../api/questionApi";
+import { useAnswerQuestion, useSetGold } from "../api/questionApi";
 
 type AgentQuestion = Schemas["AgentQuestion"];
 
-const ROLE: Record<TeamRole, { label: string; tone: "fe" | "be" }> = {
+// PM 질문은 PM 에이전트가 초안만 쓰고 대표가 확정한다
+const ROLE: Record<AgentQuestion["targetRole"], { label: string; tone: "fe" | "be" | "pm" }> = {
   FRONTEND: { label: "FE", tone: "fe" },
   BACKEND: { label: "BE", tone: "be" },
+  PM: { label: "PM(대표)", tone: "pm" },
 };
+
+type GoldTarget = "FRONTEND" | "BACKEND" | "PM" | "SELF";
+const GOLD: { value: GoldTarget; label: string }[] = [
+  { value: "FRONTEND", label: "FE" },
+  { value: "BACKEND", label: "BE" },
+  { value: "PM", label: "PM(대표)" },
+  { value: "SELF", label: "질문한 쪽 스스로" },
+];
 
 const SOURCE: Record<NonNullable<AgentQuestion["answerSource"]>, string> = {
   agent: "에이전트가 답함 · 사람 미확인",
@@ -47,15 +56,19 @@ function toggleLabel(value: string, label: string) {
 export function QuestionCard({
   question: q,
   canAnswer,
+  canLabel = false,
   taskHref,
   taskTitle,
 }: {
   question: AgentQuestion;
   canAnswer: boolean;
+  /** 대표 전용 평가 — 답이 끝난 질문에 "원래 누구에게 갔어야 했나"를 붙인다 */
+  canLabel?: boolean;
   taskHref: string;
   taskTitle?: string;
 }) {
   const answer = useAnswerQuestion();
+  const isPm = q.targetRole === "PM";
   const agentAnswered = q.status === "agent_answered";
   const open = q.status === "pending" || agentAnswered;
   // 에이전트가 이미 답했으면 그 답, 아니면 상담 초안
@@ -99,6 +112,11 @@ export function QuestionCard({
           {relTime(q.createdAt)}
         </span>
       </div>
+      {q.routedBy.startsWith("fallback:") && (
+        <p className="mt-1.5 text-[11.5px] text-ink-500">
+          자동 분류에 실패해 대표에게 왔습니다{q.routing.fallback && ` · ${q.routing.fallback}`}
+        </p>
+      )}
 
       <ol className="mt-3 space-y-4">
         {q.questions.map((x) => {
@@ -110,7 +128,11 @@ export function QuestionCard({
                 {x.header && <Badge>{x.header}</Badge>}
                 {/* decided=false: 코드에 없는 결정 — 사람이 정해야 한다 */}
                 {open && decided === false && <Badge tone="warn">코드에 없는 결정 · 사람이 정해야 함</Badge>}
-                {open && decided === true && <Badge tone="info">에이전트 초안</Badge>}
+                {open && isPm && q.draft ? (
+                  <Badge tone="pm">PM 초안 — 대표 확인 필요</Badge>
+                ) : (
+                  open && decided === true && <Badge tone="info">에이전트 초안</Badge>
+                )}
               </div>
               <p className="mt-1 whitespace-pre-wrap text-[14px] font-medium leading-6">{x.question}</p>
 
@@ -182,7 +204,8 @@ export function QuestionCard({
         </p>
       ) : !canAnswer ? (
         <p className="mt-3 text-[12.5px] text-ink-500">
-          {ROLE[q.targetRole].label} 담당자나 대표가 답합니다 · {fmtDateTime(q.expiresAt)}까지
+          {isPm ? "대표가 확정합니다" : `${ROLE[q.targetRole].label} 담당자나 대표가 답합니다`} ·{" "}
+          {fmtDateTime(q.expiresAt)}까지
         </p>
       ) : (
         <div className="mt-3 space-y-2">
@@ -215,6 +238,57 @@ export function QuestionCard({
         </div>
       )}
       {answer.isError && <p className="mt-2 text-[12.5px] text-forbidden">{errorMessage(answer.error)}</p>}
+      {canLabel && q.status === "answered" && <GoldLabel id={q.id} />}
     </div>
+  );
+}
+
+/** 발표 평가용 정답 담당자. 서비스 동작은 바뀌지 않는다. 다시 저장하면 바뀐다 */
+function GoldLabel({ id }: { id: string }) {
+  const gold = useSetGold();
+  const [target, setTarget] = useState<GoldTarget | "">("");
+  const [note, setNote] = useState("");
+  return (
+    <details className="mt-3 border-t border-ink-100 pt-2 text-[12.5px]">
+      <summary className="cursor-pointer text-ink-500">평가</summary>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <span className="text-ink-700">원래 누구에게 갔어야 했나</span>
+        <select
+          value={target}
+          onChange={(e) => setTarget(e.target.value as GoldTarget)}
+          disabled={gold.isPending}
+          aria-label="정답 담당자"
+          className="h-8 rounded-lg border border-ink-200 bg-white px-2"
+        >
+          <option value="" disabled>
+            선택
+          </option>
+          {GOLD.map((g) => (
+            <option key={g.value} value={g.value}>
+              {g.label}
+            </option>
+          ))}
+        </select>
+        <Input
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          disabled={gold.isPending}
+          placeholder="근거 (선택)"
+          aria-label="근거"
+          className="h-8 min-w-0 flex-1 text-[12.5px]"
+        />
+        <Button
+          size="sm"
+          disabled={!target || gold.isPending}
+          onClick={() => target && gold.mutate({ id, target, note: note.trim() || undefined })}
+        >
+          {gold.isPending ? "저장 중…" : "저장"}
+        </Button>
+      </div>
+      {gold.isSuccess && (
+        <p className="mt-1 text-ink-500">저장됨 · {GOLD.find((g) => g.value === gold.data.goldTarget)?.label}</p>
+      )}
+      {gold.isError && <p className="mt-1 text-forbidden">{errorMessage(gold.error)}</p>}
+    </details>
   );
 }

@@ -7,7 +7,7 @@ import { ArrowRight, Bot } from "lucide-react";
 import { Badge, Button, CopyField, Logo } from "@/shared/ui";
 import { cn, fmtDateTime } from "@/shared/lib/format";
 import { errorMessage } from "@/shared/api";
-import { CLI_NPX, useOrgAgents } from "@/entities/agent";
+import { CLI_NPX, useCreateConnectCode, useOrgAgents } from "@/entities/agent";
 import { AccountMenu, RotateConnectKey, useCurrentUser } from "@/entities/user";
 import { GITHUB_STEP, StepLabel } from "./steps";
 
@@ -19,26 +19,16 @@ const SERVER_FLAG = API_ORIGIN === CLI_DEFAULT_SERVER ? "" : ` --server ${API_OR
 
 const CODE = "font-mono text-ink-700";
 
-const APPROVE_HINT = (
-  <>
-    브라우저가 열리면 터미널에 나온 코드와 같은지 확인하고 <b>승인</b>을 누르세요. 에이전트 이름은 컴퓨터 이름으로
-    정해집니다. 브라우저가 열리지 않으면{" "}
-    <Link href="/connect/device" className="font-medium text-ink-900 underline underline-offset-2">
-      승인 화면
-    </Link>
-    에서 코드를 직접 입력하세요.
-  </>
-);
-
 // connect는 시작 전에 git·claude가 실행되는지 확인하고, 없으면 시작하지 않는다
 const STEPS = [
   {
     title: "터미널에서 연결",
-    commands: [`${CLI_NPX} connect${SERVER_FLAG}`],
+    commands: [],
     hint: (
       <>
         필요한 것: Node.js 22 이상 · git · Claude Code(설치 후 터미널에서 <code className={CODE}>claude</code>를 한 번
-        실행해 로그인). {APPROVE_HINT}
+        실행해 로그인). 이 명령은 지금 로그인한 계정 전용이라, 노트북에 다른 계정 정보가 남아 있어도 이 계정으로
+        연결됩니다. 에이전트 이름은 컴퓨터 이름으로 정해집니다.
       </>
     ),
   },
@@ -132,6 +122,7 @@ export function ConnectAgentView({ joined = false }: { joined?: boolean }) {
                     {step.title}
                   </div>
                   <div className="space-y-1.5">
+                    {i === 0 && <ConnectCommand />}
                     {step.commands.map((cmd) => (
                       <CopyField key={cmd} value={cmd} />
                     ))}
@@ -198,5 +189,34 @@ export function ConnectAgentView({ joined = false }: { joined?: boolean }) {
         </div>
       </main>
     </div>
+  );
+}
+
+/** 1회용 연결 명령. 화면에 들어오면 바로 발급하고, 10분이 지났거나 이미 썼으면 새로 받는다 */
+function ConnectCommand() {
+  const issue = useCreateConnectCode();
+  const { mutate } = issue;
+  useEffect(() => mutate(), [mutate]);
+
+  if (issue.isError)
+    return (
+      <div className="flex flex-wrap items-center gap-2 text-[12.5px]">
+        <span className="text-forbidden">{errorMessage(issue.error)}</span>
+        <Button size="sm" variant="outline" onClick={() => mutate()}>
+          다시 받기
+        </Button>
+      </div>
+    );
+  if (!issue.data) return <p className="text-[12.5px] text-ink-500">연결 명령을 받는 중…</p>;
+  return (
+    <>
+      <CopyField value={issue.data.command} />
+      <div className="flex flex-wrap items-center gap-2 text-[12px] text-ink-500">
+        <span>{fmtDateTime(issue.data.expiresAt)}까지 한 번만 쓸 수 있습니다</span>
+        <Button size="sm" variant="ghost" disabled={issue.isPending} onClick={() => mutate()}>
+          {issue.isPending ? "받는 중…" : "새 명령 받기"}
+        </Button>
+      </div>
+    </>
   );
 }

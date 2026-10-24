@@ -10,6 +10,16 @@ export const agentKeys = {
 /** 에이전트 CLI (backend#7). npx가 캐시한 옛 버전이 바뀐 서버 API로 실행되지 않게 @latest를 붙인다 */
 export const CLI_NPX = "npx @capstone-nomos/cli@latest";
 
+/**
+ * 1회용 연결 명령 발급 (로그인만 하면 됨, 조직 가입 전에도). 노트북에 다른 계정 자격 증명이 남아 있어도 이 계정으로 연결된다.
+ * 10분 · 1회용이고 부를 때마다 새 코드다. command를 그대로 보여준다
+ */
+export function useCreateConnectCode() {
+  return useMutation({
+    mutationFn: () => apiFetch<Schemas["AgentConnectCode"]>("/me/agent-connect-codes", { method: "POST" }),
+  });
+}
+
 /** 조직의 에이전트 목록. online은 서버 메모리 값이라 서버 재시작 직후 잠깐 false다 (최근 60초 안에 요청이 있으면 true) */
 export function useOrgAgents(orgId: string | null, { poll = false }: { poll?: boolean } = {}) {
   return useQuery({
