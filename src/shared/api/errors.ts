@@ -37,6 +37,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   NOT_QUESTION_TARGET: "이 질문에 답할 역할의 담당자나 대표만 답할 수 있습니다.",
   VERIFICATION_STAGE_NOT_REPORTABLE: "보고할 수 없는 검증 단계입니다.",
   NOT_AGENT_OWNER: "에이전트 주인이나 대표만 연결을 해제할 수 있습니다.",
+  NOT_TASK_OWNER: "이 태스크 역할의 담당자나 대표만 할 수 있습니다.",
 
   // 404
   NOT_FOUND: "요청한 주소를 찾을 수 없습니다.",
@@ -60,7 +61,9 @@ const ERROR_MESSAGES: Record<string, string> = {
   GITHUB_ACCOUNT_TAKEN: "이 GitHub 계정은 다른 사용자에게 연결되어 있습니다.",
   GITHUB_NOT_LINKED: "대표가 GitHub를 연결하지 않았습니다.",
   GITHUB_REPO_NAME_TAKEN: "같은 이름의 레포가 이미 있습니다. 다른 이름을 쓰세요.",
-  TASK_NOT_STOPPED: "멈춘 태스크가 아닙니다.",
+  TASK_NOT_STOPPED: "멈췄거나 재시도를 다 쓴 태스크가 아닙니다.",
+  TASK_IN_PROGRESS: "에이전트가 작업 중이거나 승인을 기다리는 태스크입니다.",
+  TASK_ALREADY_CLOSED: "이미 끝났거나 취소된 태스크입니다.",
   QUESTION_CLOSED: "이미 답했거나 만료된 질문입니다.",
   REPO_ALREADY_CONNECTED: "이미 연결된 레포지토리입니다.",
   PATH_PATTERN_DUPLICATE: "같은 경로 패턴이 이미 있습니다.",
@@ -106,6 +109,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   // 아래 둘은 details: [{ where, message }]에 이유가 전부 온다. 화면은 details를 목록으로 함께 보여준다
   PROJECT_START_INVALID: "프로젝트를 시작할 수 없습니다.",
   PLAN_INVALID: "명세·태스크 검증을 통과하지 못했습니다.",
+  // details: { undeclared, overdeclared, reason } (manualCompletionDetails)
+  MANUAL_COMPLETION_INVALID: "커밋의 실제 변경과 적은 파일이 맞지 않습니다.",
 
   // 5xx
   INTERNAL_ERROR: "서버에서 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.",
@@ -150,4 +155,25 @@ export function heldTasks(error: unknown): HeldTask[] {
     (d): d is HeldTask =>
       typeof d === "object" && d !== null && typeof d.taskId === "string" && typeof d.title === "string",
   );
+}
+
+export interface ManualCompletionDetails {
+  undeclared: string[];
+  overdeclared: string[];
+  reason: string | null;
+}
+
+/** 422 MANUAL_COMPLETION_INVALID의 details: { undeclared, overdeclared, reason }. 아니면 null */
+export function manualCompletionDetails(error: unknown): ManualCompletionDetails | null {
+  if (!(error instanceof ApiError) || error.code !== "MANUAL_COMPLETION_INVALID") return null;
+  const d = (typeof error.details === "object" && error.details !== null ? error.details : {}) as Record<
+    string,
+    unknown
+  >;
+  const paths = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []);
+  return {
+    undeclared: paths(d.undeclared),
+    overdeclared: paths(d.overdeclared),
+    reason: typeof d.reason === "string" ? d.reason : null,
+  };
 }

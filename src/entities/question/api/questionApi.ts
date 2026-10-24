@@ -49,3 +49,25 @@ export function useAnswerQuestion() {
     onSettled: () => queryClient.invalidateQueries({ queryKey: questionKeys.all }),
   });
 }
+
+/** 대표 전용 평가. 답이 끝난 질문에 정답 담당자를 붙인다 (SELF = 질문한 쪽 소관). 라우팅 보고서만 바뀐다 */
+export function useSetGold() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...body }: { id: string; target: "FRONTEND" | "BACKEND" | "PM" | "SELF"; note?: string }) =>
+      apiFetch<{ questionId: string; goldTarget: "FRONTEND" | "BACKEND" | "PM" | "SELF" }>(`/questions/${id}/gold`, {
+        method: "POST",
+        body,
+      }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: questionKeys.all }),
+  });
+}
+
+/** 대표 전용 라우팅 평가 보고서. 키를 questionKeys 아래에 둬 questions 신호로 함께 다시 읽는다 */
+export function useRoutingReport(projectId: string, enabled = true) {
+  return useQuery({
+    queryKey: [...questionKeys.all, "routing-report", projectId] as const,
+    queryFn: () => apiFetch<Schemas["RoutingReport"]>(`/projects/${projectId}/routing-report`),
+    enabled,
+  });
+}

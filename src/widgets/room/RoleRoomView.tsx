@@ -34,8 +34,11 @@ export function RoleRoomView({ projectId, role }: { projectId: string; role: Tea
   const roleMeta = TEAM_ROLE_META[role];
   const questions = useProjectQuestions(projectId, "all").data ?? [];
   // 같은 카드가 묻는 쪽 룸(보기 전용)과 답하는 쪽 룸에 나온다. 답할 수 있는 사람은 그 역할의 담당자와 대표다
+  // PM 질문은 대표만 확정한다
   const canAnswer = (q: Question) =>
-    q.targetRole === role && (isRep || members.some((m) => m.userId === me.userId && m.teamRole === role));
+    q.targetRole === "PM"
+      ? isRep
+      : q.targetRole === role && (isRep || members.some((m) => m.userId === me.userId && m.teamRole === role));
 
   const nameOf = (userId: string) => {
     if (userId === me.userId) return "나";
@@ -142,6 +145,7 @@ export function RoleRoomView({ projectId, role }: { projectId: string; role: Tea
                               <QuestionCard
                                 question={q}
                                 canAnswer={canAnswer(q)}
+                                canLabel={isRep}
                                 taskHref={`/p/${projectId}/tasks/${q.taskId}`}
                                 taskTitle={m.taskTitle ?? undefined}
                               />
@@ -197,6 +201,7 @@ export function RoleRoomView({ projectId, role }: { projectId: string; role: Tea
                   key={q.id}
                   question={q}
                   canAnswer={canAnswer(q)}
+                  canLabel={isRep}
                   taskHref={`/p/${projectId}/tasks/${q.taskId}`}
                 />
               ))}

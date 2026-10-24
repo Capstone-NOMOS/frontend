@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useState } from "react";
 import { ArrowLeft, GitBranch, Loader2 } from "lucide-react";
-import { errorMessage, type Schemas } from "@/shared/api";
-import { Badge, Button, EmptyState, Input, SectionTitle } from "@/shared/ui";
+import { errorMessage, manualCompletionDetails, type Schemas } from "@/shared/api";
+import { Badge, Button, EmptyState, Input, SectionTitle, Textarea } from "@/shared/ui";
 import { cn, fmtDateTime, relTime } from "@/shared/lib/format";
 import {
   GateModeBadge,
@@ -14,10 +14,21 @@ import {
   useVerifications,
 } from "@/entities/artifact";
 import { NoteItem, useNotes } from "@/entities/note";
-import { ProjectErrorView } from "@/entities/project";
+import { ProjectErrorView, useProject } from "@/entities/project";
 import { ROLE_ROOM } from "@/entities/room";
-import { ApiTaskBadge, BLOCKED_REASON, TeamRoleBadge, useResumeTask, useTasks } from "@/entities/task";
+import {
+  ApiTaskBadge,
+  BLOCKED_REASON,
+  TeamRoleBadge,
+  useCancelTask,
+  useCompleteTaskManually,
+  useResumeTask,
+  useTasks,
+} from "@/entities/task";
 import { useCurrentUser } from "@/entities/user";
+
+// 에이전트가 붙잡지 않은 상태 — 사람이 취소하거나 직접 완료할 수 있다
+const CLOSABLE: Schemas["Task"]["state"][] = ["READY", "BLOCKED", "ESCALATED"];
 
 // 결과가 늦게 오는 단계(V2·V4는 브릿지 보고). INTEGRATION은 아직 돌지 않으므로 빈자리로 보이지 않는다
 const EXPECTED_STAGES = VERIFICATION_ORDER.filter((s) => s !== "INTEGRATION");
@@ -66,6 +77,14 @@ export function TaskDetailView({ projectId, taskId }: { projectId: string; taskI
                 </p>
               )}
               {task.state === "BLOCKED" && task.blockedReason && <Blocked projectId={projectId} task={task} />}
+              {task.state === "ESCALATED" && (
+                <div className="mt-3 rounded-lg bg-human-bg px-3 py-2.5 text-[13px]">
+                  <p className="font-medium text-human">재시도를 다 썼습니다</p>
+                  <p className="mt-1 text-ink-700">원인을 확인한 뒤 재개하면 재시도 횟수가 0으로 돌아갑니다.</p>
+                  <Resume taskId={task.id} />
+                </div>
+              )}
+              {CLOSABLE.includes(task.state) && <TaskActions projectId={projectId} task={task} />}
             </header>
 
             <Submissions taskId={taskId} />
@@ -80,9 +99,6 @@ export function TaskDetailView({ projectId, taskId }: { projectId: string; taskI
 
 /** BLOCKED는 이유마다 풀리는 방법이 다르다. QUESTION은 답하면 자동으로, AGENT_STOPPED는 대표가 재개해야 풀린다 */
 function Blocked({ projectId, task }: { projectId: string; task: Schemas["Task"] }) {
-  const isRep = useCurrentUser().me?.orgRole === "REPRESENTATIVE";
-  const resume = useResumeTask();
-  const [note, setNote] = useState("");
   const reason = task.blockedReason!;
   const roomHref = task.teamRole && `/p/${projectId}/rooms/${ROLE_ROOM[task.teamRole].slug}`;
 
@@ -112,29 +128,174 @@ function Blocked({ projectId, task }: { projectId: string; task: Schemas["Task"]
               </>
             )}
           </p>
-          {isRep ? (
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <Input
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                disabled={resume.isPending}
-                placeholder="무엇을 해결했는지 (선택, 룸에 보입니다)"
-                aria-label="재개 메모"
-                className="h-8 min-w-0 flex-1 bg-white text-[13px] sm:max-w-[360px]"
-              />
-              <Button
-                size="sm"
-                disabled={resume.isPending}
-                onClick={() => resume.mutate({ taskId: task.id, note: note.trim() || undefined })}
-              >
-                {resume.isPending ? "재개하는 중…" : "재개"}
-              </Button>
-            </div>
-          ) : (
-            <p className="mt-1 text-ink-700">대표가 원인을 해결한 뒤 재개합니다.</p>
-          )}
-          {resume.isError && <p className="mt-2 text-[12.5px] text-forbidden">{errorMessage(resume.error)}</p>}
+          <Resume taskId={task.id} />
         </>
+      )}
+    </div>
+  );
+}
+
+/** 대표 전용 재개. BLOCKED · AGENT_STOPPED와 ESCALATED에서 쓴다 */
+function Resume({ taskId }: { taskId: string }) {
+  const isRep = useCurrentUser().me?.orgRole === "REPRESENTATIVE";
+  const resume = useResumeTask();
+  const [note, setNote] = useState("");
+
+  if (!isRep) return <p className="mt-1 text-ink-700">대표가 원인을 해결한 뒤 재개합니다.</p>;
+  return (
+    <>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <Input
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          disabled={resume.isPending}
+          placeholder="무엇을 해결했는지 (선택, 룸에 보입니다)"
+          aria-label="재개 메모"
+          className="h-8 min-w-0 flex-1 bg-white text-[13px] sm:max-w-[360px]"
+        />
+        <Button
+          size="sm"
+          disabled={resume.isPending}
+          onClick={() => resume.mutate({ taskId, note: note.trim() || undefined })}
+        >
+          {resume.isPending ? "재개하는 중…" : "재개"}
+        </Button>
+      </div>
+      {resume.isError && <p className="mt-2 text-[12.5px] text-forbidden">{errorMessage(resume.error)}</p>}
+    </>
+  );
+}
+
+/**
+ * 취소(대표) · 직접 완료(그 역할 담당 · 대표). READY · BLOCKED · ESCALATED에서만 보인다.
+ * 최종 판정은 서버 — 403 NOT_TASK_OWNER, 409 TASK_IN_PROGRESS · TASK_ALREADY_CLOSED
+ */
+function TaskActions({ projectId, task }: { projectId: string; task: Schemas["Task"] }) {
+  const me = useCurrentUser().me!;
+  const isRep = me.orgRole === "REPRESENTATIVE";
+  const isOwner = useProject(projectId).data?.members.some(
+    (m) => m.userId === me.userId && m.teamRole === task.teamRole,
+  );
+  const [mode, setMode] = useState<"cancel" | "complete" | null>(null);
+  if (!isRep && !isOwner) return null;
+
+  if (mode === "cancel") return <CancelForm taskId={task.id} onClose={() => setMode(null)} />;
+  if (mode === "complete") return <CompleteForm taskId={task.id} onClose={() => setMode(null)} />;
+  return (
+    <div className="mt-3 flex flex-wrap gap-2">
+      <Button size="sm" variant="outline" onClick={() => setMode("complete")}>
+        직접 완료
+      </Button>
+      {isRep && (
+        <Button size="sm" variant="outline" onClick={() => setMode("cancel")}>
+          취소
+        </Button>
+      )}
+    </div>
+  );
+}
+
+function CancelForm({ taskId, onClose }: { taskId: string; onClose: () => void }) {
+  const cancel = useCancelTask();
+  const [reason, setReason] = useState("");
+  return (
+    <div className="card mt-3 space-y-2 p-3">
+      <Textarea
+        rows={2}
+        value={reason}
+        onChange={(e) => setReason(e.target.value)}
+        disabled={cancel.isPending}
+        placeholder="왜 취소하나요? (필수, 룸에 보입니다)"
+        aria-label="취소 사유"
+      />
+      <div className="flex gap-2">
+        <Button
+          size="sm"
+          variant="danger"
+          disabled={!reason.trim() || cancel.isPending}
+          onClick={() => cancel.mutate({ taskId, reason: reason.trim() })}
+        >
+          {cancel.isPending ? "취소하는 중…" : "태스크 취소"}
+        </Button>
+        <Button size="sm" variant="ghost" disabled={cancel.isPending} onClick={onClose}>
+          닫기
+        </Button>
+      </div>
+      {cancel.isError && <p className="text-[12.5px] text-forbidden">{errorMessage(cancel.error)}</p>}
+    </div>
+  );
+}
+
+function CompleteForm({ taskId, onClose }: { taskId: string; onClose: () => void }) {
+  const complete = useCompleteTaskManually();
+  const [sha, setSha] = useState("");
+  const [paths, setPaths] = useState("");
+  const [note, setNote] = useState("");
+  const changedPaths = paths
+    .split("\n")
+    .map((x) => x.trim())
+    .filter(Boolean);
+  const invalid = manualCompletionDetails(complete.error);
+
+  return (
+    <div className="card mt-3 space-y-2 p-3">
+      <p className="text-[12.5px] text-ink-700">
+        태스크 브랜치에 직접 커밋해 push한 뒤, 그 커밋 sha와 <b>기본 브랜치에서 갈라진 뒤 바꾼 파일 전부</b>를 적어
+        주세요.
+      </p>
+      <Input
+        value={sha}
+        onChange={(e) => setSha(e.target.value)}
+        disabled={complete.isPending}
+        placeholder="커밋 sha (예: a1b2c3d)"
+        aria-label="커밋 sha"
+        className="font-mono"
+      />
+      <Textarea
+        rows={3}
+        value={paths}
+        onChange={(e) => setPaths(e.target.value)}
+        disabled={complete.isPending}
+        placeholder={"바꾼 파일 (한 줄에 하나)\nsrc/routes/studies.ts"}
+        aria-label="바꾼 파일"
+        className="font-mono"
+      />
+      <Input
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        disabled={complete.isPending}
+        placeholder="메모 (선택)"
+        aria-label="메모"
+      />
+      <div className="flex gap-2">
+        <Button
+          size="sm"
+          disabled={!sha.trim() || changedPaths.length === 0 || complete.isPending}
+          onClick={() =>
+            complete.mutate({ taskId, commitSha: sha.trim(), changedPaths, note: note.trim() || undefined })
+          }
+        >
+          {complete.isPending ? "확인하는 중…" : "완료로 넘기기"}
+        </Button>
+        <Button size="sm" variant="ghost" disabled={complete.isPending} onClick={onClose}>
+          닫기
+        </Button>
+      </div>
+      {complete.isError && (
+        <div className="space-y-1 text-[12.5px] text-forbidden">
+          <p>{errorMessage(complete.error)}</p>
+          {invalid?.reason && <p>{invalid.reason}</p>}
+          {invalid && invalid.undeclared.length > 0 && (
+            <p>
+              빠뜨린 파일: <span className="font-mono">{invalid.undeclared.join(", ")}</span>
+            </p>
+          )}
+          {invalid && invalid.overdeclared.length > 0 && (
+            <p>
+              바꾸지 않았는데 적은 파일: <span className="font-mono">{invalid.overdeclared.join(", ")}</span>
+            </p>
+          )}
+        </div>
       )}
     </div>
   );
