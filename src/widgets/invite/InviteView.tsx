@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { Loader2 } from "lucide-react";
@@ -9,7 +8,7 @@ import { Button, Logo } from "@/shared/ui";
 import { fmtDateTime } from "@/shared/lib/format";
 import { INVITE_INVALID, useAcceptInvite, useInvitePreview } from "@/entities/invite";
 import { TeamRoleBadge } from "@/entities/task";
-import { useCurrentUser } from "@/entities/user";
+import { HomeLink, useCurrentUser } from "@/entities/user";
 
 /** 로그인 없이도 열리는 화면이라 AuthGate로 감싸지 않는다. 로그인 여부는 useCurrentUser로만 본다 */
 export function InviteView({ token }: { token: string }) {
@@ -119,9 +118,9 @@ function Frame({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-dvh flex-col dots-bg">
       <header className="flex h-16 items-center px-5 sm:px-8">
-        <Link href="/" aria-label="NOMOS 홈">
+        <HomeLink>
           <Logo />
-        </Link>
+        </HomeLink>
       </header>
       <main className="flex flex-1 items-start justify-center px-4 pb-16 pt-6 sm:items-center sm:pt-0">
         <div className="card w-full max-w-[460px] p-6 animate-rise sm:p-8">{children}</div>

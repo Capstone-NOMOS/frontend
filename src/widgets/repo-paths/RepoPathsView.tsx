@@ -21,7 +21,7 @@ import {
   useUpdatePath,
 } from "@/entities/repo";
 import { TeamRoleBadge } from "@/entities/task";
-import { AccountMenu, useCurrentUser } from "@/entities/user";
+import { AccountMenu, HomeLink, useCurrentUser } from "@/entities/user";
 
 type RepoPath = Schemas["RepoPath"];
 type Access = RepoPath["access"];
@@ -46,9 +46,9 @@ export function RepoPathsView({ repoId }: { repoId: string }) {
   return (
     <div className="min-h-dvh dots-bg">
       <header className="flex h-16 items-center justify-between px-5 sm:px-8">
-        <Link href="/" aria-label="NOMOS 홈">
+        <HomeLink>
           <Logo />
-        </Link>
+        </HomeLink>
         <AccountMenu />
       </header>
 

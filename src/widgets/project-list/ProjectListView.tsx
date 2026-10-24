@@ -10,7 +10,7 @@ import { cn } from "@/shared/lib/format";
 import { useOrgAgents } from "@/entities/agent";
 import { LEVELS } from "@/entities/policy";
 import { ProjectStatusBadge, fmtUsd, useProjects } from "@/entities/project";
-import { AccountMenu, useCurrentUser, userKeys } from "@/entities/user";
+import { AccountMenu, HomeLink, useCurrentUser, userKeys } from "@/entities/user";
 
 export function ProjectListView() {
   // AuthGate 안쪽이므로 me와 orgId가 있다
@@ -34,9 +34,9 @@ export function ProjectListView() {
   return (
     <div className="min-h-dvh dots-bg">
       <header className="flex h-16 items-center justify-between px-5 sm:px-8">
-        <Link href="/" aria-label="NOMOS 홈">
+        <HomeLink>
           <Logo />
-        </Link>
+        </HomeLink>
         <div className="flex items-center gap-3">
           <span className="hidden items-center gap-1.5 text-[12.5px] text-ink-500 sm:inline-flex">
             {myAgent ? (

@@ -8,7 +8,7 @@ import { Badge, Button, Input, Logo } from "@/shared/ui";
 import { fmtDateTime, fmtTime } from "@/shared/lib/format";
 import { errorMessage, type Schemas } from "@/shared/api";
 import { CLI_NPX, useApproveDeviceRequest, useDenyDeviceRequest, useDeviceRequest } from "@/entities/agent";
-import { AccountMenu } from "@/entities/user";
+import { AccountMenu, HomeLink } from "@/entities/user";
 
 const PATH = "/connect/device";
 
@@ -34,9 +34,9 @@ export function ConnectDeviceView({ code }: { code?: string }) {
   return (
     <div className="min-h-dvh dots-bg">
       <header className="flex h-16 items-center justify-between px-5 sm:px-8">
-        <Link href="/" aria-label="NOMOS 홈">
+        <HomeLink>
           <Logo />
-        </Link>
+        </HomeLink>
         <AccountMenu />
       </header>
       <main className="mx-auto max-w-[560px] px-4 pb-16 pt-4 sm:px-6">

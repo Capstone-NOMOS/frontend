@@ -7,7 +7,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Button, Logo } from "@/shared/ui";
 import { orgKeys } from "@/entities/org";
-import { AccountMenu, GithubConnect, useCurrentUser } from "@/entities/user";
+import { AccountMenu, GithubConnect, HomeLink, useCurrentUser } from "@/entities/user";
 import { StepLabel } from "./steps";
 
 /**
@@ -29,9 +29,9 @@ export function ConnectGithubView() {
   return (
     <div className="min-h-dvh dots-bg">
       <header className="flex h-16 items-center justify-between px-5 sm:px-8">
-        <Link href="/" aria-label="NOMOS 홈">
+        <HomeLink>
           <Logo />
-        </Link>
+        </HomeLink>
         <AccountMenu />
       </header>
       <main className="mx-auto max-w-[720px] px-4 pb-16 pt-4 sm:px-6">
