@@ -26,7 +26,7 @@ export function makeEventLookup(
   };
 }
 
-const ROLE: Record<string, string> = { FRONTEND: "FE", BACKEND: "BE" };
+const ROLE: Record<string, string> = { FRONTEND: "FE", BACKEND: "BE", PM: "PM(대표)" };
 
 /** 누가 했는가. 에이전트가 했으면 에이전트, 아니면 책임 주체(사람 또는 system:*) */
 export function eventActor(e: ProjectEvent, l: EventLookup) {
@@ -144,6 +144,15 @@ export function describeEvent(e: ProjectEvent, l: EventLookup): { text: string; 
       };
     case "QUESTION_ANSWERED":
       return { text: `질문에 답함 · ${task()}`, tone: "default" };
+    case "TASK_COMPLETED_MANUALLY": {
+      const paths = Array.isArray(p.changedPaths) ? p.changedPaths.length : 0;
+      return {
+        text: `직접 완료 · 커밋 ${str("commitSha").slice(0, 7)} · 파일 ${paths}개 · ${str("title") || task()}`,
+        tone: "success",
+      };
+    }
+    case "QUESTION_GOLD_LABELED":
+      return { text: `평가 · 질문에 정답 담당자를 붙임 · ${task()}`, tone: "default" };
     case "QUESTION_EXPIRED":
       return { text: `질문 만료 · 답이 없음 · ${task()}`, tone: "danger" };
     default:

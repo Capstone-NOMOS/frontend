@@ -17,6 +17,7 @@ import {
   RefreshCcw,
   Settings,
   X,
+  NotebookPen,
 } from "lucide-react";
 import { useProjectStream, type Schemas } from "@/shared/api";
 import { Avatar, Badge, Logo, MockBadge } from "@/shared/ui";
@@ -322,6 +323,13 @@ function SidebarContent({
             icon={<FileText size={16} />}
             label="결정기록"
             active={is(`${base}/docs/adr`)}
+            onNavigate={onNavigate}
+          />
+          <NavItem
+            href={`${base}/docs/notes`}
+            icon={<NotebookPen size={16} />}
+            label="인계 노트"
+            active={is(`${base}/docs/notes`)}
             onNavigate={onNavigate}
           />
         </NavGroup>

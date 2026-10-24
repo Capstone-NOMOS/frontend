@@ -1,11 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { Building2 } from "lucide-react";
 import { Button, Input, Logo } from "@/shared/ui";
 import { ApiError, errorMessage } from "@/shared/api";
-import { AccountMenu } from "@/entities/user";
+import { AccountMenu, HomeLink } from "@/entities/user";
 import { useCreateOrg } from "@/entities/org";
 
 /** 조직이 없는 사용자가 오는 곳. 성공하면 me가 갱신되고 AuthGate가 /projects로 보낸다 */
@@ -19,9 +18,9 @@ export function OnboardingView() {
   return (
     <div className="flex min-h-dvh flex-col dots-bg">
       <header className="flex h-16 items-center justify-between px-5 sm:px-8">
-        <Link href="/" aria-label="NOMOS 홈">
+        <HomeLink>
           <Logo />
-        </Link>
+        </HomeLink>
         <AccountMenu />
       </header>
       <main className="flex flex-1 items-start justify-center px-4 pb-16 pt-6 sm:items-center sm:pt-0">

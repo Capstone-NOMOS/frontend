@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { ArrowRight, Bot } from "lucide-react";
@@ -8,7 +7,7 @@ import { Badge, Button, CopyField, Logo } from "@/shared/ui";
 import { cn, fmtDateTime } from "@/shared/lib/format";
 import { errorMessage } from "@/shared/api";
 import { CLI_NPX, useCreateConnectCode, useOrgAgents } from "@/entities/agent";
-import { AccountMenu, RotateConnectKey, useCurrentUser } from "@/entities/user";
+import { AccountMenu, HomeLink, RotateConnectKey, useCurrentUser } from "@/entities/user";
 import { GITHUB_STEP, StepLabel } from "./steps";
 
 // Executor는 오리진만 받는다 (/api는 스스로 붙인다)
@@ -71,9 +70,9 @@ export function ConnectAgentView({ joined = false }: { joined?: boolean }) {
   return (
     <div className="min-h-dvh dots-bg">
       <header className="flex h-16 items-center justify-between px-5 sm:px-8">
-        <Link href="/" aria-label="NOMOS 홈">
+        <HomeLink>
           <Logo />
-        </Link>
+        </HomeLink>
         <AccountMenu />
       </header>
       <main className="mx-auto max-w-[720px] px-4 pb-16 pt-4 sm:px-6">
