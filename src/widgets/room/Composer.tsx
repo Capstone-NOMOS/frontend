@@ -22,12 +22,18 @@ export function Composer({
   const [text, setText] = useState("");
   const [withMention, setWithMention] = useState(true);
   const ref = useRef<HTMLTextAreaElement>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
 
+  // 내용에 맞춰 높이를 다시 잰다. 잴 때 textarea를 0px로 줄이면 위의 피드가 그만큼 커지며 scrollTop이 깎여
+  // 대화가 내려앉는다 — 재는 동안 바깥 틀 높이를 고정해 레이아웃이 바뀌지 않게 한다
   useEffect(() => {
     const el = ref.current;
-    if (!el) return;
+    const box = boxRef.current;
+    if (!el || !box) return;
+    box.style.height = `${box.offsetHeight}px`;
     el.style.height = "0px";
     el.style.height = `${Math.min(el.scrollHeight, 180)}px`;
+    box.style.height = "";
   }, [text]);
 
   const send = () => {
@@ -43,7 +49,10 @@ export function Composer({
   };
 
   return (
-    <div className="rounded-2xl border border-ink-200 bg-white shadow-card transition focus-within:border-ink-300 focus-within:ring-4 focus-within:ring-ink-100">
+    <div
+      ref={boxRef}
+      className="rounded-2xl border border-ink-200 bg-white shadow-card transition focus-within:border-ink-300 focus-within:ring-4 focus-within:ring-ink-100"
+    >
       {mention && (
         <div className="flex items-center gap-1.5 px-3 pt-2.5">
           <button

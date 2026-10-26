@@ -23,7 +23,7 @@ export default async function SettingsPage({
   const base = `/p/${projectId}/settings`;
 
   return (
-    <div className="h-full overflow-y-auto">
+    <div className="no-scrollbar h-full overflow-y-auto">
       <div className="mx-auto max-w-[960px] space-y-6 px-4 py-6 sm:px-6 lg:px-8">
         <TabLinks
           tabs={TABS.map((t) => ({

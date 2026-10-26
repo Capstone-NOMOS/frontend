@@ -65,7 +65,7 @@ export function RoleRoomView({ projectId, role }: { projectId: string; role: Tea
       : []),
     ...(owner ? [{ kind: "human" as const, name: nameOf(owner.userId), note: roleMeta.label }] : []),
     ...(rep && rep.userId !== owner?.userId
-      ? [{ kind: "human" as const, name: nameOf(rep.userId), note: "대표" }]
+      ? [{ kind: "human" as const, name: nameOf(rep.userId), note: "대표 · 보기만" }]
       : []),
   ];
 
@@ -82,8 +82,9 @@ export function RoleRoomView({ projectId, role }: { projectId: string; role: Tea
   const openContracts =
     role === "BACKEND" ? contracts.filter((c) => c.status === "draft" || c.status === "failed") : [];
   const canDecideContract = owner ? owner.userId === me.userId : isRep;
-  // 에이전트에게 말하기는 그 역할 담당과 대표. 에이전트가 없거나 오프라인이어도 서버가 받아 두었다가 다음 실행에 전달한다
-  const canSend = isRep || owner?.userId === me.userId;
+  // 에이전트에게 말하기는 그 역할 담당만 — 대표는 FE·BE 룸을 읽기만 한다(명세 F-07. API는 대표도 받지만 화면은 명세를 따른다).
+  // 에이전트가 없거나 오프라인이어도 서버가 받아 두었다가 다음 실행에 전달한다
+  const canSend = owner?.userId === me.userId;
   const send = useSendRoomMessage(projectId, role);
   const thinkingSec = useThinking(messages);
   const newestId = feed.data?.[0]?.id;

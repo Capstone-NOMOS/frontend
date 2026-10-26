@@ -45,7 +45,7 @@ export function useRoomFeed(projectId: string, role: TeamRole) {
 }
 
 /**
- * 룸에서 그 역할의 에이전트에게 말하기 — 그 역할 담당 · 대표. 실행 중인 에이전트에 바로 끼워 넣지 않고 다음 실행에 전달된다.
+ * 룸에서 그 역할의 에이전트에게 말하기 — API는 그 역할 담당 · 대표를 받지만 화면은 담당만 연다(명세 F-07). 실행 중인 에이전트에 바로 끼워 넣지 않고 다음 실행에 전달된다.
  * 에이전트가 없거나 오프라인이어도 받아 둔다. 403 ROOM_NOT_VISIBLE · 409 PROJECT_NOT_OPEN · 400 VALIDATION_ERROR(0자·1000자 초과)
  */
 export function useSendRoomMessage(projectId: string, role: TeamRole) {
