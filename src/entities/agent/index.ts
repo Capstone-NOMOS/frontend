@@ -4,6 +4,7 @@ export {
   agentKeys,
   CLI_NPX,
   useApproveDeviceRequest,
+  useCreateConnectCode,
   useDenyDeviceRequest,
   useDisconnectAgent,
   useDeviceRequest,

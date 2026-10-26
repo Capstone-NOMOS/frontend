@@ -17,6 +17,7 @@ import {
   RefreshCcw,
   Settings,
   X,
+  NotebookPen,
 } from "lucide-react";
 import { useProjectStream, type Schemas } from "@/shared/api";
 import { Avatar, Badge, Logo, MockBadge } from "@/shared/ui";
@@ -185,7 +186,8 @@ function SidebarContent({
   const is = (p: string) => pathname === p;
   const startsWith = (p: string) => pathname.startsWith(p);
 
-  const myAgentName = detail.members.find((m) => m.userId === user.userId)?.agentName;
+  const mine = detail.members.find((m) => m.userId === user.userId);
+  const myAgentName = mine && (mine.agentName ?? "에이전트 연결 필요");
 
   return (
     <div className="flex h-full flex-col">
@@ -322,6 +324,13 @@ function SidebarContent({
             icon={<FileText size={16} />}
             label="결정기록"
             active={is(`${base}/docs/adr`)}
+            onNavigate={onNavigate}
+          />
+          <NavItem
+            href={`${base}/docs/notes`}
+            icon={<NotebookPen size={16} />}
+            label="인계 노트"
+            active={is(`${base}/docs/notes`)}
             onNavigate={onNavigate}
           />
         </NavGroup>

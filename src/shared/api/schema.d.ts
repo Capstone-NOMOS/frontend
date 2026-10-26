@@ -369,6 +369,287 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/questions/{questionId}/gold": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 정답 담당자 붙이기 (대표, 평가용)
+         * @description 발표 지표(026)를 위한 기록이다 — 서비스 동작은 바뀌지 않는다. 질문을 보고 "원래 누구에게 갔어야 했나"를 정한다(`SELF` = 질문한 쪽 자기 소관).
+         *     다시 부르면 바뀐다(이전 값은 이벤트 `QUESTION_GOLD_LABELED`). 대표만(403 `NOT_REPRESENTATIVE`).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    questionId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    /**
+                     * @example {
+                     *       "target": "BACKEND",
+                     *       "note": "응답 상태 코드는 서버가 정한다"
+                     *     }
+                     */
+                    "application/json": {
+                        /** @enum {string} */
+                        target: "FRONTEND" | "BACKEND" | "PM" | "SELF";
+                        /** @description 판단 근거 */
+                        note?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description 붙였음 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** Format: uuid */
+                                questionId: string;
+                                /** @enum {string} */
+                                goldTarget: "FRONTEND" | "BACKEND" | "PM" | "SELF";
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{projectId}/routing-report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 질문 라우팅 평가 보고서 (대표, 발표 지표)
+         * @description 실제 질문마다 실제로 보낸 라우터(primary)와 함께 돌려 본 라우터(shadow — 설정 `QUESTION_SHADOW_ROUTERS`: llm·decision)의 판정을 모아
+         *     라우터별 **최초 수신자-정답 담당자 일치율**(정답이 붙은 질문만)·**분류 지연**·**요청당 비용**을 낸다.
+         *     라우터가 실패해 대표에게 보낸 경우는 `fallback:representative`로 따로 나온다(실패한 라우터에는 errors로 센다).
+         *     `baseline:asker`는 조건 A(기존 다인 개발 — 질문이 질문한 사람에게 간다, 모두 SELF)다. 대표만.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @example {{PROJECT_ID}} */
+                    projectId: components["parameters"]["ProjectId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 보고서 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["RoutingReport"];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/agent-connect-codes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 1회용 연결 코드 받기 (로그인한 사람)
+         * @description 웹의 "에이전트 연결" 안내가 부른다(024). 응답의 `command`를 그대로 보여 주면 된다 — 팀원이 노트북에서 실행하면
+         *     **노트북에 다른 계정의 자격 증명이 남아 있어도 이 계정의 에이전트로** 연결된다(통합 테스트: 예전 계정으로 조용히 붙었다).
+         *     코드는 10분·1회용이고 서버에는 해시만 남는다. 누를 때마다 새 코드다. 조직 가입 전에도 받을 수 있다.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 발급됨 */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "data": {
+                         *         "code": "WDJB-MJHT",
+                         *         "expiresAt": "2026-10-23T09:10:00Z",
+                         *         "command": "npx @capstone-nomos/cli@latest connect --code WDJB-MJHT --server https://nomos-team.duckdns.org"
+                         *       }
+                         *     }
+                         */
+                        "application/json": {
+                            data: components["schemas"]["AgentConnectCode"];
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/connect/code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 1회용 연결 코드로 에이전트 연결 (CLI)
+         * @description `connect --code`가 부른다. 코드의 주인 계정으로 에이전트 자격 증명을 낸다(연결 키·브라우저 승인과 같은 발급 경로, `AGENT_CONNECTED.payload.method = connect_code`).
+         *     틀린·만료·이미 쓴 코드는 모두 400 `INVALID_CONNECT_REQUEST`(어느 경우인지 알려 주지 않는다). 응답의 `account`를 CLI가 출력한다 — 남이 준 명령이면 드러난다.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "WDJB-MJHT",
+                     *       "agentName": "be-laptop",
+                     *       "harness": "claude-code"
+                     *     }
+                     */
+                    "application/json": {
+                        /** @description 대소문자·하이픈 무시 */
+                        code: string;
+                        agentName: string;
+                        harness: string;
+                        skills?: string[];
+                        maxConcurrent?: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description 연결됨 */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["AgentConnectedByCode"];
+                        };
+                    };
+                };
+                /** @description 코드가 틀림·만료·이미 씀 */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "INVALID_CONNECT_REQUEST",
+                         *         "message": "invalid connect request"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/me/account": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 이 에이전트의 주인 계정 (에이전트)
+         * @description CLI가 저장된 자격 증명을 재사용할 때 "어느 계정으로 붙었는지" 출력한다(024). 프로젝트 배정 전에도 된다.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["AgentAccount"];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/agents/device/start": {
         parameters: {
             query?: never;
@@ -4490,6 +4771,15 @@ export interface paths {
          *     - `types`로 거른다(쉼표로 여러 개). `payload` 모양은 `type`마다 다르다.
          *     - `onBehalfOf`는 사람(user id)이거나 시스템 주체 문자열(`system:pm`, `system:device-flow` 등)이다.
          *     - `tokenCost`는 그 행의 비용(USD) — 지금은 PM 호출(`PM_CALL`)에만 있다. 태스크별·사람별 비용 집계는 별도 API로 다룬다.
+         *     - 화면이 문구를 만들 때 자주 쓰는 type과 payload(전체 목록은 서버 `domain/events/types.ts`):
+         *       - `TASK_CANCELLED` — `taskId, title, previousState, reason, expiredQuestionIds[], unblockedDependents[]`(대표가 취소, 027)
+         *       - `TASK_COMPLETED_MANUALLY` — `taskId, title, artifactId, commitSha, changedPaths[], previousState, v3('PASS'), note`(사람이 직접 완료, 027)
+         *       - `TASK_RESUMED` — `taskId, note, from('AGENT_STOPPED'|'ESCALATED'), previousRetryCount?`
+         *       - `QUESTION_ASKED` — `questionId, taskId, askerRole, targetRole('FRONTEND'|'BACKEND'|'PM'|'SELF'), routedBy, confidence, latencyMs, fallback, costUsd, questionCount`
+         *       - `QUESTION_GOLD_LABELED` — `questionId, goldTarget('FRONTEND'|'BACKEND'|'PM'|'SELF'), previousGoldTarget`(대표가 정답 담당자를 붙임, 026)
+         *       - `MEMBER_AGENT_DETACHED` — `agentId, teamRole, userId, cause('agent_disconnected')`(에이전트만 떨어짐 — 사람은 담당으로 남음, 028)
+         *       - `MEMBER_AGENT_ATTACHED` — `agentId, teamRole, userId, cause('reconnected'|'assigned')`(빈 담당 자리에 에이전트가 다시 붙음, 028)
+         *       - `MEMBER_UNASSIGNED` — `agentId(없으면 null), teamRole, userId, cause?`(사람이 역할에서 빠짐)
          */
         get: {
             parameters: {
@@ -4597,6 +4887,66 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{projectId}/rooms/{role}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 사람 → 그 역할 에이전트 메시지 (그 역할 담당·대표)
+         * @description 룸 대화창에서 그 역할의 에이전트에게 말을 걸거나 지시한다. 보낼 수 있는 사람은 그 룸을 볼 수 있는 사람 — 그 역할 담당과 대표(아니면 403 `ROOM_NOT_VISIBLE`).
+         *     **실행 중인 에이전트에게 바로 끼워 넣지 않는다.** 다음 실행의 브리핑(`humanMessages`, 프롬프트 "담당자가 보낸 메시지")으로 전달된다 —
+         *     지금 실행에 바로 반영하려면 그 태스크를 멈추고 재개한다. 에이전트가 꺼져 있거나 태스크가 없어도 받아 두었다가 다음 실행에 전달한다(409 없음).
+         *     메시지로 권한이 넓어지지 않는다 — 경로 금지·제출 시 판정·V3가 그대로 막는다. 이벤트 `ROOM_MESSAGE_SENT`(보낸 사람 명의, 본문 포함 — 비밀값을 적지 말 것).
+         *     끝난 프로젝트면 409 `PROJECT_NOT_OPEN`. 길이는 1~1000자(넘으면 400 `VALIDATION_ERROR`).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @example {{PROJECT_ID}} */
+                    projectId: components["parameters"]["ProjectId"];
+                    role: "FRONTEND" | "BACKEND";
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    /**
+                     * @example {
+                     *       "text": "목록 화면은 페이지네이션 없이 전부 보여 주세요"
+                     *     }
+                     */
+                    "application/json": {
+                        text: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 남김 — 피드에 나올 줄(speaker human) */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["RoomMessage"];
+                        };
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -4991,7 +5341,9 @@ export interface paths {
         post?: never;
         /**
          * 배정 해제 (대표 전용)
-         * @description **역할 교체는 해제 후 재배정으로 한다.** UPDATE 경로를 두면 한 역할에 둘이 잠깐 겹칠 수 있다.
+         * @description 역할 담당(사람)을 역할에서 뺀다 — 그 사람의 프로젝트 접근과 GitHub 레포 접근도 빠진다.
+         *     경로의 `agentId` 자리에는 붙어 있는 에이전트 id를, **에이전트가 없는 담당(`agentId: null`)이면 그 담당의 `userId`**를 넣는다(028).
+         *     **역할 교체는 해제 후 재배정으로 한다.** UPDATE 경로를 두면 한 역할에 둘이 잠깐 겹칠 수 있다.
          *     시작(G1) 뒤에도 된다(021) — 단 그 에이전트가 진행 중 태스크(CLAIMED·IN_PROGRESS·VERIFYING)를 붙잡고 있으면 409 `ACTIVE_TASKS_HELD`(details에 태스크 목록).
          *     빠진 역할의 태스크는 새 사람을 배정할 때까지 READY로 기다린다. 끝난 프로젝트(completed·aborted)는 409 `PROJECT_NOT_OPEN`.
          */
@@ -5103,9 +5455,11 @@ export interface paths {
         /**
          * 에이전트 연결 해제
          * @description 노트북 CLI 연결을 끊는다(021) — 그 에이전트의 주인이나 같은 조직의 대표가 한다(아니면 403 `NOT_AGENT_OWNER`).
-         *     맡은 진행 중 프로젝트에서 빠지고(진행 중 태스크가 있으면 409 `ACTIVE_TASKS_HELD`), refresh token이 폐기되며, 남은 access token도 401 `AGENT_DISCONNECTED`로 거부된다.
-         *     실행 중인 CLI의 태스크 스트림도 끊긴다. 목록(`GET /orgs/{orgId}/agents`)에서 빠진다.
-         *     같은 노트북에서 같은 이름으로 다시 `connect`하면 그 에이전트가 되살아난다.
+         *     맡은 진행 중 프로젝트에서 **에이전트만 떨어진다**(028) — 사람은 그 역할 담당으로 남아 프로젝트를 보고 질문 답·계약 확정을 계속하며, GitHub 레포 접근도 그대로다(`githubRevocations`는 빈 배열).
+         *     진행 중 태스크가 있으면 409 `ACTIVE_TASKS_HELD`. refresh token이 폐기되고, 남은 access token도 401 `AGENT_DISCONNECTED`로 거부된다.
+         *     실행 중인 CLI의 태스크 스트림도 끊긴다. 목록(`GET /orgs/{orgId}/agents`)에서 빠진다. 응답의 `unassignedFrom`은 에이전트가 떨어진 프로젝트다.
+         *     같은 사람이 다시 `connect`(연결 키·브라우저 승인·`--code` 모두)하면 — 같은 이름이면 같은 에이전트가 되살아나고 — 에이전트 없이 담당만 남은 진행 중 프로젝트가 하나면 그 역할에 **자동으로 다시 붙는다**
+         *     (이벤트 `MEMBER_AGENT_ATTACHED`). 여럿이면 대표가 배정 API로 붙인다.
          */
         delete: {
             parameters: {
@@ -5246,6 +5600,7 @@ export interface paths {
          * 프로젝트의 API 계약
          * @description 새 계획 흐름 2단계(023). 기능 명세를 확정하면 API가 필요한 기능마다 계약이 `pending`으로 생기고, BE 노트북의 에이전트가 BE 코드를 읽어 초안(`draft`)을 쓴다.
          *     BE 담당이 확정(`approved`)하거나 수정 요청한다. 프로젝트를 볼 수 있는 사람 누구나 읽는다. 실시간 신호 토픽은 `contracts`.
+         *     **에이전트 토큰**이면 자기 프로젝트의 확정한(`approved`) 계약만 준다 — MCP `read_contracts`가 FE의 API 연동에 쓴다(초안은 바뀔 수 있어 주지 않는다).
          */
         get: {
             parameters: {
@@ -6681,7 +7036,7 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
-                    state?: "READY" | "CLAIMED" | "IN_PROGRESS" | "VERIFYING" | "AWAITING_APPROVAL" | "BLOCKED" | "ESCALATED" | "DONE";
+                    state?: "READY" | "CLAIMED" | "IN_PROGRESS" | "VERIFYING" | "AWAITING_APPROVAL" | "BLOCKED" | "ESCALATED" | "DONE" | "CANCELLED";
                     /** @description 에이전트 토큰이면 무시된다 */
                     teamRole?: "FRONTEND" | "BACKEND";
                     limit?: number;
@@ -7254,6 +7609,132 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/tasks/{taskId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 태스크 취소 (대표 전용)
+         * @description 재실행으로 풀리지 않는 태스크(잘못 나눔·필요 없어짐)를 닫는다(027). 지우지 않고 `CANCELLED`로 남는다.
+         *     통합 확인(G3)의 "모든 태스크 완료"와 뒤 태스크의 선행 조건에서 **끝난 것으로 센다** — 이 태스크를 선행으로 둔 태스크는 풀린다.
+         *     그 태스크의 대기 질문은 만료로 닫힌다. 대신할 일은 새 태스크로 만든다.
+         *     에이전트가 붙잡지 않은 상태(READY·BLOCKED·ESCALATED)에서만 — 작업 중·승인 대기면 409 `TASK_IN_PROGRESS`, 이미 끝났으면 409 `TASK_ALREADY_CLOSED`.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @example {{TASK_BE}} */
+                    taskId: components["parameters"]["TaskId"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    /**
+                     * @example {
+                     *       "reason": "로그인 화면 태스크와 겹친다 — 그쪽에서 처리"
+                     *     }
+                     */
+                    "application/json": {
+                        /** @description 왜 취소하나(룸에 보인다) */
+                        reason: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 취소됨(CANCELLED) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["Task"];
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tasks/{taskId}/manual-completion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 사람이 직접 완료 (그 역할 담당 또는 대표)
+         * @description 에이전트가 끝내 못 한 일을 개발자가 직접 커밋해 넘긴다(027). 커밋을 태스크 브랜치에 push한 뒤 sha와 **태스크 브랜치에서 바꾼 모든 경로**를 낸다.
+         *     에이전트 제출과 **같은 V3**(실제 diff와 신고 대조, 경로 소유권)를 서버가 돌린다 — 실패면 아무것도 바뀌지 않고 422 `MANUAL_COMPLETION_INVALID`(details에 undeclared·overdeclared·거부 사유).
+         *     서버가 커밋을 읽지 못하면(레포 clone_url·GitHub 미연결 — V3 SKIPPED) 받지 않는다: 409 `MANUAL_COMPLETION_UNVERIFIABLE`. 확인 안 된 sha로 DONE이 되지 않게.
+         *     통과하면 산출물(gateMode HUMAN)과 V3 결과가 남고 태스크는 DONE, 이벤트 `TASK_COMPLETED_MANUALLY`(지표에서 사람이 처리한 것으로 따로 센다).
+         *     에이전트가 붙잡지 않은 상태(READY·BLOCKED·ESCALATED)에서만. 그 역할 담당(에이전트 주인)이나 대표가 아니면 403 `NOT_TASK_OWNER`.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @example {{TASK_BE}} */
+                    taskId: components["parameters"]["TaskId"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    /**
+                     * @example {
+                     *       "commitSha": "a1b2c3d",
+                     *       "changedPaths": [
+                     *         "src/routes/studies.ts"
+                     *       ],
+                     *       "note": "정원 계산 로직을 직접 고쳤다"
+                     *     }
+                     */
+                    "application/json": {
+                        /** @description 태스크 브랜치에 push한 커밋(7~64자 hex) */
+                        commitSha: string;
+                        /** @description 기본 브랜치에서 갈라진 뒤 태스크 브랜치가 바꾼 경로 전부 */
+                        changedPaths: string[];
+                        note?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description 완료됨(DONE) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["Task"];
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tasks/{taskId}/resume": {
         parameters: {
             query?: never;
@@ -7264,10 +7745,11 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * 멈춘 태스크 재개 (대표 전용)
-         * @description 에이전트가 제출 없이 멈춘 태스크(BLOCKED·`AGENT_STOPPED`)를 원인을 해결한 뒤 다시 돌린다. READY로 돌아가고 담당이 비어
-         *     같은 역할의 에이전트가 다시 가져간다(룸에 "다시 실행해 주세요 (재개)"). **재시도 횟수는 그대로다** — 권한·환경 탓은 에이전트 실패가 아니다.
-         *     멈춘 상태가 아니면 409 `TASK_NOT_STOPPED`.
+         * 멈춘·재시도 소진 태스크 재개 (대표 전용)
+         * @description 두 경우를 다시 돌린다. READY로 돌아가고 담당이 비어 같은 역할의 에이전트가 다시 가져간다(룸에 "다시 실행해 주세요 (재개)").
+         *     - 에이전트가 제출 없이 멈춘 태스크(BLOCKED·`AGENT_STOPPED`): **재시도 횟수는 그대로다** — 권한·환경 탓은 에이전트 실패가 아니다.
+         *     - 재시도를 다 쓴 태스크(`ESCALATED`): 원인을 확인한 대표가 다시 맡긴다. **재시도 횟수를 0으로 돌린다**(이전 횟수는 이벤트 `TASK_RESUMED.payload.previousRetryCount`).
+         *     둘 다 아니면 409 `TASK_NOT_STOPPED`.
          */
         post: {
             parameters: {
@@ -7451,7 +7933,7 @@ export interface paths {
                          *             "result": "SKIPPED",
                          *             "executedBy": "server",
                          *             "detail": {
-                         *               "reason": "contracts 테이블 미구현 — ⑦ 이후 가능"
+                         *               "reason": "계약 대조 검사 미구현 — 확정한 계약(contracts)은 있지만 BE 구현(코드·실제 응답)을 서버가 읽어 비교하는 단계가 아직 없다"
                          *             }
                          *           },
                          *           {
@@ -7818,11 +8300,12 @@ export interface components {
             /** @enum {string} */
             askerRole: "FRONTEND" | "BACKEND";
             /**
-             * @description 답할 역할. 서버가 정한다(routedBy에 근거)
+             * @description 답할 쪽. 서버의 질문 라우터가 정한다(routedBy에 근거). PM(025) = 요구사항·정책 같은 제품 결정 — 대표가 운용하는 PM 에이전트가 답 초안(draft)을 쓰고
+             *     **대표가 확정한다**(PM 질문은 초안이 곧 답이 되지 않는다, draftedByAgentId가 null일 수 있다). 답할 수 있는 사람은 대표뿐이다.
              * @enum {string}
              */
-            targetRole: "FRONTEND" | "BACKEND";
-            /** @description 대상 역할을 정한 라우터 구현(이름·버전). 기본 'role_rule:opposite'(묻는 쪽의 반대 역할) */
+            targetRole: "FRONTEND" | "BACKEND" | "PM";
+            /** @description 대상을 정한 라우터 구현(이름·버전). 운영 기본은 LLM('llm:<relay|anthropic>:<모델>:v2'), 실패하면 대표에게('fallback:representative', targetRole PM) 보내고 fallback에 사유 */
             routedBy: string;
             /** @description 라우터 판정 상세 — 라우터 구현을 바꿔 가며 비교하는 근거 */
             routing: {
@@ -7832,6 +8315,8 @@ export interface components {
                 latencyMs: number;
                 /** @description 라우터가 실패·시간 초과로 규칙 라우터로 대체됐으면 그 사유 */
                 fallback: string | null;
+                /** @description 판정의 모델 비용(USD). 규칙 라우터·옛 질문은 없음 또는 null */
+                costUsd?: number | null;
             };
             /** @description Claude Code AskUserQuestion 형식 그대로 */
             questions: ({
@@ -7945,6 +8430,85 @@ export interface components {
             refreshToken: string;
             /** Format: uuid */
             agentId: string;
+        };
+        /** @description 질문 라우팅 평가(026, 발표 지표). 라우터마다 같은 실제 질문에서의 판정을 정답(gold)과 비교한다 */
+        RoutingReport: {
+            /** Format: uuid */
+            projectId: string;
+            questions: number;
+            /** @description 정답 담당자가 붙은 질문 수 */
+            labeled: number;
+            routers: {
+                /** @description 라우터 이름·버전. baseline:asker = 조건 A(질문한 사람에게 — 모두 SELF) */
+                router: string;
+                /**
+                 * @description primary 실제로 보낸 라우터 · shadow 함께 돌려 본 라우터 · baseline 기준선
+                 * @enum {string}
+                 */
+                mode: "primary" | "shadow" | "baseline";
+                decisions: number;
+                /** @description 실패·시간 초과(대체됨) */
+                errors: number;
+                labeled: number;
+                aligned: number;
+                /** @description 최초 수신자-정답 담당자 일치율(0~1) */
+                alignmentRate: number | null;
+                /** @description 분류 지연 평균 */
+                avgLatencyMs: number | null;
+                p95LatencyMs: number | null;
+                /** @description 요청당 비용(USD) */
+                avgCostUsd: number | null;
+                totalCostUsd: number | null;
+            }[];
+            answer: {
+                answered: number;
+                /** @description 질문부터 답까지 중앙값 */
+                medianMs: number | null;
+            };
+            rows: {
+                /** Format: uuid */
+                questionId: string;
+                /** Format: date-time */
+                askedAt: string;
+                askerRole: string;
+                status: string;
+                firstQuestion: string;
+                goldTarget: string | null;
+                /** Format: date-time */
+                answeredAt: string | null;
+                /** @description 라우터 → 판정(FRONTEND·BACKEND·PM·SELF, 실패면 null) */
+                decisions: {
+                    [key: string]: string | null;
+                };
+            }[];
+        };
+        AgentConnectCode: {
+            /** @description 1회용 연결 코드(XXXX-XXXX). 10분 안에 한 번만 쓸 수 있다 */
+            code: string;
+            /** Format: date-time */
+            expiresAt: string;
+            /** @description 팀원에게 보여 줄 명령 그대로 — `npx @capstone-nomos/cli@latest connect --code XXXX-XXXX --server …` */
+            command: string;
+        };
+        AgentAccount: {
+            /** Format: uuid */
+            agentId: string;
+            agentName: string;
+            loginId: string | null;
+            nickname: string | null;
+            /** @description 조직 가입 전이면 null */
+            orgName: string | null;
+        };
+        AgentConnectedByCode: {
+            accessToken: string;
+            refreshToken: string;
+            /** Format: uuid */
+            agentId: string;
+            account: {
+                loginId: string | null;
+                nickname: string | null;
+                orgName: string | null;
+            };
         };
         DeviceStart: {
             /** @description CLI가 poll에 쓰는 비밀. 이 응답에서 한 번만 나온다(서버는 해시만 저장) */
@@ -8085,15 +8649,21 @@ export interface components {
              * @description - pm: 서버가 지시·판정을 알림(실행해 주세요, 검증 결과, 승인)
              *     - nomos: Executor가 보고한 실행 상태(수령, 구현 시작, 제출, 실행 종료)
              *     - agent: 에이전트가 쓴 도구(읽기·수정·실행) · 인계 노트
+             *     - human: 사람(그 역할 담당·대표)이 룸에서 에이전트에게 보낸 메시지 — type `ROOM_MESSAGE_SENT`, 보낸 사람은 `userId`
              * @enum {string}
              */
-            speaker: "pm" | "nomos" | "agent";
+            speaker: "pm" | "nomos" | "agent" | "human";
             /** @description 원본 이벤트 타입(TASK_DISPATCHED 등) 또는 ACTIVITY_READ·ACTIVITY_EDIT·ACTIVITY_WRITE·ACTIVITY_RUN·ACTIVITY_SEARCH·ACTIVITY_OTHER·ACTIVITY_SAY(에이전트의 말). 아이콘용 */
             type: string;
             /** Format: uuid */
             taskId: string | null;
             taskTitle: string | null;
-            /** @description 화면에 그대로 보여 줄 문장(서버가 만든다) */
+            /**
+             * Format: uuid
+             * @description speaker human이면 보낸 사람. 그 밖에는 null
+             */
+            userId: string | null;
+            /** @description 화면에 그대로 보여 줄 문장(서버가 만든다). human이면 보낸 메시지 그대로 */
             text: string;
             /**
              * Format: uuid
@@ -8229,15 +8799,22 @@ export interface components {
             orgId: string;
             fullName: string;
         };
+        /**
+         * @description 역할 담당(**사람**, 028)과 그 사람이 붙인 에이전트. 에이전트 연결을 해제하면 `agentId`·`agentName`이 null — 사람은 담당으로 남아
+         *     프로젝트를 보고 질문 답·계약 확정을 계속한다(화면은 "에이전트 연결 필요"). 같은 사람이 다시 연결하면 그 역할에 자동으로 다시 붙는다.
+         */
         ProjectMember: {
-            /** Format: uuid */
-            agentId: string;
-            agentName: string;
+            /**
+             * Format: uuid
+             * @description 붙어 있는 에이전트. 없으면 null
+             */
+            agentId: string | null;
+            agentName: string | null;
             /** @enum {string} */
             teamRole: "FRONTEND" | "BACKEND";
             /**
              * Format: uuid
-             * @description 에이전트 주인
+             * @description 역할 담당(사람). 에이전트가 있으면 그 주인이다
              */
             userId: string;
             /**
@@ -8276,7 +8853,7 @@ export interface components {
             kind: "IMPLEMENT" | "INTEGRATION" | "REWORK";
             title: string;
             /** @enum {string} */
-            state: "READY" | "CLAIMED" | "IN_PROGRESS" | "VERIFYING" | "AWAITING_APPROVAL" | "BLOCKED" | "ESCALATED" | "DONE";
+            state: "READY" | "CLAIMED" | "IN_PROGRESS" | "VERIFYING" | "AWAITING_APPROVAL" | "BLOCKED" | "ESCALATED" | "DONE" | "CANCELLED";
             /** @enum {string|null} */
             teamRole: "FRONTEND" | "BACKEND" | null;
             /** Format: uuid */
@@ -8327,7 +8904,7 @@ export interface components {
              */
             outcome: "DONE" | "AWAITING_APPROVAL" | "RETRY" | "ESCALATED" | "PENDING" | "SETTLED";
             /** @enum {string} */
-            taskState: "READY" | "CLAIMED" | "IN_PROGRESS" | "VERIFYING" | "AWAITING_APPROVAL" | "BLOCKED" | "ESCALATED" | "DONE";
+            taskState: "READY" | "CLAIMED" | "IN_PROGRESS" | "VERIFYING" | "AWAITING_APPROVAL" | "BLOCKED" | "ESCALATED" | "DONE" | "CANCELLED";
             retryCount: number;
             /**
              * Format: uuid
@@ -8476,13 +9053,16 @@ export interface components {
             id: string;
             /** Format: uuid */
             orgId: string;
-            /** Format: uuid */
-            planId: string;
             /**
-             * @description repair면 첫 초안이 검증에 걸려 위반 목록을 붙여 다시 쓰는 호출
+             * Format: uuid
+             * @description 계획 호출이 아니면 null(질문 라우팅·PM 질문 초안)
+             */
+            planId: string | null;
+            /**
+             * @description draft·repair = 계획(repair는 위반 목록을 붙여 다시 쓰는 호출) · route = 질문을 FE·BE·PM 중 누구에게 보낼지(025) · question_draft = PM 소관 질문의 답 초안(025)
              * @enum {string}
              */
-            purpose: "draft" | "repair";
+            purpose: "draft" | "repair" | "route" | "question_draft";
             request: {
                 model: string;
                 effort: string;
@@ -8744,6 +9324,18 @@ export interface components {
             policyHash: string;
             /** @description 프로젝트의 질문 중계 스위치. 꺼져 있으면 Executor가 권한 도구(AskUserQuestion)를 붙이지 않는다 */
             questionRelay: boolean;
+            /** @description 그 역할 담당·대표가 룸에서 보낸 메시지 중 아직 전달되지 않은 것(그 역할 태스크의 마지막 실행 시작 이후, 최근 20개, 오래된 것부터). 실행 중에는 끼워 넣지 않고 다음 실행에 여기로 온다 */
+            humanMessages: {
+                /** @description ROOM_MESSAGE_SENT 이벤트 id */
+                id: string;
+                /** Format: date-time */
+                ts: string;
+                text: string;
+                /** Format: uuid */
+                fromUserId: string;
+                fromNickname: string | null;
+                fromRepresentative: boolean;
+            }[];
             /** @description 이 태스크에서 물어 받은 답 — 질문 때문에 멈췄다 재개한 실행이 읽는다. source=agent는 상대 에이전트가 코드에서 찾은 답(사람 미확인) */
             answeredQuestions: {
                 question: string;

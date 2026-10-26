@@ -47,7 +47,7 @@ ink 스케일은 50 · 100 · 200 · 300 · 400 · 500 · 600 · 700 · 800 · 9
 
 | tone | 토큰 | 쓰는 곳 |
 | --- | --- | --- |
-| `neutral` | ink-100 / ink-700 | 기본, READY, CLAIMED, QUEUED, 검증 SKIPPED, "목업" 배지 |
+| `neutral` | ink-100 / ink-700 | 기본, READY, CLAIMED, CANCELLED, QUEUED, 검증 SKIPPED, "목업" 배지 |
 | `brand` | brand-50 / brand-600 | SUBMITTED, VERIFYING, 재제출 |
 | `success` | auto-bg / auto | DONE, AUTO, 검증 PASS |
 | `warn` | human-bg / human | WAITING\_HUMAN, AWAITING\_APPROVAL, BLOCKED, HUMAN |
@@ -63,9 +63,9 @@ ink 스케일은 50 · 100 · 200 · 300 · 400 · 500 · 600 · 700 · 800 · 9
 
 `READY` `QUEUED` → neutral / `IN_PROGRESS` → info / `WAITING_HUMAN` → warn / `SUBMITTED` `VERIFYING` → brand / `DONE` → success / `FAILED` `ESCALATED` → danger
 
-API에 연결된 화면은 서버 상태 8종을 `API_TASK_META` / `ApiTaskBadge`로 찍는다. 위 9종은 목업 화면 전용이다.
+API에 연결된 화면은 서버 상태 9종을 `API_TASK_META` / `ApiTaskBadge`로 찍는다. 위 9종은 목업 화면 전용이다.
 
-`READY` `CLAIMED` → neutral / `IN_PROGRESS` → info / `VERIFYING` → brand / `AWAITING_APPROVAL` `BLOCKED` → warn / `ESCALATED` → danger / `DONE` → success
+`READY` `CLAIMED` → neutral / `IN_PROGRESS` → info / `VERIFYING` → brand / `AWAITING_APPROVAL` `BLOCKED` → warn / `ESCALATED` → danger / `DONE` → success / `CANCELLED` → neutral ("취소됨", 칸반 완료 열)
 
 ## 검증 결과 배지
 

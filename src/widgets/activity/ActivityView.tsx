@@ -7,23 +7,18 @@ import { cn, fmtKrw, fmtTokens } from "@/shared/lib/format";
 import { useQueryParam } from "@/shared/lib/useQueryParam";
 import { useOrgAgents } from "@/entities/agent";
 import { EventRow, makeEventLookup, useProjectEvents } from "@/entities/event";
-import { NOTE_KIND, NoteItem, useNotes, type NoteKind } from "@/entities/note";
 import { useOrgMembers } from "@/entities/org";
 import { TaskBadge, useTasks } from "@/entities/task";
 import { useCurrentUser } from "@/entities/user";
 import { useProject as useMockProject } from "@/lib/store";
 
-type Tab = "events" | "notes" | "costs";
-const TABS: Record<Tab, string> = { events: "활동", notes: "인계 노트", costs: "비용" };
+type Tab = "events" | "costs";
+const TABS: Record<Tab, string> = { events: "활동", costs: "비용" };
 
 export function ActivityView({ projectId }: { projectId: string }) {
-  const notes = useNotes(projectId);
   // 뒤로가기로 돌아와도 보던 탭·종류가 남도록 주소에 둔다
   const [tabParam, setTab] = useQueryParam("tab", Object.keys(TABS) as Tab[]);
   const tab = tabParam ?? "events";
-  const [kind, setKind] = useQueryParam("kind", Object.keys(NOTE_KIND) as NoteKind[]);
-
-  const list = (notes.data ?? []).filter((n) => !kind || n.kind === kind);
 
   return (
     <div className="h-full overflow-y-auto">
@@ -32,8 +27,7 @@ export function ActivityView({ projectId }: { projectId: string }) {
           <div>
             <h1 className="text-[22px] font-semibold tracking-tight">활동 · 비용</h1>
             <p className="mt-1 text-[14px] text-ink-500">
-              프로젝트에서 일어난 일과 에이전트가 남긴 인계 노트입니다. 노트는 자기 보고이며, 검증 결과는 태스크
-              상세에서 확인합니다.
+              프로젝트에서 일어난 일과 비용입니다. 에이전트가 남긴 인계 노트는 문서(MCP) › 인계 노트에 있습니다.
             </p>
           </div>
           <div className="inline-flex shrink-0 self-start rounded-lg bg-ink-100 p-0.5 sm:self-auto">
@@ -52,46 +46,7 @@ export function ActivityView({ projectId }: { projectId: string }) {
           </div>
         </div>
 
-        {tab === "events" ? (
-          <Events projectId={projectId} />
-        ) : tab === "notes" ? (
-          <section className="mt-6">
-            <div className="mb-3 flex flex-wrap gap-1.5">
-              {([null, ...(Object.keys(NOTE_KIND) as NoteKind[])] as const).map((k) => (
-                <button
-                  key={k ?? "all"}
-                  onClick={() => setKind(k)}
-                  className={cn(
-                    "h-7 rounded-full border px-2.5 text-[12px] font-medium",
-                    kind === k ? "border-ink-900 bg-ink-900 text-white" : "border-ink-200 text-ink-600 hover:bg-ink-50",
-                  )}
-                >
-                  {k ? NOTE_KIND[k].label : "전체"}
-                </button>
-              ))}
-            </div>
-            {notes.isPending ? (
-              <div className="flex justify-center py-10 text-ink-400" aria-busy="true">
-                <Loader2 size={20} className="animate-spin" aria-label="불러오는 중" />
-              </div>
-            ) : notes.isError ? (
-              <EmptyState title={errorMessage(notes.error)} />
-            ) : (
-              <ol className="card divide-y divide-ink-100">
-                {list.map((n) => (
-                  <li key={n.id} className="px-4 py-3">
-                    <NoteItem note={n} notes={notes.data} />
-                  </li>
-                ))}
-                {list.length === 0 && (
-                  <li className="px-4 py-8 text-center text-[13px] text-ink-500">노트가 없습니다</li>
-                )}
-              </ol>
-            )}
-          </section>
-        ) : (
-          <MockCosts projectId={projectId} />
-        )}
+        {tab === "events" ? <Events projectId={projectId} /> : <MockCosts projectId={projectId} />}
       </div>
     </div>
   );

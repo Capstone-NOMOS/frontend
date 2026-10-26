@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Logo, TabLinks } from "@/shared/ui";
-import { AccountMenu } from "@/entities/user";
+import { AccountMenu, HomeLink } from "@/entities/user";
 
 const TABS = [
   { href: "/settings/account", label: "계정" },
@@ -18,9 +18,9 @@ export function SettingsFrame({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-dvh dots-bg">
       <header className="flex h-16 items-center justify-between px-5 sm:px-8">
-        <Link href="/" aria-label="NOMOS 홈">
+        <HomeLink>
           <Logo />
-        </Link>
+        </HomeLink>
         <AccountMenu />
       </header>
 

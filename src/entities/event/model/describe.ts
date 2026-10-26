@@ -26,7 +26,7 @@ export function makeEventLookup(
   };
 }
 
-const ROLE: Record<string, string> = { FRONTEND: "FE", BACKEND: "BE" };
+const ROLE: Record<string, string> = { FRONTEND: "FE", BACKEND: "BE", PM: "PM(대표)" };
 
 /** 누가 했는가. 에이전트가 했으면 에이전트, 아니면 책임 주체(사람 또는 system:*) */
 export function eventActor(e: ProjectEvent, l: EventLookup) {
@@ -55,6 +55,14 @@ export function describeEvent(e: ProjectEvent, l: EventLookup): { text: string; 
       return { text: `${role()} 배정 · ${agent()}`, tone: "default" };
     case "MEMBER_UNASSIGNED":
       return { text: `${role()} 배정 해제 · ${agent()}`, tone: "default" };
+    case "MEMBER_AGENT_DETACHED":
+      return { text: `${role()} 에이전트 연결 해제 · 담당은 그대로 · ${agent()}`, tone: "warn" };
+    case "MEMBER_AGENT_ATTACHED":
+      return { text: `${role()} 에이전트 다시 연결 · ${agent()}`, tone: "default" };
+    case "ROOM_MESSAGE_SENT":
+      return { text: `${ROLE[str("role")] ?? str("role")} 룸에 메시지 · ${str("text").slice(0, 40)}`, tone: "default" };
+    case "TASK_CANCELLED":
+      return { text: `태스크 취소 · ${str("title") || task()}${str("reason") && ` — ${str("reason")}`}`, tone: "warn" };
     case "PROJECT_STARTED":
       return { text: `프로젝트 시작 · 태스크 ${num("taskCount")}개`, tone: "success" };
     case "SPEC_CREATED":
@@ -144,6 +152,15 @@ export function describeEvent(e: ProjectEvent, l: EventLookup): { text: string; 
       };
     case "QUESTION_ANSWERED":
       return { text: `질문에 답함 · ${task()}`, tone: "default" };
+    case "TASK_COMPLETED_MANUALLY": {
+      const paths = Array.isArray(p.changedPaths) ? p.changedPaths.length : 0;
+      return {
+        text: `직접 완료 · 커밋 ${str("commitSha").slice(0, 7)} · 파일 ${paths}개 · ${str("title") || task()}`,
+        tone: "success",
+      };
+    }
+    case "QUESTION_GOLD_LABELED":
+      return { text: `평가 · 질문에 정답 담당자를 붙임 · ${task()}`, tone: "default" };
     case "QUESTION_EXPIRED":
       return { text: `질문 만료 · 답이 없음 · ${task()}`, tone: "danger" };
     default:

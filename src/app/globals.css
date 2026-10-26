@@ -74,9 +74,12 @@ body {
   background: var(--color-brand-100);
 }
 
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-ink-200) transparent;
+/* base 레이어에 둬야 no-scrollbar 같은 유틸리티가 이긴다 (레이어 밖 규칙은 모든 레이어보다 우선) */
+@layer base {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-ink-200) transparent;
+  }
 }
 
 @utility card {
