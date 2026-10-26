@@ -111,6 +111,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   PLAN_INVALID: "명세·태스크 검증을 통과하지 못했습니다.",
   // details: { undeclared, overdeclared, reason } (manualCompletionDetails)
   MANUAL_COMPLETION_INVALID: "커밋의 실제 변경과 적은 파일이 맞지 않습니다.",
+  MANUAL_COMPLETION_UNVERIFIABLE: "서버가 커밋을 확인할 수 없습니다. 레포의 GitHub 연결을 확인하세요.",
 
   // 5xx
   INTERNAL_ERROR: "서버에서 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.",

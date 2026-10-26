@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch, livePoll, type Schemas } from "@/shared/api";
 import type { TeamRole } from "@/shared/model";
 
@@ -41,5 +41,21 @@ export function useRoomFeed(projectId: string, role: TeamRole) {
     select: (data) => data.pages.flatMap((p) => p.messages),
     refetchInterval: livePoll(4000),
     refetchIntervalInBackground: false,
+  });
+}
+
+/**
+ * 룸에서 그 역할의 에이전트에게 말하기 — API는 그 역할 담당 · 대표를 받지만 화면은 담당만 연다(명세 F-07). 실행 중인 에이전트에 바로 끼워 넣지 않고 다음 실행에 전달된다.
+ * 에이전트가 없거나 오프라인이어도 받아 둔다. 403 ROOM_NOT_VISIBLE · 409 PROJECT_NOT_OPEN · 400 VALIDATION_ERROR(0자·1000자 초과)
+ */
+export function useSendRoomMessage(projectId: string, role: TeamRole) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (text: string) =>
+      apiFetch<Schemas["RoomMessage"]>(`/projects/${projectId}/rooms/${role}/messages`, {
+        method: "POST",
+        body: { text },
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: roomKeys.feed(projectId, role) }),
   });
 }

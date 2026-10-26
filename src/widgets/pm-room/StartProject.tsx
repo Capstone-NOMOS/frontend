@@ -27,11 +27,14 @@ export function StartProject({ projectId }: { projectId: string }) {
           <p className="text-[13px] font-medium">시작하면 배정된 에이전트가 바로 태스크를 받습니다.</p>
           <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[12.5px] text-ink-700">
             지금 배정:
-            {ROLES.map((role) => (
-              <span key={role} className="inline-flex items-center gap-1">
-                <TeamRoleBadge role={role} /> {members.find((m) => m.teamRole === role)?.agentName ?? "없음"}
-              </span>
-            ))}
+            {ROLES.map((role) => {
+              const m = members.find((x) => x.teamRole === role);
+              return (
+                <span key={role} className="inline-flex items-center gap-1">
+                  <TeamRoleBadge role={role} /> {m ? (m.agentName ?? "에이전트 연결 필요") : "없음"}
+                </span>
+              );
+            })}
           </p>
           <div className="mt-2.5 flex gap-2">
             <Button

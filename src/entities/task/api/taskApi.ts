@@ -51,7 +51,8 @@ export function useCancelTask() {
 
 /**
  * 그 역할 담당 · 대표. 사람이 태스크 브랜치에 직접 커밋한 것을 완료로 넘긴다 (DONE).
- * 서버가 V3로 실제 diff와 대조해 어긋나면 422 MANUAL_COMPLETION_INVALID — 아무것도 바뀌지 않는다
+ * 서버가 V3로 실제 diff와 대조해 어긋나면 422 MANUAL_COMPLETION_INVALID — 아무것도 바뀌지 않는다.
+ * 레포의 GitHub 연결이 없어 커밋을 읽지 못하면 409 MANUAL_COMPLETION_UNVERIFIABLE
  */
 export function useCompleteTaskManually() {
   const queryClient = useQueryClient();
