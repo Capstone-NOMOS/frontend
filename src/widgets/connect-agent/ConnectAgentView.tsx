@@ -27,10 +27,19 @@ const STEPS = [
       <>
         필요한 것: Node.js 22 이상 · git · Claude Code(설치 후 터미널에서 <code className={CODE}>claude</code>를 한 번
         실행해 로그인). 이 명령은 지금 로그인한 계정 전용이라, 노트북에 다른 계정 정보가 남아 있어도 이 계정으로
-        연결됩니다. 에이전트 이름은 컴퓨터 이름으로 정해집니다. 창 없이 실행하려면 명령 끝에{" "}
-        <code className={CODE}>--background</code>를 붙이세요 — 상태는{" "}
-        <code className={CODE}>npx @capstone-nomos/cli@latest status</code>, 끄기는{" "}
-        <code className={CODE}>npx @capstone-nomos/cli@latest stop</code>.
+        연결됩니다. 에이전트 이름은 컴퓨터 이름으로 정해집니다.
+        <span className="mt-2.5 block rounded-lg border border-ink-200 bg-ink-50 px-3 py-2.5">
+          <span className="block font-semibold text-ink-700">창 없이 실행하기 (백그라운드)</span>
+          <span className="mt-1 block">
+            명령 끝에 <code className={CODE}>--background</code>를 붙이면 터미널을 닫아도 계속 돕니다.
+          </span>
+          <span className="mt-0.5 block">
+            상태 확인 <code className={CODE}>npx @capstone-nomos/cli@latest status</code>
+          </span>
+          <span className="mt-0.5 block">
+            끄기 <code className={CODE}>npx @capstone-nomos/cli@latest stop</code>
+          </span>
+        </span>
       </>
     ),
   },
