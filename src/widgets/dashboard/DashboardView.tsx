@@ -215,7 +215,7 @@ export function DashboardView({ projectId }: { projectId: string }) {
                       <AgentMark tone={tone} size={28} />
                       <span className="min-w-0 flex-1 truncate text-[13px]">
                         {m ? (
-                          <span className="font-semibold">{m.agentName}</span>
+                          <span className="font-semibold">{m.agentName ?? "에이전트 연결 필요"}</span>
                         ) : (
                           <span className="text-ink-500">아직 배정되지 않음</span>
                         )}

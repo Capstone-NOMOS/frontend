@@ -55,6 +55,14 @@ export function describeEvent(e: ProjectEvent, l: EventLookup): { text: string; 
       return { text: `${role()} 배정 · ${agent()}`, tone: "default" };
     case "MEMBER_UNASSIGNED":
       return { text: `${role()} 배정 해제 · ${agent()}`, tone: "default" };
+    case "MEMBER_AGENT_DETACHED":
+      return { text: `${role()} 에이전트 연결 해제 · 담당은 그대로 · ${agent()}`, tone: "warn" };
+    case "MEMBER_AGENT_ATTACHED":
+      return { text: `${role()} 에이전트 다시 연결 · ${agent()}`, tone: "default" };
+    case "ROOM_MESSAGE_SENT":
+      return { text: `${ROLE[str("role")] ?? str("role")} 룸에 메시지 · ${str("text").slice(0, 40)}`, tone: "default" };
+    case "TASK_CANCELLED":
+      return { text: `태스크 취소 · ${str("title") || task()}${str("reason") && ` — ${str("reason")}`}`, tone: "warn" };
     case "PROJECT_STARTED":
       return { text: `프로젝트 시작 · 태스크 ${num("taskCount")}개`, tone: "success" };
     case "SPEC_CREATED":

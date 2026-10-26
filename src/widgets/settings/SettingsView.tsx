@@ -114,7 +114,7 @@ function Row({ k, children }: { k: string; children: React.ReactNode }) {
   );
 }
 
-function ownerName(agents: OrgAgent[] | undefined, agentId: string) {
+function ownerName(agents: OrgAgent[] | undefined, agentId: string | null) {
   const a = agents?.find((x) => x.agentId === agentId);
   return a ? (a.nickname ?? "이름 없음") : null;
 }
@@ -165,7 +165,9 @@ function MembersSection({
               </span>
               {member ? (
                 <>
-                  <span className="text-[14px] font-medium">{member.agentName}</span>
+                  <span className={member.agentName ? "text-[14px] font-medium" : "text-[14px] text-ink-500"}>
+                    {member.agentName ?? "에이전트 연결 필요"}
+                  </span>
                   {ownerName(agents, member.agentId) && (
                     <span className="text-[12.5px] text-ink-500">{ownerName(agents, member.agentId)}의 에이전트</span>
                   )}
@@ -177,10 +179,12 @@ function MembersSection({
                       disabled={busy}
                       onClick={() => {
                         assign.reset();
-                        unassign.mutate(member.agentId, { onSettled: refreshAgents });
+                        unassign.mutate(member.agentId ?? member.userId, { onSettled: refreshAgents });
                       }}
                     >
-                      {unassign.isPending && unassign.variables === member.agentId ? "해제 중…" : "해제"}
+                      {unassign.isPending && unassign.variables === (member.agentId ?? member.userId)
+                        ? "해제 중…"
+                        : "해제"}
                     </Button>
                   )}
                   <GithubInvites
@@ -292,8 +296,8 @@ function GithubInvites({
         ))}
       </ul>
       {/* 대표 전용 (시작 뒤에도 된다). 실패해도 200이라 결과는 다시 읽은 githubInvites로 본다 */}
-      {isRep && retryable && (
-        <Button variant="outline" size="sm" disabled={resend.isPending} onClick={() => resend.mutate(member.agentId)}>
+      {isRep && retryable && member.agentId && (
+        <Button variant="outline" size="sm" disabled={resend.isPending} onClick={() => resend.mutate(member.agentId!)}>
           {resend.isPending ? "초대 보내는 중…" : "다시 초대"}
         </Button>
       )}
@@ -451,7 +455,7 @@ function StartSection({
                   const m = members.find((x) => x.teamRole === role);
                   return (
                     <span key={role} className="inline-flex items-center gap-1">
-                      <TeamRoleBadge role={role} /> {m ? m.agentName : "없음"}
+                      <TeamRoleBadge role={role} /> {m ? (m.agentName ?? "에이전트 연결 필요") : "없음"}
                     </span>
                   );
                 })}

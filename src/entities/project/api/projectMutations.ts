@@ -61,13 +61,14 @@ export function useAssignMember(projectId: string) {
 
 /**
  * 대표 전용. 역할 교체는 해제 후 재배정 (UPDATE 경로가 없다). 시작 뒤에도 된다.
- * 진행 중 태스크를 붙잡고 있으면 409 ACTIVE_TASKS_HELD. 응답 githubRevocations는 그 프로젝트 레포의 접근 회수 결과
+ * 진행 중 태스크를 붙잡고 있으면 409 ACTIVE_TASKS_HELD. 응답 githubRevocations는 그 프로젝트 레포의 접근 회수 결과.
+ * 경로에는 붙은 에이전트 id, 에이전트가 없는 담당(agentId null)이면 그 담당의 userId
  */
 export function useUnassignMember(projectId: string) {
   return useMutation({
-    mutationFn: (agentId: string) =>
+    mutationFn: (memberKey: string) =>
       apiFetch<{ members: Schemas["ProjectMember"][]; githubRevocations: Schemas["GithubRevokeResult"][] }>(
-        `/projects/${projectId}/members/${agentId}`,
+        `/projects/${projectId}/members/${memberKey}`,
         {
           method: "DELETE",
         },

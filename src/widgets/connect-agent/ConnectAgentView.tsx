@@ -27,7 +27,10 @@ const STEPS = [
       <>
         필요한 것: Node.js 22 이상 · git · Claude Code(설치 후 터미널에서 <code className={CODE}>claude</code>를 한 번
         실행해 로그인). 이 명령은 지금 로그인한 계정 전용이라, 노트북에 다른 계정 정보가 남아 있어도 이 계정으로
-        연결됩니다. 에이전트 이름은 컴퓨터 이름으로 정해집니다.
+        연결됩니다. 에이전트 이름은 컴퓨터 이름으로 정해집니다. 창 없이 실행하려면 명령 끝에{" "}
+        <code className={CODE}>--background</code>를 붙이세요 — 상태는{" "}
+        <code className={CODE}>npx @capstone-nomos/cli@latest status</code>, 끄기는{" "}
+        <code className={CODE}>npx @capstone-nomos/cli@latest stop</code>.
       </>
     ),
   },

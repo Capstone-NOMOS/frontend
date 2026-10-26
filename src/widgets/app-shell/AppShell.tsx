@@ -186,7 +186,8 @@ function SidebarContent({
   const is = (p: string) => pathname === p;
   const startsWith = (p: string) => pathname.startsWith(p);
 
-  const myAgentName = detail.members.find((m) => m.userId === user.userId)?.agentName;
+  const mine = detail.members.find((m) => m.userId === user.userId);
+  const myAgentName = mine && (mine.agentName ?? "에이전트 연결 필요");
 
   return (
     <div className="flex h-full flex-col">
