@@ -1,6 +1,8 @@
 export {
+  DECISIONS_MAX,
   questionKeys,
   useAnswerQuestion,
+  useDecisions,
   useMyQuestions,
   useProjectQuestions,
   useRoutingReport,

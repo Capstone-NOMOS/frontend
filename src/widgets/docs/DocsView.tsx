@@ -4,13 +4,14 @@ import Link from "next/link";
 import { useState } from "react";
 import { BookOpen, FileText, History, Loader2, Lock, NotebookPen, TerminalSquare } from "lucide-react";
 import { errorMessage, type Schemas } from "@/shared/api";
-import { Badge, EmptyState, Markdown, MockBadge } from "@/shared/ui";
+import { Badge, Button, EmptyState, Markdown, MockBadge } from "@/shared/ui";
 import { useQueryParam } from "@/shared/lib/useQueryParam";
 import { cn, fmtDateTime } from "@/shared/lib/format";
 import { ContractCard, useContracts } from "@/entities/contract";
 import type { DocType } from "@/entities/document";
 import { NOTE_KIND, NoteItem, useNotes, type NoteKind } from "@/entities/note";
 import { ROLE_ROOM } from "@/entities/room";
+import { DECISIONS_MAX, useDecisions } from "@/entities/question";
 import { useSpecs } from "@/entities/spec";
 import { useProject } from "@/lib/store";
 
@@ -25,7 +26,7 @@ const TYPES: { slug: string; type: DocType | "NOTES"; label: string; who: string
     who: "쓰기: BE 에이전트 · 확정: BE 담당",
     icon: <FileText size={15} />,
   },
-  { slug: "adr", type: "ADR", label: "결정기록", who: "쓰기: 서버 자동 (추가만)", icon: <FileText size={15} /> },
+  { slug: "adr", type: "ADR", label: "결정기록", who: "쓰기: 질문에 답하면 자동", icon: <FileText size={15} /> },
   { slug: "notes", type: "NOTES", label: "인계 노트", who: "쓰기: 에이전트", icon: <NotebookPen size={15} /> },
 ];
 
@@ -39,7 +40,7 @@ const TOOLS = [
   ["report_blocker(task_id, reason)", "막힘 신고"],
 ];
 
-/** 명세·계약은 API(`GET /projects/{id}/specs`·`/contracts`), 헌법·결정기록은 API가 없어 목업 스토어를 읽는다 */
+/** 명세·계약·결정기록·인계 노트는 API, 헌법은 API가 없어 목업 스토어를 읽는다 */
 export function DocsView({ projectId, slug }: { projectId: string; slug: string }) {
   const { docs } = useProject(projectId);
   const specs = useSpecs(projectId);
@@ -78,7 +79,8 @@ export function DocsView({ projectId, slug }: { projectId: string; slug: string 
                             {contracts.data.filter((c) => c.status === "approved").length}/{contracts.data.length}
                           </span>
                         )
-                      : latest && <span className="text-[11px] text-ink-400">v{latest.version}</span>}
+                      : t.type !== "ADR" &&
+                        latest && <span className="text-[11px] text-ink-400">v{latest.version}</span>}
                 </Link>
               </li>
             );
@@ -106,6 +108,8 @@ export function DocsView({ projectId, slug }: { projectId: string; slug: string 
             <SpecDocs specs={specs} who={current.who} />
           ) : current.type === "CONTRACT" ? (
             <ContractDocs projectId={projectId} contracts={contracts} />
+          ) : current.type === "ADR" ? (
+            <DecisionDocs projectId={projectId} />
           ) : current.type === "NOTES" ? (
             <NoteDocs projectId={projectId} />
           ) : (
@@ -417,5 +421,121 @@ function NoteDocs({ projectId }: { projectId: string }) {
         </ol>
       )}
     </>
+  );
+}
+
+const DECISION_ROLES = ["FRONTEND", "BACKEND", "PM"] as const;
+const ROLE_LABEL = { FRONTEND: "FE", BACKEND: "BE", PM: "PM" } as const;
+const DECISION_PAGE = 50;
+
+/** 에이전트가 물은 질문에 누가 무엇을 골랐는지. 확정된 결정은 서버가 관련 태스크의 에이전트에게 전달한다 */
+function DecisionDocs({ projectId }: { projectId: string }) {
+  const [role, setRole] = useQueryParam("role", DECISION_ROLES);
+  const [limit, setLimit] = useState(DECISION_PAGE);
+  const decisions = useDecisions(projectId, role, limit);
+  // 받은 줄이 요청한 만큼 꽉 찼으면 더 있을 수 있다
+  const hasMore = decisions.data?.length === limit && limit < DECISIONS_MAX;
+
+  return (
+    <>
+      <div className="border-b border-ink-100 pb-4">
+        <h1 className="text-[20px] font-semibold tracking-tight">결정기록</h1>
+        <p className="mt-1 text-[12.5px] text-ink-500">
+          에이전트가 물은 질문에 정해진 답입니다. 사람이 정한 결정은 관련 태스크의 에이전트에게 전달됩니다(PM 결정은
+          모든 태스크, FE·BE 결정은 같은 기능의 태스크).
+        </p>
+      </div>
+      <div className="mb-3 mt-4 flex flex-wrap gap-1.5">
+        {([null, ...DECISION_ROLES] as const).map((r) => (
+          <button
+            key={r ?? "all"}
+            onClick={() => {
+              setRole(r);
+              setLimit(DECISION_PAGE);
+            }}
+            className={cn(
+              "h-7 rounded-full border px-2.5 text-[12px] font-medium",
+              role === r ? "border-ink-900 bg-ink-900 text-white" : "border-ink-200 text-ink-600 hover:bg-ink-50",
+            )}
+          >
+            {r ? ROLE_LABEL[r] : "전체"}
+          </button>
+        ))}
+      </div>
+      {decisions.isPending ? (
+        <div className="flex justify-center py-10 text-ink-400" aria-busy="true">
+          <Loader2 size={20} className="animate-spin" aria-label="불러오는 중" />
+        </div>
+      ) : decisions.isError ? (
+        <EmptyState title={errorMessage(decisions.error)} />
+      ) : (
+        <ol className="card divide-y divide-ink-100">
+          {decisions.data.map((d) => (
+            <li key={d.id} className="px-4 py-3">
+              <DecisionItem projectId={projectId} decision={d} />
+            </li>
+          ))}
+          {decisions.data.length === 0 && (
+            <li className="px-4 py-8 text-center text-[13px] text-ink-500">
+              아직 결정이 없습니다. 에이전트가 질문하고 답을 받으면 여기에 쌓입니다.
+            </li>
+          )}
+        </ol>
+      )}
+      {hasMore && (
+        <div className="mt-3 flex justify-center">
+          <Button
+            variant="outline"
+            disabled={decisions.isFetching}
+            onClick={() => setLimit((n) => Math.min(n + DECISION_PAGE, DECISIONS_MAX))}
+          >
+            {decisions.isFetching ? <Loader2 size={14} className="animate-spin" /> : null}더 보기
+          </Button>
+        </div>
+      )}
+    </>
+  );
+}
+
+function DecisionItem({ projectId, decision: d }: { projectId: string; decision: Schemas["QuestionDecision"] }) {
+  return (
+    <details>
+      <summary className="flex cursor-pointer list-none flex-wrap items-center gap-2 text-[13px]">
+        <span className="min-w-0 flex-1">{d.summary}</span>
+        {d.decidedBy?.kind === "user" && <Badge tone="brand">사람이 정함</Badge>}
+        {d.decidedBy?.kind === "agent" && <Badge tone="info">에이전트가 코드에서 찾음</Badge>}
+        {d.answeredAt && <span className="text-[11.5px] text-ink-400">{fmtDateTime(d.answeredAt)}</span>}
+      </summary>
+      <div className="mt-2 space-y-2 rounded-lg bg-ink-50 px-3 py-2.5 text-[12.5px]">
+        <div className="font-medium text-ink-800">{d.question}</div>
+        {d.options.length > 0 && (
+          <ul className="flex flex-wrap gap-1.5">
+            {d.options.map((o) => (
+              <li key={o}>
+                <Badge tone={o === d.answer ? "success" : "neutral"}>{o}</Badge>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div>
+          {d.answerSource === "human_override" && d.draftAnswer ? (
+            <>
+              초안 <span className="text-ink-500 line-through">{d.draftAnswer}</span> → 최종{" "}
+              <span className="font-medium">{d.answer}</span>
+            </>
+          ) : (
+            <>
+              답 <span className="font-medium">{d.answer ?? "없음"}</span>
+            </>
+          )}
+        </div>
+        <div className="text-ink-500">
+          <Link href={`/p/${projectId}/tasks/${d.taskId}`} className="underline underline-offset-2">
+            {d.taskTitle}
+          </Link>{" "}
+          · {d.askedByAgentName} · {fmtDateTime(d.askedAt)}
+        </div>
+      </div>
+    </details>
   );
 }
