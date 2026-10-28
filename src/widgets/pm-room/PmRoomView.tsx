@@ -66,6 +66,14 @@ function Room({ projectId, meName }: { projectId: string; meName: string }) {
   const pending = list.some((p) => p.status === "pending");
   const s = status.data;
   const blocked = !s || !s.ready || s.pendingPlanId !== null || pending || request.isPending;
+  // 마지막 기능 명세 확정 뒤에 태스크 나누기가 진행 중·대기·확정이면 다음 단계 카드를 내린다 (실패·반려면 다시 보인다)
+  const lastTasks = list.findLast((p) => p.kind === "tasks");
+  const lastFeature = list.findLast((p) => p.kind === "feature" && p.status === "applied");
+  const splitDone =
+    !!lastTasks &&
+    lastTasks.status !== "failed" &&
+    lastTasks.status !== "rejected" &&
+    (!lastFeature || list.indexOf(lastTasks) > list.indexOf(lastFeature));
 
   // 새 계획·상태 변화가 오면 아래로
   const lastKey = list.map((p) => `${p.id}:${p.status}`).join(",");
@@ -117,35 +125,41 @@ function Room({ projectId, meName }: { projectId: string; meName: string }) {
           ) : plans.isError ? (
             <p className="text-center text-[13px] text-forbidden">{errorMessage(plans.error)}</p>
           ) : (
-            list.map((plan) => (
-              <div key={plan.id} className="space-y-3">
-                <MeLine name={meName}>
-                  {plan.feedback ? (
-                    <>
-                      <span className="mr-1.5 text-[12px] font-semibold text-brand-600">수정 요청</span>
-                      {plan.feedback}
-                    </>
-                  ) : (
-                    (plan.instruction ?? (plan.kind === "tasks" ? "태스크 나누기" : ""))
+            list.map((plan) => {
+              // 태스크 나누기 요청은 instruction이 빈 문자열로 온다
+              const said = plan.instruction?.trim() || (plan.kind === "tasks" ? "태스크 나누기" : "");
+              return (
+                <div key={plan.id} className="space-y-3">
+                  {(plan.feedback || said) && (
+                    <MeLine name={meName}>
+                      {plan.feedback ? (
+                        <>
+                          <span className="mr-1.5 text-[12px] font-semibold text-brand-600">수정 요청</span>
+                          {plan.feedback}
+                        </>
+                      ) : (
+                        said
+                      )}
+                    </MeLine>
                   )}
-                </MeLine>
-                <PlanCard
-                  projectId={projectId}
-                  plan={plan}
-                  plans={list}
-                  started={project.startedAt !== null}
-                  onRetry={(text) => setDraft(text)}
-                  // 기능 명세 확정은 명세·계약을, 태스크 확정은 태스크를 만든다. 다른 엔티티의 키라 위젯에서 무효화
-                  onApplied={() =>
-                    [taskKeys.all, specKeys.all, contractKeys.all].forEach(
-                      (queryKey) => void queryClient.invalidateQueries({ queryKey }),
-                    )
-                  }
-                />
-              </div>
-            ))
+                  <PlanCard
+                    projectId={projectId}
+                    plan={plan}
+                    plans={list}
+                    started={project.startedAt !== null}
+                    onRetry={(text) => setDraft(text)}
+                    // 기능 명세 확정은 명세·계약을, 태스크 확정은 태스크를 만든다. 다른 엔티티의 키라 위젯에서 무효화
+                    onApplied={() =>
+                      [taskKeys.all, specKeys.all, contractKeys.all].forEach(
+                        (queryKey) => void queryClient.invalidateQueries({ queryKey }),
+                      )
+                    }
+                  />
+                </div>
+              );
+            })
           )}
-          {plans.isSuccess && <TaskSplitStep projectId={projectId} blocked={blocked} />}
+          {plans.isSuccess && !splitDone && <TaskSplitStep projectId={projectId} blocked={blocked} />}
         </div>
       </div>
 

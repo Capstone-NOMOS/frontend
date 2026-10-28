@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { BookOpen, FileText, History, Loader2, Lock, NotebookPen, TerminalSquare } from "lucide-react";
+import { Loader2, Lock } from "lucide-react";
 import { errorMessage, type Schemas } from "@/shared/api";
-import { Badge, Button, EmptyState, Markdown, MockBadge } from "@/shared/ui";
+import { Badge, Button, EmptyState, Markdown } from "@/shared/ui";
 import { useQueryParam } from "@/shared/lib/useQueryParam";
 import { cn, fmtDateTime } from "@/shared/lib/format";
 import { ContractCard, useContracts } from "@/entities/contract";
@@ -13,123 +13,34 @@ import { NOTE_KIND, NoteItem, useNotes, type NoteKind } from "@/entities/note";
 import { ROLE_ROOM } from "@/entities/room";
 import { DECISIONS_MAX, useDecisions } from "@/entities/question";
 import { useSpecs } from "@/entities/spec";
-import { useProject } from "@/lib/store";
 
-// NOTES는 에이전트가 남긴 인계 노트 — 문서 서버가 에이전트에게 함께 주는 기록이라 여기서 읽는다
-const TYPES: { slug: string; type: DocType | "NOTES"; label: string; who: string; icon: React.ReactNode }[] = [
-  { slug: "constitution", type: "CONSTITUTION", label: "헌법", who: "쓰기: 대표만", icon: <BookOpen size={15} /> },
-  { slug: "spec", type: "SPEC", label: "명세", who: "쓰기: PM (대표 승인 후)", icon: <FileText size={15} /> },
-  {
-    slug: "contract",
-    type: "CONTRACT",
-    label: "API 계약",
-    who: "쓰기: BE 에이전트 · 확정: BE 담당",
-    icon: <FileText size={15} />,
-  },
-  { slug: "adr", type: "ADR", label: "결정기록", who: "쓰기: 질문에 답하면 자동", icon: <FileText size={15} /> },
-  { slug: "notes", type: "NOTES", label: "인계 노트", who: "쓰기: 에이전트", icon: <NotebookPen size={15} /> },
+// NOTES는 에이전트가 남긴 인계 노트 — 문서 서버가 에이전트에게 함께 주는 기록이라 여기서 읽는다.
+// 문서 목록은 앱 사이드바에 있어 여기서는 다시 그리지 않는다. 헌법은 쓰지 않는다
+const TYPES: { slug: string; type: Exclude<DocType, "CONSTITUTION"> | "NOTES"; who: string }[] = [
+  { slug: "spec", type: "SPEC", who: "쓰기: PM (대표 승인 후)" },
+  { slug: "contract", type: "CONTRACT", who: "쓰기: BE 에이전트 · 확정: BE 담당" },
+  { slug: "adr", type: "ADR", who: "쓰기: 질문에 답하면 자동" },
+  { slug: "notes", type: "NOTES", who: "쓰기: 에이전트" },
 ];
 
-const TOOLS = [
-  ["get_constitution()", "헌법 조회"],
-  ["get_spec(feature_id)", "기능 명세 조회 — 해당 기능만"],
-  ["get_contract(feature_id)", "API 계약 조회"],
-  ["search_decisions(query)", "결정기록 검색"],
-  ["ask_human(question, options, context)", "담당 개발자에게 질의 → WAITING_HUMAN"],
-  ["submit_task(task_id, commit)", "완료 제출 → 검증"],
-  ["report_blocker(task_id, reason)", "막힘 신고"],
-];
-
-/** 명세·계약·결정기록·인계 노트는 API, 헌법은 API가 없어 목업 스토어를 읽는다 */
+/** 명세·계약·결정기록·인계 노트. 모르는 slug(예전 헌법 주소 포함)는 명세로 */
 export function DocsView({ projectId, slug }: { projectId: string; slug: string }) {
-  const { docs } = useProject(projectId);
   const specs = useSpecs(projectId);
   const contracts = useContracts(projectId);
-  const current = TYPES.find((t) => t.slug === slug) ?? TYPES[1];
-  const [sel, setSel] = useState<number | null>(null);
+  const current = TYPES.find((t) => t.slug === slug) ?? TYPES[0];
 
   return (
-    <div className="flex h-full flex-col lg:flex-row">
-      {/* nav */}
-      <nav className="shrink-0 border-b border-ink-200 lg:w-[240px] lg:border-b-0 lg:border-r">
-        <div className="hidden px-5 pb-2 pt-5 text-[11px] font-semibold uppercase tracking-wide text-ink-500 lg:block">
-          MCP 문서 서버
-        </div>
-        <ul className="flex gap-1 overflow-x-auto px-3 py-2 no-scrollbar lg:flex-col lg:px-3 lg:py-0">
-          {TYPES.map((t) => {
-            const latest = docs.filter((d) => d.type === t.type).sort((a, b) => b.version - a.version)[0];
-            const active = t.slug === current.slug;
-            return (
-              <li key={t.slug} className="shrink-0">
-                <Link
-                  href={`/p/${projectId}/docs/${t.slug}`}
-                  onClick={() => setSel(null)}
-                  className={cn(
-                    "flex items-center gap-2 rounded-lg px-2.5 py-2 text-[13.5px] font-medium",
-                    active ? "bg-ink-100 text-ink-900" : "text-ink-600 hover:bg-ink-50",
-                  )}
-                >
-                  <span className="text-ink-500">{t.icon}</span>
-                  <span className="flex-1">{t.label}</span>
-                  {t.type === "SPEC"
-                    ? specs.data && <span className="text-[11px] text-ink-400">{specs.data.length}개</span>
-                    : t.type === "CONTRACT"
-                      ? contracts.data && (
-                          <span className="text-[11px] text-ink-400">
-                            {contracts.data.filter((c) => c.status === "approved").length}/{contracts.data.length}
-                          </span>
-                        )
-                      : t.type !== "ADR" &&
-                        latest && <span className="text-[11px] text-ink-400">v{latest.version}</span>}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-        <div className="hidden px-5 pb-5 pt-4 lg:block">
-          <div className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
-            <TerminalSquare size={12} /> MCP 도구
-          </div>
-          <ul className="space-y-1.5">
-            {TOOLS.map(([sig, desc]) => (
-              <li key={sig} className="text-[11.5px] leading-snug">
-                <code className="rounded bg-ink-100 px-1 py-0.5 font-mono text-[10.5px] text-ink-800">{sig}</code>
-                <div className="mt-0.5 text-ink-500">{desc}</div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </nav>
-
-      {/* content */}
-      <div className="min-w-0 flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-[820px] px-4 py-6 sm:px-8">
-          {current.type === "SPEC" ? (
-            <SpecDocs specs={specs} who={current.who} />
-          ) : current.type === "CONTRACT" ? (
-            <ContractDocs projectId={projectId} contracts={contracts} />
-          ) : current.type === "ADR" ? (
-            <DecisionDocs projectId={projectId} />
-          ) : current.type === "NOTES" ? (
-            <NoteDocs projectId={projectId} />
-          ) : (
-            <MockDoc projectId={projectId} current={current} sel={sel} onSelect={setSel} />
-          )}
-
-          <div className="mt-8 rounded-xl border border-ink-200 bg-ink-50 p-4 lg:hidden">
-            <div className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
-              <TerminalSquare size={12} /> MCP 도구
-            </div>
-            <ul className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
-              {TOOLS.map(([sig, desc]) => (
-                <li key={sig} className="text-[11.5px]">
-                  <code className="rounded bg-white px-1 py-0.5 font-mono text-[10.5px]">{sig}</code>{" "}
-                  <span className="text-ink-500">{desc}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
+    <div className="h-full overflow-y-auto">
+      <div className="mx-auto max-w-[820px] px-4 py-6 sm:px-8">
+        {current.type === "SPEC" ? (
+          <SpecDocs specs={specs} who={current.who} />
+        ) : current.type === "CONTRACT" ? (
+          <ContractDocs projectId={projectId} contracts={contracts} />
+        ) : current.type === "ADR" ? (
+          <DecisionDocs projectId={projectId} />
+        ) : (
+          <NoteDocs projectId={projectId} />
+        )}
       </div>
     </div>
   );
@@ -285,93 +196,6 @@ function SpecSection({ spec: s }: { spec: Schemas["Spec"] }) {
         )}
       </div>
     </section>
-  );
-}
-
-function MockDoc({
-  projectId,
-  current,
-  sel,
-  onSelect,
-}: {
-  projectId: string;
-  current: (typeof TYPES)[number];
-  sel: number | null;
-  onSelect: (version: number) => void;
-}) {
-  const { docs, project } = useProject(projectId);
-  const versions = docs.filter((d) => d.type === current.type).sort((a, b) => b.version - a.version);
-  const doc = versions.find((v) => v.version === sel) ?? versions[0];
-
-  // 실제 프로젝트는 목업 데이터가 없다. API가 생기면 명세처럼 바꾼다
-  if (!project) {
-    return (
-      <EmptyState
-        title={`${current.label} API 연결 전입니다`}
-        desc="이 문서는 아직 서버 API가 없어 볼 수 없습니다. 명세 탭은 실제 데이터입니다."
-        action={<MockBadge />}
-      />
-    );
-  }
-  if (!doc) {
-    return (
-      <EmptyState
-        title={`${current.label} 문서가 아직 없습니다`}
-        desc={
-          current.type === "CONTRACT"
-            ? "대표가 대표 룸에서 명세를 승인하면 v1이 저장됩니다."
-            : "에이전트가 사람에게 질문하고 답을 받으면 자동으로 추가됩니다."
-        }
-      />
-    );
-  }
-
-  return (
-    <>
-      <div className="flex flex-col gap-3 border-b border-ink-100 pb-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-[20px] font-semibold tracking-tight">{current.label}</h1>
-            <Badge tone="brand">v{doc.version}</Badge>
-            {doc.locked && (
-              <Badge tone="neutral">
-                <Lock size={10} /> LOCKED
-              </Badge>
-            )}
-            <MockBadge />
-          </div>
-          <div className="mt-1 text-[12.5px] text-ink-500">
-            {doc.title} · {current.who} · {fmtDateTime(doc.createdAt)}
-          </div>
-        </div>
-        {versions.length > 1 && (
-          <label className="flex items-center gap-2 text-[12.5px] text-ink-600">
-            <History size={14} className="text-ink-400" />
-            <select
-              value={doc.version}
-              onChange={(e) => onSelect(Number(e.target.value))}
-              className="h-8 rounded-lg border border-ink-200 bg-white px-2 text-[12.5px]"
-            >
-              {versions.map((v) => (
-                <option key={v.id} value={v.version}>
-                  v{v.version} · {fmtDateTime(v.createdAt)}
-                  {v.version === versions[0].version ? " (최신)" : ""}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-      </div>
-      {doc.version !== versions[0].version && (
-        <div className="mt-3 rounded-lg border border-human bg-human-bg px-3 py-2 text-[12.5px] text-human">
-          이전 버전(v{doc.version})을 보고 있습니다. 최신은 v{versions[0].version}이며, 이 버전을 참조하던 태스크에는
-          갱신 알림이 갔습니다.
-        </div>
-      )}
-      <div className="pt-5">
-        <Markdown content={doc.content} />
-      </div>
-    </>
   );
 }
 

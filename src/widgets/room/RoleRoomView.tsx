@@ -5,7 +5,7 @@ import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
 import { FilePlus, FileText, Loader2, Pencil, Search, Terminal, Wrench, type LucideIcon } from "lucide-react";
 import { errorMessage, type Schemas } from "@/shared/api";
 import type { TeamRole } from "@/shared/model";
-import { AgentMark, Badge, Button, EmptyState } from "@/shared/ui";
+import { AgentMark, Avatar, Badge, Button, EmptyState } from "@/shared/ui";
 import { cn, fmtDate, fmtDateTime, fmtTime, sameDay } from "@/shared/lib/format";
 import { ContractCard, useContracts } from "@/entities/contract";
 import { useOrgMembers } from "@/entities/org";
@@ -164,9 +164,14 @@ export function RoleRoomView({ projectId, role }: { projectId: string; role: Tea
                           </li>
                         )}
                         {m.speaker === "human" ? (
-                          <RightRow who={m.userId ? nameOf(m.userId) : "사람"} ts={m.ts}>
+                          <HumanRow
+                            mine={m.userId === me.userId}
+                            head={head}
+                            who={m.userId ? nameOf(m.userId) : "사람"}
+                            ts={m.ts}
+                          >
                             {m.text}
-                          </RightRow>
+                          </HumanRow>
                         ) : (
                           <LeftRow head={head} who={who} tone={m.speaker === "agent" ? roleMeta.tone : "pm"} ts={m.ts}>
                             {q ? (
@@ -194,9 +199,9 @@ export function RoleRoomView({ projectId, role }: { projectId: string; role: Tea
                           </LeftRow>
                         )}
                         {q && human !== null && q.answeredBy && (
-                          <RightRow who={nameOf(q.answeredBy)} ts={q.answeredAt}>
+                          <HumanRow mine={q.answeredBy === me.userId} head who={nameOf(q.answeredBy)} ts={q.answeredAt}>
                             {human}
-                          </RightRow>
+                          </HumanRow>
                         )}
                       </Fragment>
                     );
@@ -274,23 +279,57 @@ export function RoleRoomView({ projectId, role }: { projectId: string; role: Tea
   );
 }
 
-/** 에이전트·PM·NOMOS 쪽(왼쪽). head면 마크와 이름·시각을 그린다 */
+/** 사람 메시지. 내가 쓴 것만 오른쪽, 다른 사람(담당·대표)은 왼쪽에 이름과 함께 */
+function HumanRow({
+  mine,
+  head,
+  who,
+  ts,
+  children,
+}: {
+  mine: boolean;
+  head: boolean;
+  who: string;
+  ts: string | null;
+  children: ReactNode;
+}) {
+  if (mine) {
+    return (
+      <RightRow who={who} ts={ts}>
+        {children}
+      </RightRow>
+    );
+  }
+  return (
+    <LeftRow head={head} who={who} person ts={ts ?? undefined}>
+      <div className="inline-block whitespace-pre-wrap rounded-2xl rounded-tl-md bg-ink-100 px-4 py-2.5 text-[14px] leading-6 text-ink-900">
+        {children}
+      </div>
+    </LeftRow>
+  );
+}
+
+/** 에이전트·PM·NOMOS·다른 사람 쪽(왼쪽). head면 마크와 이름·시각을 그린다. person이면 마크 대신 이니셜 */
 function LeftRow({
   head,
   who,
-  tone,
+  tone = "pm",
+  person = false,
   ts,
   children,
 }: {
   head: boolean;
   who: string;
-  tone: "fe" | "be" | "pm";
+  tone?: "fe" | "be" | "pm";
+  person?: boolean;
   ts?: string;
   children: ReactNode;
 }) {
   return (
     <li className={cn("flex gap-2.5 animate-rise", head && "pt-2")}>
-      <span className="w-7 shrink-0">{head && <AgentMark tone={tone} size={28} />}</span>
+      <span className="w-7 shrink-0">
+        {head && (person ? <Avatar name={who} size={28} /> : <AgentMark tone={tone} size={28} />)}
+      </span>
       <div className="min-w-0 flex-1">
         {head && (
           <div className="mb-0.5 flex items-baseline gap-1.5 text-[12px]">
@@ -308,7 +347,7 @@ function LeftRow({
   );
 }
 
-/** 사람 쪽(오른쪽). 질문에 단 답과 담당·대표가 보낸 메시지 */
+/** 내 쪽(오른쪽). 내가 질문에 단 답과 내가 보낸 메시지 */
 function RightRow({ who, ts, children }: { who: string; ts: string | null; children: ReactNode }) {
   return (
     <li className="flex justify-end pt-2 animate-rise">

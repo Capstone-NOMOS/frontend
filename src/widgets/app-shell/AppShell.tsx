@@ -5,7 +5,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import {
   Activity,
-  BookOpen,
   ChevronDown,
   FileText,
   Inbox,
@@ -298,13 +297,6 @@ function SidebarContent({
         </NavGroup>
 
         <NavGroup label="문서 (MCP)">
-          <NavItem
-            href={`${base}/docs/constitution`}
-            icon={<BookOpen size={16} />}
-            label="헌법"
-            active={is(`${base}/docs/constitution`)}
-            onNavigate={onNavigate}
-          />
           <NavItem
             href={`${base}/docs/spec`}
             icon={<FileText size={16} />}
