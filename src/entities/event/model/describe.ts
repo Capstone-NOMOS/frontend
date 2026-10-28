@@ -98,6 +98,10 @@ export function describeEvent(e: ProjectEvent, l: EventLookup): { text: string; 
       const n = Array.isArray(p.noteIds) ? p.noteIds.length : 0;
       return { text: `확인할 노트 ${n}개 · ${task()}`, tone: "warn" };
     }
+    case "DECISIONS_ACK_REQUIRED": {
+      const n = Array.isArray(p.decisionIds) ? p.decisionIds.length : 0;
+      return { text: `새 결정 확인 요청 ${n}개 · ${task()}`, tone: "warn" };
+    }
     case "TOOL_DENIED":
       return { text: `도구 사용 거부 · ${str("actionKey")}${str("path") && ` ${str("path")}`}`, tone: "danger" };
     case "PM_REVIEW_DEGRADED":
