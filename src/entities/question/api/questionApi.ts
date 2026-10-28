@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch, livePoll, type Schemas } from "@/shared/api";
 
 type AgentQuestion = Schemas["AgentQuestion"];
@@ -69,5 +69,29 @@ export function useRoutingReport(projectId: string, enabled = true) {
     queryKey: [...questionKeys.all, "routing-report", projectId] as const,
     queryFn: () => apiFetch<Schemas["RoutingReport"]>(`/projects/${projectId}/routing-report`),
     enabled,
+  });
+}
+
+type DecisionRole = "FRONTEND" | "BACKEND" | "PM";
+
+/** 서버 상한. 커서가 없어 더 보기는 limit을 늘려 처음부터 다시 받는다 */
+export const DECISIONS_MAX = 200;
+
+/**
+ * 질문으로 정해진 결정 (질문 문장 하나당 한 줄, 답한 시각 최신순). 키를 questionKeys 아래에 둬 questions 신호로 함께 다시 읽는다.
+ * ponytail: 200줄이 상한이다 — 넘어가면 BE에 커서(before=answeredAt)를 요청할 것
+ */
+export function useDecisions(projectId: string, role: DecisionRole | null, limit: number) {
+  return useQuery({
+    queryKey: [...questionKeys.all, "decisions", projectId, role ?? "all", limit] as const,
+    queryFn: () => {
+      const q = new URLSearchParams({ limit: String(limit) });
+      if (role) q.set("role", role);
+      return apiFetch<{ decisions: Schemas["QuestionDecision"][] }>(`/projects/${projectId}/decisions?${q}`);
+    },
+    select: (data) => data.decisions,
+    // 더 보기를 누르는 동안 이미 보던 줄을 지우지 않는다
+    placeholderData: keepPreviousData,
+    ...POLL,
   });
 }
