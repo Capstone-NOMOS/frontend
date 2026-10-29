@@ -405,7 +405,9 @@ export function DashboardView({ projectId }: { projectId: string }) {
                         href={`/p/${projectId}/inbox#${a.id}`}
                         className="flex items-center gap-3 rounded-lg border border-ink-200 px-3 py-2.5 hover:bg-ink-50"
                       >
-                        <Badge tone="warn">{a.gate === "G3" ? "통합 확인" : "승인"}</Badge>
+                        <Badge tone="warn">
+                          {a.gate === "G3" ? "통합 확인" : a.stage === "role_review" ? "담당 검토" : "승인"}
+                        </Badge>
                         <span className="min-w-0 flex-1 truncate text-[13px]">
                           {a.gate === "G3" ? "모든 태스크 완료 · 프로젝트 완료 승인" : (a.taskTitle ?? "태스크")}
                         </span>

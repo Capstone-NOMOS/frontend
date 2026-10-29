@@ -1572,6 +1572,118 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/orgs/{orgId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * 조직 해산 (대표 전용)
+         * @description 조직을 해산한다(029). **대표가 조직을 떠나는 길은 이것 하나다** — 대표 넘기기는 없고, 대표 단독 탈퇴(`DELETE /orgs/{orgId}/members/{나}`)는 여전히 409 `REPRESENTATIVE_CANNOT_LEAVE`.
+         *     행은 지우지 않는다(`dissolved_at` 표시). 한 트랜잭션에서 차례로:
+         *     1. 진행 중 태스크(CLAIMED·IN_PROGRESS·VERIFYING)를 잡은 에이전트가 있으면 409 `ACTIVE_TASKS_HELD`(`details`에 태스크) — **아무것도 바뀌지 않는다**.
+         *     2. 진행 중 프로젝트(planning·active·halted) 전부 중단(`PROJECT_ABORTED` — 삭제는 하지 않는다).
+         *     3. 대기 초대 전부 취소(`INVITE_REVOKED`), 레포 연결 전부 해제(`REPO_DISCONNECTED`).
+         *     4. 멤버 전원(대표 포함)을 조직에서 뺀다(`ORG_MEMBER_REMOVED`, `cause: org_dissolved`) — 에이전트 연결도 해제된다. 계정은 남는다.
+         *     5. `ORG_DISSOLVED { name, memberCount, abortedProjectIds }`(대표 명의).
+         *
+         *     해산 뒤: 이 조직 id로 오는 조직 API는 404 `ORG_NOT_FOUND`, 이 조직의 초대 링크는 수락할 수 없다(404 `INVITE_NOT_FOUND`).
+         *     전 멤버는 모두 조직 없음 상태라 새 조직을 만들거나 다른 조직의 초대를 수락할 수 있다. 화면 스트림은 4403 `NOT_IN_ORG`로 끊긴다(대표 포함).
+         *     GitHub 접근은 회수하지 않는다(레포·코드는 팀의 것). 대표의 GitHub 연결(oauth)은 계정에 붙은 것이라 그대로다.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @example {{ORG_ID}} */
+                    orgId: components["parameters"]["OrgId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 해산됨 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** Format: uuid */
+                                orgId: string;
+                                /** @description 조직에서 뺀 사람 수(대표 포함) */
+                                memberCount: number;
+                                /** @description 이번에 중단한 진행 중 프로젝트 */
+                                abortedProjectIds: string[];
+                            };
+                        };
+                    };
+                };
+                /** @description 대표가 아님 · 다른 조직 */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description 없는 조직이거나 이미 해산한 조직 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "ORG_NOT_FOUND",
+                         *         "message": "organization not found"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+                /** @description 진행 중 태스크를 잡은 에이전트가 있다 — 아무것도 바뀌지 않았다 */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "ACTIVE_TASKS_HELD",
+                         *         "message": "1 task(s) are still held by agents; finish or stop them first",
+                         *         "details": [
+                         *           {
+                         *             "taskId": "11111111-1111-1111-1111-111111111111",
+                         *             "title": "T-1",
+                         *             "state": "CLAIMED",
+                         *             "agentId": "22222222-2222-2222-2222-222222222222"
+                         *           }
+                         *         ]
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/orgs/{orgId}/members/{userId}": {
         parameters: {
             query?: never;
@@ -1586,7 +1698,7 @@ export interface paths {
          * 조직에서 멤버 내보내기 · 본인 탈퇴
          * @description 대표가 다른 멤버를 내보내거나, `userId`가 나 자신이면 탈퇴다(021). **계정은 남고 조직만 빠진다** — 다른 조직의 초대를 받을 수 있고, 지난 기록(이벤트·노트·제출)은 그대로 남는다.
          *     그 사람의 에이전트는 맡은 진행 중 프로젝트에서 빠지고 연결이 해제된다. 진행 중 태스크를 붙잡고 있으면 409 `ACTIVE_TASKS_HELD`.
-         *     대표는 나갈 수도 내보낼 수도 없다(409 `REPRESENTATIVE_CANNOT_LEAVE`). 대표가 아닌 사람이 남을 내보내면 403 `NOT_REPRESENTATIVE`.
+         *     대표는 나갈 수도 내보낼 수도 없다(409 `REPRESENTATIVE_CANNOT_LEAVE`) — 대표가 떠나는 길은 조직 해산(`DELETE /orgs/{orgId}`)뿐이다. 대표가 아닌 사람이 남을 내보내면 403 `NOT_REPRESENTATIVE`.
          *     빠진 사람의 화면 스트림(`/api/stream`)은 4403 `NOT_IN_ORG`로 끊긴다.
          */
         delete: {
@@ -3781,7 +3893,72 @@ export interface paths {
         };
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * 프로젝트 삭제 (대표 전용)
+         * @description 프로젝트를 지운다(029). **행은 지우지 않고 표시(`deleted_at`)만 남긴다** — 이벤트·태스크·노트가 가리킨다(P5).
+         *     그 뒤로 이 프로젝트는 어디서도 보이지 않는다: 프로젝트 목록에서 빠지고, 상세와 하위 API(태스크·명세·노트·질문·결정·계약·룸·승인·라우팅 보고서 등)는 404 `PROJECT_NOT_FOUND`,
+         *     `GET /me/questions`·조직 승인 대기열에서도 빠진다. 화면 스트림(`/api/stream`)에서 이 프로젝트를 구독 중이면 `{ type: 'unsubscribed', projectId, reason: 'PROJECT_NOT_FOUND' }`가 온다.
+         *     - 진행 중(planning·active·halted)이면 **같은 트랜잭션에서 먼저 중단**한다(`abortedNow: true`, `PROJECT_ABORTED`가 먼저 남는다) — 중단과 같은 규칙이라
+         *       에이전트가 태스크를 잡고 있어도 막지 않는다. 실행 중인 CLI는 배정이 풀린 것을 보고(`NOT_PROJECT_MEMBER`) 다시 배정을 기다린다. 에이전트·레포가 풀린다.
+         *     - 이벤트 `PROJECT_DELETED { name, previousStatus, abortedNow }`(대표 명의). GitHub 권한은 회수하지 않는다(레포·코드는 팀의 것).
+         *     - 이미 지운 프로젝트를 다시 지우면 404 `PROJECT_NOT_FOUND`.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @example {{PROJECT_ID}} */
+                    projectId: components["parameters"]["ProjectId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 지움 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                /** Format: uuid */
+                                projectId: string;
+                                /** @description 진행 중이라 이번에 함께 중단했는가 */
+                                abortedNow: boolean;
+                            };
+                        };
+                    };
+                };
+                /** @description 대표가 아님 */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description 없는 프로젝트이거나 이미 지운 프로젝트 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "PROJECT_NOT_FOUND",
+                         *         "message": "project not found"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
+                    };
+                };
+            };
+        };
         options?: never;
         head?: never;
         patch?: never;
@@ -3982,12 +4159,16 @@ export interface paths {
         /**
          * 조직 승인 대기열 (대표 전용)
          * @description 대시보드 "승인 · 결정 대기"와 받은 편지함. 기본은 대기 중(`status=pending`)만 준다.
-         *     지금 생기는 카드는 ACTION 하나다 — 검증은 통과했지만 정책 판정이 HUMAN·PM_REVIEW라 태스크가 `AWAITING_APPROVAL`에 멈춘 산출물.
+         *     카드는 ACTION(검증은 통과했지만 정책 판정이 HUMAN·PM_REVIEW라 태스크가 `AWAITING_APPROVAL`에 멈춘 산출물)과 G3(통합 확인·완료)다.
+         *     ACTION은 **역할 담당의 1차 검토(`stage=role_review`) → 대표 최종(`final`)** 두 단계이고, 대표에게는 1차 검토 대기도 보인다 —
+         *     역할 담당이 응답하지 않으면 대표가 대신 처리한다(`stage`로 거른다, 기본 전부).
          */
         get: {
             parameters: {
                 query?: {
                     status?: "pending" | "decided" | "all";
+                    /** @description 단계로 거른다(role_review 역할 담당 1차 검토 · final 대표 최종) */
+                    stage?: "role_review" | "final" | "all";
                     limit?: number;
                 };
                 header?: never;
@@ -4014,6 +4195,12 @@ export interface paths {
                          *             "projectId": "{{PROJECT_ID}}",
                          *             "projectName": "스터디 관리 웹앱 v1",
                          *             "gate": "ACTION",
+                         *             "stage": "role_review",
+                         *             "reviewer": {
+                         *               "userId": "22222222-2222-4222-8222-222222222222",
+                         *               "nickname": "민수"
+                         *             },
+                         *             "roleReview": null,
                          *             "taskId": "{{TASK_BE}}",
                          *             "taskTitle": "T-001 참여 신청 API 구현",
                          *             "taskState": "AWAITING_APPROVAL",
@@ -4065,6 +4252,210 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 알림(일어난 일)
+         * @description 내 태스크가 완료됐다 · 내 질문에 답이 왔다 · 나에게 질문이 왔다. events에서 계산하고 최근 30일만 본다. 최신순.
+         *     `before`(이전 응답의 마지막 `id`)로 더 본다. `unreadCount`는 읽음 커서 뒤의 내 알림 수.
+         *     실시간: 조직 토픽 `inbox` 신호를 받으면 다시 읽는다.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                    /** @description 이 이벤트 id보다 앞의 것만 */
+                    before?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 최신순 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                notifications: components["schemas"]["Notification"][];
+                                unreadCount: number;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/notifications/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 알림 읽음
+         * @description 읽음 커서를 `upToEventId`까지(없으면 지금 최신까지) 민다. **앞으로만 간다** — 더 작은 값이면 그대로다.
+         *     읽음은 화면 상태라 이벤트를 남기지 않는다. 받은 편지함을 열 때 그때 받은 첫 알림의 id로 부르면 그 뒤에 온 알림은 안 읽음으로 남는다.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @description 이 이벤트 id까지 읽음(숫자도 받는다) */
+                        upToEventId?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 읽음 커서와 남은 안 읽음 수 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                readUpToEventId: string | null;
+                                unreadCount: number;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/inbox": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 처리할 일
+         * @description 지금 내가 처리할 일 — 승인·질문·계약·PM 초안·멈춘 태스크·에이전트 연결. 지금 상태에서 계산하므로 처리하면 빠진다. 오래된 것부터.
+         *     누가 받는지는 각 일을 처리하는 API의 권한 판정과 같다. 실시간: 조직 토픽 `inbox`.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 오래된 것부터 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                items: components["schemas"]["InboxItem"][];
+                                /** @description 종류별 개수(0 포함) */
+                                counts: {
+                                    approval_role_review: number;
+                                    approval_final: number;
+                                    release: number;
+                                    question: number;
+                                    contract: number;
+                                    plan: number;
+                                    stuck_task: number;
+                                    agent_needed: number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/approvals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 내가 검토할 승인 (팀원의 "검토 요청")
+         * @description 내가 그 역할 담당인 **1차 검토 대기**(`stage=role_review`, 결정 전) 카드 — 조직 전체, 요청 시각 최신순. 승인·반려하면 목록에서 빠진다.
+         *     역할에서 빠지면(해제·탈퇴) 보이지 않는다(그 카드는 대표가 처리한다). 대표는 1차 검토 대상이 아니라 보통 빈 목록이다 — 대표의 대기열은 `GET /orgs/{orgId}/approvals`.
+         *     실시간: 프로젝트 토픽 `approvals` 신호를 받으면 다시 읽는다.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 요청 시각 최신순 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                approvals: components["schemas"]["Approval"][];
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{projectId}/approvals": {
         parameters: {
             query?: never;
@@ -4074,12 +4465,14 @@ export interface paths {
         };
         /**
          * 프로젝트 승인 이력
-         * @description 볼 수 있는 범위는 태스크·노트와 같다(대표는 전부, 팀원은 배정된 프로젝트). 결정은 대표만 한다.
+         * @description 볼 수 있는 범위는 태스크·노트와 같다(대표는 전부, 팀원은 배정된 프로젝트). 1차 검토는 그 역할 담당·대표가, 최종은 대표가 결정한다.
          */
         get: {
             parameters: {
                 query?: {
                     status?: "pending" | "decided" | "all";
+                    /** @description 단계로 거른다(role_review 역할 담당 1차 검토 · final 대표 최종) */
+                    stage?: "role_review" | "final" | "all";
                     limit?: number;
                 };
                 header?: never;
@@ -4106,6 +4499,12 @@ export interface paths {
                          *             "projectId": "{{PROJECT_ID}}",
                          *             "projectName": "스터디 관리 웹앱 v1",
                          *             "gate": "ACTION",
+                         *             "stage": "role_review",
+                         *             "reviewer": {
+                         *               "userId": "22222222-2222-4222-8222-222222222222",
+                         *               "nickname": "민수"
+                         *             },
+                         *             "roleReview": null,
                          *             "taskId": "{{TASK_BE}}",
                          *             "taskTitle": "T-001 참여 신청 API 구현",
                          *             "taskState": "AWAITING_APPROVAL",
@@ -4167,9 +4566,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * 승인 (대표 전용)
-         * @description 태스크가 `DONE`이 된다. 뒤에 걸린 태스크가 풀리면 담당 에이전트에게 바로 간다.
-         *     대표가 자기 에이전트의 산출물을 승인하면 이벤트에 `selfApproval: true`가 남는다(지금은 대표 말고 승인자가 없어 허용).
+         * 승인 (1차 검토는 역할 담당·대표, 최종은 대표)
+         * @description - `stage=role_review`(1차 검토): 그 카드의 `reviewer`(지금도 그 역할 담당일 때) 또는 대표가 승인한다. 이 카드가 닫히고 같은 스냅샷으로
+         *       **대표의 final 카드가 새로 생긴다** — 태스크는 `AWAITING_APPROVAL` 그대로다. 대표가 대신 처리하면 `roleReview.decidedByRepresentative: true`.
+         *     - `stage=final`(최종) · G3: 대표만. 태스크가 `DONE`이 된다(G3는 프로젝트 completed). 뒤에 걸린 태스크가 풀리면 담당 에이전트에게 바로 간다.
+         *       대표가 자기 에이전트의 산출물을 승인하면 이벤트에 `selfApproval: true`가 남는다.
+         *     응답은 결정한 그 카드다(1차 검토 승인이면 닫힌 role_review 카드 — 새 final 카드는 목록에서 읽는다).
          */
         post: {
             parameters: {
@@ -4180,9 +4582,21 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody?: {
+                content: {
+                    /**
+                     * @example {
+                     *       "note": "마이그레이션 down까지 확인했다"
+                     *     }
+                     */
+                    "application/json": {
+                        /** @description 선택 메모 — 1차 검토면 final 카드의 roleReview.note로 대표에게 보인다 */
+                        note?: string;
+                    };
+                };
+            };
             responses: {
-                /** @description 승인됨(decision=APPROVE, 태스크 DONE) */
+                /** @description 승인됨(decision=APPROVE — 1차 검토면 태스크 AWAITING_APPROVAL 그대로, 최종이면 DONE) */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -4191,6 +4605,23 @@ export interface paths {
                         "application/json": {
                             data: components["schemas"]["Approval"];
                         };
+                    };
+                };
+                /** @description 이 카드를 결정할 자격이 없다 — 1차 검토는 그 역할 담당·대표, 최종·G3는 대표만 */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "NOT_APPROVAL_REVIEWER",
+                         *         "message": "only the organization representative can make the final decision"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
                     };
                 };
                 /** @description 없는 승인 */
@@ -4237,9 +4668,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * 반려 (대표 전용, 사유 필수)
-         * @description 태스크가 `READY`로 돌아가고(담당 비움) 재시도 횟수가 1 오른다 — **3회째는 `ESCALATED`**(검증 실패와 같은 횟수를 쓴다).
-         *     같은 역할의 에이전트가 다시 받아 **같은 태스크 브랜치에서 이어서** 고친다. 사유는 그 시도의 브리핑(`lastRejection`)으로 간다.
+         * 반려 (1차 검토는 역할 담당·대표, 최종은 대표 — 사유 필수)
+         * @description 결정할 수 있는 사람은 승인과 같다. **어느 단계든** 태스크가 `READY`로 돌아가고(담당 비움) 재시도 횟수가 1 오른다 — **3회째는 `ESCALATED`**(검증 실패와 같은 횟수를 쓴다).
+         *     1차 검토에서 반려하면 대표 대기열에 오지 않는다.
+         *     같은 역할의 에이전트가 다시 받아 **같은 태스크 브랜치에서 이어서** 고친다. 사유는 그 시도의 브리핑(`lastRejection`, 누가 반려했는지 `rejectedBy`)으로 간다.
          */
         post: {
             parameters: {
@@ -4272,6 +4704,23 @@ export interface paths {
                         "application/json": {
                             data: components["schemas"]["Approval"];
                         };
+                    };
+                };
+                /** @description 이 카드를 결정할 자격이 없다 — 1차 검토는 그 역할 담당·대표, 최종·G3는 대표만 */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /**
+                         * @example {
+                         *       "error": {
+                         *         "code": "NOT_APPROVAL_REVIEWER",
+                         *         "message": "only the organization representative can make the final decision"
+                         *       }
+                         *     }
+                         */
+                        "application/json": unknown;
                     };
                 };
                 /** @description 없는 승인 */
@@ -4864,8 +5313,11 @@ export interface paths {
          *       - `TASK_RESUMED` — `taskId, note, from('AGENT_STOPPED'|'ESCALATED'), previousRetryCount?`
          *       - `QUESTION_ASKED` — `questionId, taskId, askerRole, targetRole('FRONTEND'|'BACKEND'|'PM'|'SELF'), routedBy, confidence, latencyMs, fallback, costUsd, questionCount`
          *       - `QUESTION_GOLD_LABELED` — `questionId, goldTarget('FRONTEND'|'BACKEND'|'PM'|'SELF'), previousGoldTarget`(대표가 정답 담당자를 붙임, 026)
-         *       - `MEMBER_AGENT_DETACHED` — `agentId, teamRole, userId, cause('agent_disconnected')`(에이전트만 떨어짐 — 사람은 담당으로 남음, 028)
-         *       - `MEMBER_AGENT_ATTACHED` — `agentId, teamRole, userId, cause('reconnected'|'assigned')`(빈 담당 자리에 에이전트가 다시 붙음, 028)
+         *       - `MEMBER_AGENT_DETACHED` — `agentId, agentName?, teamRole, userId, cause('agent_disconnected')`(에이전트만 떨어짐 — 사람은 담당으로 남음, 028. 그 역할 룸에 줄로도 나온다)
+         *       - `MEMBER_AGENT_ATTACHED` — `agentId, agentName?, teamRole, userId, cause('reconnected'|'assigned')`(빈 담당 자리에 에이전트가 다시 붙음, 028. 그 역할 룸에 줄로도 나온다)
+         *       - `AGENT_RUN_ENDED` — `taskId, attempt, outcome('completed'|'timeout'|'failed'|'disconnected'), committed, submitted, durationMs, exitCode, taskState, waitingQuestion?`.
+         *         `disconnected`는 에이전트 연결이 해제(연결 해제·조직 탈퇴·해산)되어 서버가 열린 실행을 대신 닫은 것이다(Executor의 종료 보고는 오지 않는다).
+         *         서버 시작 때도 연결 해제된 에이전트에 남은 열린 실행을 같은 방식으로 닫는다(명의는 그 에이전트의 주인).
          *       - `MEMBER_UNASSIGNED` — `agentId(없으면 null), teamRole, userId, cause?`(사람이 역할에서 빠짐)
          */
         get: {
@@ -7499,6 +7951,7 @@ export interface paths {
          *     제출하지 않은 것이다. 그때는 같은 트랜잭션에서 태스크가 **BLOCKED(AGENT_STOPPED)**로 바뀌고(이벤트 `TASK_BLOCKED`), 룸에
          *     "멈췄습니다 — 사유 / 거부된 명령 → 대표 확인 후 재개가 필요합니다"가 남는다. 재시도 횟수는 오르지 않는다.
          *     Executor가 꺼져 이 보고조차 오지 않으면 서버 감시가 45분 동안 응답이 없는 수령을 같은 방식으로 멈춘다.
+         *     에이전트 연결이 해제되면 서버가 열린 실행을 `outcome: disconnected`로 대신 닫는다 — 그 뒤의 이 보고는 토큰이 막혀 401이다(Executor는 보내지 않는다).
          *     열린 실행(시작하고 아직 안 끝낸 것)이 없으면 409 `RUN_NOT_OPEN`.
          */
         post: {
@@ -8324,6 +8777,86 @@ export interface components {
             /** @description activeProjectId 프로젝트의 이름 */
             activeProjectName: string | null;
         };
+        /**
+         * @description 받은 편지함의 알림 한 줄 — "일어난 일". 따로 저장하지 않고 events에서 계산한다(id = 그 이벤트 id). 최근 30일만.
+         *     받는 사람: 관련 역할(`role`)의 담당과 대표. 대표는 조직의 모든 프로젝트, 팀원은 지금 자기가 담당인 역할만. 한 이벤트는 한 번이다.
+         *     질문 내용·답 전체는 싣지 않는다 — `questionId`로 `GET /projects/{projectId}/questions`(또는 `/decisions`)를 읽는다.
+         */
+        Notification: {
+            /** @description 이벤트 id(bigint를 문자열로). 읽음 커서·더 보기(before)에 쓴다 */
+            id: string;
+            /**
+             * @description - task_done: 태스크가 완료됐다(최종 승인·검증만으로 완료·직접 완료). 1차 검토 승인은 완료가 아니라 없다. 역할 = 태스크 역할
+             *     - question_answered: 질문한 역할의 질문에 답이 정해졌다(사람의 답, 또는 상담 초안이 그대로 답이 된 경우). 역할 = 질문한 역할
+             *     - question_asked: 그 역할에게 질문이 왔다(PM 대상이면 대표만). 역할 = 대상 역할
+             * @enum {string}
+             */
+            type: "task_done" | "question_answered" | "question_asked";
+            /** Format: date-time */
+            ts: string;
+            /** @description 이벤트 id ≤ 읽음 커서 */
+            read: boolean;
+            /** Format: uuid */
+            projectId: string;
+            projectName: string;
+            /** Format: uuid */
+            taskId: string | null;
+            taskTitle: string | null;
+            /**
+             * Format: uuid
+             * @description 질문 종류만 — 누르면 질문 카드를 연다
+             */
+            questionId: string | null;
+            /** @description 관련 역할(FRONTEND·BACKEND·PM). 역할 제한 없는 태스크면 null */
+            role: string | null;
+            /** @description 서버가 만든 한 줄. 예: "로그인 API — 대표가 승인해 완료됐습니다", "BE 담당 민수가 답했습니다 — 목록 페이지 크기 → 20개" */
+            text: string;
+        };
+        /**
+         * @description 받은 편지함의 "처리할 일" 한 줄 — 지금 상태에서 계산한다(처리하면 저절로 빠진다). 진행 중 프로젝트만.
+         *     누가 받는지는 그 일을 처리하는 API의 권한 판정과 같다(보이는데 누르면 403이 되지 않게).
+         */
+        InboxItem: {
+            /**
+             * @description - approval_role_review: 내가 검토자인 1차 검토(`GET /me/approvals`와 같다) → `POST /approvals/{approvalId}/approve|reject`
+             *     - approval_final: 최종 승인 대기(대표만)
+             *     - release: 통합 확인·완료 승인 G3(대표만)
+             *     - question: 내가 답할 질문(`GET /me/questions`와 같다) → `POST /questions/{questionId}/answer`
+             *     - contract: 확정할 API 계약(BE 담당, 없으면 대표) — 초안 확정 대기 또는 작성 실패(다시 요청 필요)
+             *     - plan: PM 초안 검토 대기·실패(대표만, 종류별 가장 최근 요청)
+             *     - stuck_task: 멈춘(BLOCKED·AGENT_STOPPED)·재시도 소진(ESCALATED) 태스크 → `POST /tasks/{taskId}/resume`(대표만)
+             *     - agent_needed: 내가 담당인 진행 중 프로젝트 역할에 에이전트가 없다 — CLI 연결
+             * @enum {string}
+             */
+            kind: "approval_role_review" | "approval_final" | "release" | "question" | "contract" | "plan" | "stuck_task" | "agent_needed";
+            /**
+             * Format: date-time
+             * @description 그 일이 생긴 시각(카드 요청·질문·계약 갱신·계획 요청·태스크 갱신). agent_needed는 프로젝트 생성 시각
+             */
+            createdAt: string;
+            /** Format: uuid */
+            projectId: string;
+            projectName: string;
+            /** Format: uuid */
+            approvalId: string | null;
+            /** Format: uuid */
+            questionId: string | null;
+            /** Format: uuid */
+            contractId: string | null;
+            /** Format: uuid */
+            planId: string | null;
+            /** Format: uuid */
+            taskId: string | null;
+            /**
+             * Format: uuid
+             * @description stuck_task면 마지막으로 맡았던 에이전트
+             */
+            agentId: string | null;
+            role: string | null;
+            title: string;
+            /** @description 서버가 만든 한 줄 */
+            text: string;
+        };
         Approval: {
             /** Format: uuid */
             id: string;
@@ -8336,6 +8869,34 @@ export interface components {
              * @enum {string}
              */
             gate: "G1" | "G2" | "G3" | "ACTION";
+            /**
+             * @description ACTION 승인은 두 단계다.
+             *     - role_review: **역할 담당의 1차 검토**. `reviewer`(그 역할 담당) 또는 대표(대신 처리)가 결정한다. 승인하면 이 카드는 닫히고 같은 스냅샷으로 `final` 카드가 새로 생긴다(태스크는 `AWAITING_APPROVAL` 그대로). 반려하면 최종 반려와 같다(READY, 재시도 +1).
+             *     - final: **대표의 최종 승인**. 대표만 결정한다. 역할 담당이 없거나 대표 본인이면 처음부터 final이다(`payload.roleReviewSkipped`). G3와 이 기능 이전의 카드도 전부 final.
+             * @enum {string}
+             */
+            stage: "role_review" | "final";
+            /** @description role_review 카드를 볼 역할 담당. final은 null(대표가 본다) */
+            reviewer: {
+                /** Format: uuid */
+                userId: string;
+                nickname: string | null;
+            } | null;
+            /** @description final 카드가 1차 검토를 거쳤으면 그 결과. 거치지 않았으면 null(이유는 payload.roleReviewSkipped) */
+            roleReview: {
+                /**
+                 * Format: uuid
+                 * @description 1차 승인한 사람
+                 */
+                by: string;
+                nickname: string | null;
+                /** Format: date-time */
+                at: string;
+                /** @description 역할 담당 대신 대표가 1차 검토를 처리했다 */
+                decidedByRepresentative: boolean;
+                /** @description 승인 메모(있을 때만) */
+                note?: string;
+            } | null;
             /**
              * Format: uuid
              * @description ACTION이면 그 태스크, G3면 null(프로젝트 전체)
@@ -8354,7 +8915,9 @@ export interface components {
             gateMode: "HUMAN" | "PM_REVIEW" | null;
             /**
              * @description 요청 시점의 카드 스냅샷.
-             *     - ACTION: taskTitle, artifactId, attempt, commitSha, changedPaths, triggeredActions, gateMode, stages, submittedByAgentId.
+             *     - ACTION: taskTitle, artifactId, attempt, commitSha, changedPaths, triggeredActions, gateMode, stages, submittedByAgentId, teamRole.
+             *       역할 담당 검토를 건너뛰었으면 `roleReviewSkipped`(`no_owner` 역할 담당 없음 · `owner_is_representative` 담당이 대표 본인).
+             *       1차 검토를 거친 final 카드는 `roleReview`(위 필드와 같은 값)·`roleReviewApprovalId`(닫힌 role_review 카드).
              *     - G3: integrationChecks(PM이 쓴 확인 항목 문자열 목록), tasks([{ taskId, title, teamRole, repo, branchName, commitSha }] — 머지·실행해 볼 브랜치와 마지막 커밋).
              *     **backfilled: true**면 승인 기능 이전부터 멈춰 있던 태스크라 지금 DB에서 알 수 있는 값만 있다(stages 등 없음) — "정보 일부 없음"을 표시한다.
              */
@@ -8368,7 +8931,7 @@ export interface components {
             decision: "APPROVE" | "REJECT" | null;
             /** Format: uuid */
             decidedBy: string | null;
-            /** @description 반려 사유(반려는 필수) */
+            /** @description 반려 사유(반려는 필수) 또는 승인 메모(선택) */
             reason: string | null;
             /** Format: date-time */
             requestedAt: string;
@@ -8796,7 +9359,9 @@ export interface components {
             ts: string;
             /**
              * @description - pm: 서버가 지시·판정을 알림(실행해 주세요, 검증 결과, 승인)
-             *     - nomos: Executor가 보고한 실행 상태(수령, 구현 시작, 제출, 실행 종료)
+             *     - nomos: Executor가 보고한 실행 상태(수령, 구현 시작, 제출, 실행 종료)와 그 역할 에이전트의 연결 상태 —
+             *       `MEMBER_AGENT_DETACHED` "에이전트 <이름>의 연결이 해제됐습니다 — 다시 연결하면 이 역할을 이어 받습니다",
+             *       `MEMBER_AGENT_ATTACHED` "에이전트 <이름>이(가) 다시 연결됐습니다", `AGENT_RUN_ENDED`(outcome disconnected) "에이전트 연결이 해제되어 실행을 멈췄습니다 (N초)"
              *     - agent: 에이전트가 쓴 도구(읽기·수정·실행) · 인계 노트
              *     - human: 사람(그 역할 담당·대표)이 룸에서 에이전트에게 보낸 메시지 — type `ROOM_MESSAGE_SENT`, 보낸 사람은 `userId`
              * @enum {string}
@@ -9057,9 +9622,14 @@ export interface components {
             retryCount: number;
             /**
              * Format: uuid
-             * @description AWAITING_APPROVAL로 갔으면 그 승인 카드 id(대표가 승인·반려). 없으면 생략
+             * @description AWAITING_APPROVAL로 갔으면 그 승인 카드 id. 없으면 생략
              */
             approvalId?: string;
+            /**
+             * @description approvalId 카드의 단계 — role_review면 역할 담당이 먼저 검토하고, final이면 대표가 바로 승인·반려한다. approvalId가 없으면 생략
+             * @enum {string}
+             */
+            approvalStage?: "role_review" | "final";
         };
         /** @description Artifact의 필드 전부 + 서버가 동기로 끝낸 검증 요약(verification) */
         SubmittedArtifact: {
@@ -9512,7 +10082,7 @@ export interface components {
                 /** Format: date-time */
                 answeredAt: string | null;
             }[];
-            /** @description 직전 제출이 대표에게 반려됐으면 그 사유. 반려되면 태스크가 READY로 돌아오고 같은 태스크 브랜치에서 이어서 고친다 */
+            /** @description 직전 제출이 반려됐으면 그 사유(1차 검토의 역할 담당이든 최종 승인의 대표든). 반려되면 태스크가 READY로 돌아오고 같은 태스크 브랜치에서 이어서 고친다 */
             lastRejection: {
                 /** Format: uuid */
                 approvalId: string;
@@ -9522,6 +10092,11 @@ export interface components {
                 /** Format: uuid */
                 artifactId: string | null;
                 commitSha: string | null;
+                /**
+                 * @description role_owner = 1차 검토(role_review)에서 그 역할 담당이 반려, representative = 대표가 반려(최종 승인 또는 1차 검토를 대신 처리)
+                 * @enum {string}
+                 */
+                rejectedBy: "role_owner" | "representative";
             } | null;
         };
         Error: {

@@ -22,7 +22,7 @@ import { useProjectStream, type Schemas } from "@/shared/api";
 import { Avatar, Badge, Logo, MockBadge } from "@/shared/ui";
 import { cn } from "@/shared/lib/format";
 import { StatusDot } from "@/entities/agent";
-import { useProjectApprovals } from "@/entities/approval";
+import { canDecideApproval, useProjectApprovals } from "@/entities/approval";
 import { ProjectErrorView, ProjectStatusBadge, useProject, useProjects } from "@/entities/project";
 import { useMyQuestions } from "@/entities/question";
 import { ROLE_ROOM, ROOM_META, useRooms } from "@/entities/room";
@@ -172,10 +172,10 @@ function SidebarContent({
   const { state, me, actions } = useApp();
   const mock = useMockProject(projectId);
   const rooms = useRooms(projectId).data ?? [];
-  // 내가 답할 수 있는 질문(대표는 전부, 팀원은 자기 역할 대상)과, 대표가 결정할 승인
+  // 내가 답할 수 있는 질문(대표는 전부, 팀원은 자기 역할 대상)과, 내가 결정할 승인(대표는 전부, 팀원은 내 1차 검토)
   const myQuestions = (useMyQuestions().data ?? []).filter((q) => q.question.projectId === projectId);
-  const approvals = useProjectApprovals(projectId).data ?? [];
-  const inboxCount = myQuestions.length + (isRep ? approvals.length : 0);
+  const approvals = (useProjectApprovals(projectId).data ?? []).filter((a) => canDecideApproval(a, user.userId, isRep));
+  const inboxCount = myQuestions.length + approvals.length;
   const pathname = usePathname();
   const router = useRouter();
   const [projOpen, setProjOpen] = useState(false);

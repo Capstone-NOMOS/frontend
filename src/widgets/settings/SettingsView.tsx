@@ -1,12 +1,22 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Ban, CheckCircle2, Loader2, Lock, Play } from "lucide-react";
 import { errorDetails, errorMessage, type Schemas } from "@/shared/api";
 import type { TeamRole } from "@/shared/model";
-import { Badge, Button, RemovalError, RevocationNotice, SectionTitle, Segmented, Textarea } from "@/shared/ui";
+import {
+  Badge,
+  Button,
+  ConfirmButton,
+  RemovalError,
+  RevocationNotice,
+  SectionTitle,
+  Segmented,
+  Textarea,
+} from "@/shared/ui";
 import { cn, fmtDateTime } from "@/shared/lib/format";
 import { agentKeys, useOrgAgents } from "@/entities/agent";
 import { DECIDER_META, LEVELS, LevelGates, POLICY_TABLE } from "@/entities/policy";
@@ -15,6 +25,7 @@ import {
   fmtUsd,
   useAbortProject,
   useAssignMember,
+  useDeleteProject,
   useProject,
   useResendGithubInvite,
   useStartProject,
@@ -99,6 +110,7 @@ export function SettingsView({ projectId }: { projectId: string }) {
       <StartSection projectId={projectId} project={project} members={members} isRep={isRep} />
 
       {isRep && open && <AbortSection projectId={projectId} />}
+      {isRep && <DeleteSection projectId={projectId} />}
 
       <PolicySection level={project.autonomyPreset} />
     </div>
@@ -592,6 +604,32 @@ function AbortSection({ projectId }: { projectId: string }) {
         </Button>
       )}
       {abort.isError && <p className="mt-2 text-[12.5px] text-forbidden">{errorMessage(abort.error)}</p>}
+    </section>
+  );
+}
+
+/** 대표 전용. 진행 중이어도 지울 수 있다 — 서버가 먼저 중단한다. 지운 뒤에는 목록으로 보낸다 */
+function DeleteSection({ projectId }: { projectId: string }) {
+  const router = useRouter();
+  const del = useDeleteProject(projectId);
+
+  return (
+    <section className="card p-5">
+      <SectionTitle>프로젝트 삭제</SectionTitle>
+      <p className="text-[13px] text-ink-700">
+        프로젝트를 삭제하면 목록과 모든 화면에서 사라집니다. 진행 중이면 먼저 중단되고, 작업 중인 에이전트는 멈춥니다.
+        되돌릴 수 없습니다.
+      </p>
+      <div className="mt-3">
+        <ConfirmButton
+          label="프로젝트 삭제"
+          confirm="정말 삭제할까요?"
+          pendingLabel="삭제하는 중…"
+          pending={del.isPending}
+          onConfirm={() => del.mutate(undefined, { onSuccess: () => router.replace("/projects") })}
+        />
+      </div>
+      {del.isError && <p className="mt-2 text-[12.5px] text-forbidden">{errorMessage(del.error)}</p>}
     </section>
   );
 }

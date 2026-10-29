@@ -57,6 +57,8 @@ export function RoleRoomView({ projectId, role }: { projectId: string; role: Tea
   };
   const agentName = room?.agent?.agentName ?? `${roleMeta.label} 에이전트`;
   const owner = members.find((m) => m.teamRole === role);
+  // 이 역할에 붙은 에이전트가 없다(배정 전·연결 해제). 피드 마지막 줄과 상관없이 "생각 중"을 띄우지 않는다
+  const noAgent = (room !== undefined && !room.agent) || (owner !== undefined && !owner.agentId);
   const rep = orgMembers.find((m) => m.orgRole === "REPRESENTATIVE");
   const people: Participant[] = [
     { kind: "agent", name: "PM", tone: "pm" },
@@ -100,7 +102,7 @@ export function RoleRoomView({ projectId, role }: { projectId: string; role: Tea
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <h1 className="text-[16px] font-semibold tracking-tight">{meta.name}</h1>
           <RoomParticipants people={people} />
-          {room && !room.agent && <span className="text-[12.5px] text-ink-500">배정된 에이전트 없음</span>}
+          {noAgent && <span className="text-[12.5px] text-ink-500">에이전트 연결 필요</span>}
         </div>
         {room && room.activeTasks.length > 0 && (
           <ul className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[12.5px]">
@@ -206,7 +208,7 @@ export function RoleRoomView({ projectId, role }: { projectId: string; role: Tea
                       </Fragment>
                     );
                   })}
-                  {thinkingSec !== null && (
+                  {thinkingSec !== null && !noAgent && (
                     <LeftRow head who={agentName} tone={roleMeta.tone}>
                       <span
                         className="inline-flex items-center gap-2 rounded-2xl rounded-tl-md bg-ink-100 px-3 py-1.5 text-[13px] text-ink-500"

@@ -5,6 +5,7 @@ export {
   useAbortProject,
   useAssignMember,
   useCreateProject,
+  useDeleteProject,
   useResendGithubInvite,
   useStartProject,
   useUnassignMember,

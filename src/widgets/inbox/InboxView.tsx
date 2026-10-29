@@ -2,10 +2,10 @@
 
 import { Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { errorMessage } from "@/shared/api";
+import { errorMessage, type Schemas } from "@/shared/api";
 import { EmptyState, SectionTitle } from "@/shared/ui";
 import { useOrgAgents } from "@/entities/agent";
-import { ApprovalCard, useProjectApprovals } from "@/entities/approval";
+import { ApprovalCard, canDecideApproval, useProjectApprovals } from "@/entities/approval";
 import { EventRow, describeEvent, makeEventLookup, useProjectEvents } from "@/entities/event";
 import { useOrgMembers } from "@/entities/org";
 import { projectKeys, useProject } from "@/entities/project";
@@ -20,6 +20,16 @@ export function InboxView({ projectId }: { projectId: string }) {
   const isRep = me.orgRole === "REPRESENTATIVE";
   const queryClient = useQueryClient();
   const approvals = useProjectApprovals(projectId);
+  // 내 차례: 대표는 최종 카드, 팀원은 내가 검토자인 1차 카드. 나머지(대표에게는 담당 검토 중 — 대신 처리할 수 있다)는 아래 칸
+  const mine = (approvals.data ?? []).filter(
+    (a) => canDecideApproval(a, me.userId, isRep) && !(isRep && a.stage === "role_review"),
+  );
+  const others = (approvals.data ?? []).filter((a) => !mine.includes(a));
+  const onDecided = () => {
+    // 승인·반려로 태스크 상태가, G3면 프로젝트 상태가 바뀐다 (entities끼리 키를 못 쓰므로 위젯에서 무효화)
+    void queryClient.invalidateQueries({ queryKey: taskKeys.all });
+    void queryClient.invalidateQueries({ queryKey: projectKeys.all });
+  };
   const events = useProjectEvents(projectId);
   const pending = useProjectQuestions(projectId, "pending");
   const agentAnswered = useProjectQuestions(projectId, "agent_answered");
@@ -41,37 +51,42 @@ export function InboxView({ projectId }: { projectId: string }) {
         </p>
 
         <section className="mt-6">
-          <SectionTitle>승인 대기 · {approvals.data?.length ?? 0}</SectionTitle>
+          <SectionTitle>
+            {isRep ? "최종 승인 대기" : "검토 요청"} · {mine.length}
+          </SectionTitle>
           {approvals.isPending ? (
             <div className="flex justify-center py-6 text-ink-400" aria-busy="true">
               <Loader2 size={18} className="animate-spin" aria-label="불러오는 중" />
             </div>
           ) : approvals.isError ? (
             <EmptyState title={errorMessage(approvals.error)} />
-          ) : approvals.data.length === 0 ? (
+          ) : mine.length === 0 ? (
             <EmptyState
               title="처리할 항목이 없습니다"
-              desc="정책상 사람 승인이 필요한 산출물이 검증을 통과하면 여기에 모입니다."
+              desc={
+                isRep
+                  ? "역할 담당의 1차 검토를 통과한 산출물(담당이 없으면 바로)이 여기에 모입니다."
+                  : "내가 맡은 역할의 산출물이 검증을 통과하면 여기서 먼저 검토합니다."
+              }
             />
           ) : (
-            <ul className="space-y-2">
-              {approvals.data.map((a) => (
-                <li key={a.id}>
-                  <ApprovalCard
-                    approval={a}
-                    canDecide={isRep}
-                    taskHref={a.taskId ? `/p/${projectId}/tasks/${a.taskId}` : undefined}
-                    // 승인·반려로 태스크 상태가, G3면 프로젝트 상태가 바뀐다 (entities끼리 키를 못 쓰므로 위젯에서 무효화)
-                    onDecided={() => {
-                      void queryClient.invalidateQueries({ queryKey: taskKeys.all });
-                      void queryClient.invalidateQueries({ queryKey: projectKeys.all });
-                    }}
-                  />
-                </li>
-              ))}
-            </ul>
+            <ApprovalList approvals={mine} projectId={projectId} canDecide onDecided={onDecided} />
           )}
         </section>
+
+        {others.length > 0 && (
+          <section className="mt-8">
+            <SectionTitle>
+              {isRep ? "담당 검토 중" : "승인 진행 중"} · {others.length}
+            </SectionTitle>
+            {isRep && (
+              <p className="mb-2 text-[12.5px] text-ink-500">
+                대신 처리할 수 있습니다. 대신 승인해도 최종 승인 카드가 다시 생기므로 한 번 더 승인해야 합니다.
+              </p>
+            )}
+            <ApprovalList approvals={others} projectId={projectId} canDecide={isRep} onDecided={onDecided} />
+          </section>
+        )}
 
         <section className="mt-8">
           <SectionTitle>에이전트 질문 · {questions.length}</SectionTitle>
@@ -121,5 +136,32 @@ export function InboxView({ projectId }: { projectId: string }) {
         </section>
       </div>
     </div>
+  );
+}
+
+function ApprovalList({
+  approvals,
+  projectId,
+  canDecide,
+  onDecided,
+}: {
+  approvals: Schemas["Approval"][];
+  projectId: string;
+  canDecide: boolean;
+  onDecided: () => void;
+}) {
+  return (
+    <ul className="space-y-2">
+      {approvals.map((a) => (
+        <li key={a.id}>
+          <ApprovalCard
+            approval={a}
+            canDecide={canDecide}
+            taskHref={a.taskId ? `/p/${projectId}/tasks/${a.taskId}` : undefined}
+            onDecided={onDecided}
+          />
+        </li>
+      ))}
+    </ul>
   );
 }

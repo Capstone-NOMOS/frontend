@@ -30,7 +30,8 @@ function releaseTasks(v: unknown): ReleaseTask[] {
 }
 
 /**
- * 승인 카드. 결정은 대표만(canDecide).
+ * 승인 카드. 결정할 수 있는지는 부르는 쪽이 canDecideApproval로 정한다.
+ * - stage: role_review(역할 담당 1차 검토) → 승인하면 대표의 final 카드가 새로 생긴다. 반려하면 대표까지 가지 않고 에이전트가 고친다
  * - ACTION: 검증은 통과했지만 정책 판정이 HUMAN·PM_REVIEW라 멈춘 산출물. 승인하면 태스크 DONE, 반려하면 READY로 돌아가 재시도 +1 (3회째 ESCALATED)
  * - G3: 통합 확인(프로젝트 전체, taskId 없음). 모든 태스크가 DONE이 되면 생긴다. 승인하면 프로젝트 completed, 반려하면 진행 중 그대로
  */
@@ -49,6 +50,10 @@ export function ApprovalCard({
   const decide = useDecideApproval();
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
+  const [note, setNote] = useState("");
+  // 이 기능 이전의 카드에는 stage가 없다 — 대표 최종으로 본다
+  const roleReview = a.stage === "role_review";
+  const rr = a.roleReview;
 
   const p = a.payload;
   const actions = strings(p.triggeredActions).filter((k) => k !== "artifact:submit");
@@ -61,7 +66,7 @@ export function ApprovalCard({
 
   const run = (decision: "approve" | "reject") =>
     decide.mutate(
-      { id: a.id, decision, ...(decision === "reject" && { reason: reason.trim() }) },
+      { id: a.id, decision, text: (decision === "reject" ? reason : note).trim() },
       { onSettled: onDecided },
     );
 
@@ -75,6 +80,7 @@ export function ApprovalCard({
         ) : (
           <Badge tone="warn">사람 승인</Badge>
         )}
+        {!release && (roleReview ? <Badge tone="info">담당 검토</Badge> : rr && <Badge tone="brand">최종 승인</Badge>)}
         {taskHref ? (
           <Link href={taskHref} className="min-w-0 flex-1 truncate text-[14px] font-semibold hover:underline">
             {a.taskTitle ?? "태스크"}
@@ -161,6 +167,15 @@ export function ApprovalCard({
           )}
         </div>
       )}
+      {rr && (
+        <p className="mt-2 text-[12.5px] text-ink-700">
+          {rr.decidedByRepresentative
+            ? "대표가 담당 검토를 대신해 1차 승인"
+            : `담당 ${rr.nickname ?? "팀원"}이 1차 승인`}
+          <span className="text-ink-500"> · {fmtDateTime(rr.at)}</span>
+          {rr.note && <span className="block text-ink-500">메모: {rr.note}</span>}
+        </p>
+      )}
       {p.backfilled === true && (
         <p className="mt-2 text-[12px] text-ink-500">승인 기능 이전부터 멈춰 있던 태스크라 정보 일부가 없습니다.</p>
       )}
@@ -175,7 +190,9 @@ export function ApprovalCard({
           {a.decidedAt && <span className="text-ink-500"> · {fmtDateTime(a.decidedAt)}</span>}
         </p>
       ) : !canDecide ? (
-        <p className="mt-3 text-[12.5px] text-ink-500">대표가 승인하거나 반려합니다.</p>
+        <p className="mt-3 text-[12.5px] text-ink-500">
+          {roleReview ? `${a.reviewer?.nickname ?? "역할 담당"}님이 먼저 검토합니다.` : "대표가 승인하거나 반려합니다."}
+        </p>
       ) : rejecting ? (
         <div className="mt-3 space-y-2">
           <Textarea
@@ -207,6 +224,15 @@ export function ApprovalCard({
         </div>
       ) : (
         <div className="mt-3 flex flex-wrap items-center gap-2">
+          <Textarea
+            rows={1}
+            value={note}
+            maxLength={MAX_REASON}
+            onChange={(e) => setNote(e.target.value)}
+            disabled={decide.isPending}
+            placeholder={roleReview ? "메모 (선택) — 대표의 최종 카드에 함께 보입니다" : "메모 (선택)"}
+            aria-label="승인 메모"
+          />
           <Button size="sm" disabled={decide.isPending} onClick={() => run("approve")}>
             <Check size={14} /> {decide.isPending ? "승인 중…" : "승인"}
           </Button>
@@ -224,7 +250,9 @@ export function ApprovalCard({
           <span className="text-[12px] text-ink-500">
             {release
               ? "승인하면 프로젝트가 완료됩니다. 반려하면 진행 중 그대로이고, 고칠 태스크를 만들어 전부 끝나면 새 카드가 생깁니다."
-              : "반려하면 태스크가 다시 대기로 돌아가 에이전트가 고칩니다."}
+              : roleReview
+                ? "승인하면 대표의 최종 승인으로 넘어갑니다. 반려하면 대표까지 가지 않고 에이전트가 고칩니다."
+                : "반려하면 태스크가 다시 대기로 돌아가 에이전트가 고칩니다."}
           </span>
         </div>
       )}

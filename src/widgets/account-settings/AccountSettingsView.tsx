@@ -38,9 +38,20 @@ export function AccountSettingsView() {
 
       <GithubSection githubLogin={me.githubLogin} />
 
-      {/* 대표는 나갈 수 없다(409 REPRESENTATIVE_CANNOT_LEAVE) — 버튼을 숨긴다 */}
+      {/* 대표는 나갈 수 없다(409 REPRESENTATIVE_CANNOT_LEAVE) — 나가기 대신 해산으로 보낸다 */}
       {me.orgId && me.orgRole === "MEMBER" && (
         <LeaveOrgSection orgId={me.orgId} orgName={me.orgName} userId={me.userId} />
+      )}
+      {me.orgId && me.orgRole === "REPRESENTATIVE" && (
+        <section className="card p-5">
+          <SectionTitle>조직 나가기</SectionTitle>
+          <p className="text-[13px] text-ink-500">
+            대표는 조직을 해산해야만 나갈 수 있습니다.{" "}
+            <Link href="/settings/org" className="underline">
+              조직 설정에서 해산하기
+            </Link>
+          </p>
+        </section>
       )}
     </div>
   );
