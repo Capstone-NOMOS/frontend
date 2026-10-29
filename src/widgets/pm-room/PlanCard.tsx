@@ -291,9 +291,10 @@ function DraftBody({
         <h4 className="text-[12px] font-semibold uppercase tracking-wide text-ink-500">
           태스크 {draft.tasks.length}개
         </h4>
-        <div className="-mx-4 mt-1.5 overflow-x-auto px-4">
+        {/* 태스크가 많아도 카드가 끝없이 길어지지 않게 안에서 스크롤한다 (스크롤바는 숨김) */}
+        <div className="-mx-4 mt-1.5 max-h-[420px] overflow-auto px-4 no-scrollbar">
           <table className="w-full min-w-[640px] text-left text-[12.5px]">
-            <thead className="text-[11.5px] text-ink-500">
+            <thead className="sticky top-0 bg-white text-[11.5px] text-ink-500">
               <tr className="border-b border-ink-100">
                 <th className="py-1.5 pr-2 font-medium">ref</th>
                 <th className="py-1.5 pr-2 font-medium">태스크</th>

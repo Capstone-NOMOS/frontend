@@ -3,13 +3,15 @@
 import Link from "next/link";
 import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
 import { FilePlus, FileText, Loader2, Pencil, Search, Terminal, Wrench, type LucideIcon } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { errorMessage, type Schemas } from "@/shared/api";
 import type { TeamRole } from "@/shared/model";
-import { AgentMark, Badge, Button, EmptyState } from "@/shared/ui";
+import { AgentMark, Avatar, Badge, Button, EmptyState } from "@/shared/ui";
 import { cn, fmtDate, fmtDateTime, fmtTime, sameDay } from "@/shared/lib/format";
+import { ApprovalCard, canDecideApproval, useProjectApprovals } from "@/entities/approval";
 import { ContractCard, useContracts } from "@/entities/contract";
 import { useOrgMembers } from "@/entities/org";
-import { useProject } from "@/entities/project";
+import { projectKeys, useProject } from "@/entities/project";
 import { QuestionCard, useProjectQuestions } from "@/entities/question";
 import {
   ROLE_ROOM,
@@ -20,7 +22,7 @@ import {
   useSendRoomMessage,
   type Participant,
 } from "@/entities/room";
-import { TEAM_ROLE_META } from "@/entities/task";
+import { TEAM_ROLE_META, taskKeys } from "@/entities/task";
 import { useCurrentUser } from "@/entities/user";
 import { Composer } from "./Composer";
 
@@ -57,6 +59,8 @@ export function RoleRoomView({ projectId, role }: { projectId: string; role: Tea
   };
   const agentName = room?.agent?.agentName ?? `${roleMeta.label} 에이전트`;
   const owner = members.find((m) => m.teamRole === role);
+  // 이 역할에 붙은 에이전트가 없다(배정 전·연결 해제). 피드 마지막 줄과 상관없이 "생각 중"을 띄우지 않는다
+  const noAgent = (room !== undefined && !room.agent) || (owner !== undefined && !owner.agentId);
   const rep = orgMembers.find((m) => m.orgRole === "REPRESENTATIVE");
   const people: Participant[] = [
     { kind: "agent", name: "PM", tone: "pm" },
@@ -93,6 +97,20 @@ export function RoleRoomView({ projectId, role }: { projectId: string; role: Tea
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [newestId]);
+  // 이 역할 태스크의 승인 대기 — 내가 결정할 수 있는 것만 (대표는 전부, 담당은 내 1차 검토). 최종 판정은 서버
+  const queryClient = useQueryClient();
+  const approvals = (useProjectApprovals(projectId).data ?? []).filter(
+    (a) => a.payload.teamRole === role && canDecideApproval(a, me.userId, isRep),
+  );
+  // 받은 편지함·토스트에서 #카드id(승인·질문)로 들어오면 그 카드로. 카드가 그려질 때까지 기다렸다가 한 번만, 맨 아래 스크롤보다 뒤에
+  const hashDone = useRef(false);
+  useEffect(() => {
+    if (newestId === undefined || hashDone.current) return;
+    const el = document.getElementById(decodeURIComponent(window.location.hash.slice(1)));
+    if (!el) return;
+    hashDone.current = true;
+    el.scrollIntoView({ block: "center" });
+  }, [newestId, questions.length, approvals.length]);
 
   return (
     <div className="flex h-full flex-col">
@@ -100,7 +118,7 @@ export function RoleRoomView({ projectId, role }: { projectId: string; role: Tea
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <h1 className="text-[16px] font-semibold tracking-tight">{meta.name}</h1>
           <RoomParticipants people={people} />
-          {room && !room.agent && <span className="text-[12.5px] text-ink-500">배정된 에이전트 없음</span>}
+          {noAgent && <span className="text-[12.5px] text-ink-500">에이전트 연결 필요</span>}
         </div>
         {room && room.activeTasks.length > 0 && (
           <ul className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[12.5px]">
@@ -164,9 +182,14 @@ export function RoleRoomView({ projectId, role }: { projectId: string; role: Tea
                           </li>
                         )}
                         {m.speaker === "human" ? (
-                          <RightRow who={m.userId ? nameOf(m.userId) : "사람"} ts={m.ts}>
+                          <HumanRow
+                            mine={m.userId === me.userId}
+                            head={head}
+                            who={m.userId ? nameOf(m.userId) : "사람"}
+                            ts={m.ts}
+                          >
                             {m.text}
-                          </RightRow>
+                          </HumanRow>
                         ) : (
                           <LeftRow head={head} who={who} tone={m.speaker === "agent" ? roleMeta.tone : "pm"} ts={m.ts}>
                             {q ? (
@@ -194,14 +217,14 @@ export function RoleRoomView({ projectId, role }: { projectId: string; role: Tea
                           </LeftRow>
                         )}
                         {q && human !== null && q.answeredBy && (
-                          <RightRow who={nameOf(q.answeredBy)} ts={q.answeredAt}>
+                          <HumanRow mine={q.answeredBy === me.userId} head who={nameOf(q.answeredBy)} ts={q.answeredAt}>
                             {human}
-                          </RightRow>
+                          </HumanRow>
                         )}
                       </Fragment>
                     );
                   })}
-                  {thinkingSec !== null && (
+                  {thinkingSec !== null && !noAgent && (
                     <LeftRow head who={agentName} tone={roleMeta.tone}>
                       <span
                         className="inline-flex items-center gap-2 rounded-2xl rounded-tl-md bg-ink-100 px-3 py-1.5 text-[13px] text-ink-500"
@@ -228,6 +251,27 @@ export function RoleRoomView({ projectId, role }: { projectId: string; role: Tea
               </h2>
               {openContracts.map((c) => (
                 <ContractCard key={c.id} projectId={projectId} contract={c} canDecide={canDecideContract} />
+              ))}
+            </section>
+          )}
+
+          {approvals.length > 0 && (
+            <section className="mt-6 space-y-2">
+              <h2 className="text-[12px] font-semibold uppercase tracking-wide text-ink-500">
+                승인 대기 · {approvals.length}
+              </h2>
+              {approvals.map((a) => (
+                <ApprovalCard
+                  key={a.id}
+                  approval={a}
+                  canDecide
+                  taskHref={a.taskId ? `/p/${projectId}/tasks/${a.taskId}` : undefined}
+                  // 승인·반려로 태스크·프로젝트 상태가 바뀐다 (entities끼리 키를 못 쓰므로 위젯에서 무효화)
+                  onDecided={() => {
+                    void queryClient.invalidateQueries({ queryKey: taskKeys.all });
+                    void queryClient.invalidateQueries({ queryKey: projectKeys.all });
+                  }}
+                />
               ))}
             </section>
           )}
@@ -274,23 +318,57 @@ export function RoleRoomView({ projectId, role }: { projectId: string; role: Tea
   );
 }
 
-/** 에이전트·PM·NOMOS 쪽(왼쪽). head면 마크와 이름·시각을 그린다 */
+/** 사람 메시지. 내가 쓴 것만 오른쪽, 다른 사람(담당·대표)은 왼쪽에 이름과 함께 */
+function HumanRow({
+  mine,
+  head,
+  who,
+  ts,
+  children,
+}: {
+  mine: boolean;
+  head: boolean;
+  who: string;
+  ts: string | null;
+  children: ReactNode;
+}) {
+  if (mine) {
+    return (
+      <RightRow who={who} ts={ts}>
+        {children}
+      </RightRow>
+    );
+  }
+  return (
+    <LeftRow head={head} who={who} person ts={ts ?? undefined}>
+      <div className="inline-block whitespace-pre-wrap rounded-2xl rounded-tl-md bg-ink-100 px-4 py-2.5 text-[14px] leading-6 text-ink-900">
+        {children}
+      </div>
+    </LeftRow>
+  );
+}
+
+/** 에이전트·PM·NOMOS·다른 사람 쪽(왼쪽). head면 마크와 이름·시각을 그린다. person이면 마크 대신 이니셜 */
 function LeftRow({
   head,
   who,
-  tone,
+  tone = "pm",
+  person = false,
   ts,
   children,
 }: {
   head: boolean;
   who: string;
-  tone: "fe" | "be" | "pm";
+  tone?: "fe" | "be" | "pm";
+  person?: boolean;
   ts?: string;
   children: ReactNode;
 }) {
   return (
     <li className={cn("flex gap-2.5 animate-rise", head && "pt-2")}>
-      <span className="w-7 shrink-0">{head && <AgentMark tone={tone} size={28} />}</span>
+      <span className="w-7 shrink-0">
+        {head && (person ? <Avatar name={who} size={28} /> : <AgentMark tone={tone} size={28} />)}
+      </span>
       <div className="min-w-0 flex-1">
         {head && (
           <div className="mb-0.5 flex items-baseline gap-1.5 text-[12px]">
@@ -308,7 +386,7 @@ function LeftRow({
   );
 }
 
-/** 사람 쪽(오른쪽). 질문에 단 답과 담당·대표가 보낸 메시지 */
+/** 내 쪽(오른쪽). 내가 질문에 단 답과 내가 보낸 메시지 */
 function RightRow({ who, ts, children }: { who: string; ts: string | null; children: ReactNode }) {
   return (
     <li className="flex justify-end pt-2 animate-rise">

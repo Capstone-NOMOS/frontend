@@ -11,6 +11,7 @@ import {
   Button,
   ConfirmButton,
   CopyField,
+  Input,
   RemovalError,
   RevocationNotice,
   SectionTitle,
@@ -22,6 +23,7 @@ import {
   CollaboratorBadge,
   OrgRoleBadge,
   useCreateInvite,
+  useDissolveOrg,
   useInvites,
   useOrgMembers,
   useRemoveMember,
@@ -47,6 +49,8 @@ export function OrgView() {
       {isRep && <InvitePanel orgId={orgId} />}
 
       <RepoSection orgId={orgId} isRep={isRep} />
+
+      {isRep && <DissolveSection orgId={orgId} orgName={me.orgName ?? ""} />}
     </div>
   );
 }
@@ -234,6 +238,46 @@ function InvitePanel({ orgId }: { orgId: string }) {
         )}
       </div>
       <PendingInvites orgId={orgId} />
+    </section>
+  );
+}
+
+/** 대표 전용. 대표는 해산해야만 조직을 나갈 수 있다. 실수를 막으려고 조직 이름을 입력해야 버튼이 켜진다 */
+function DissolveSection({ orgId, orgName }: { orgId: string; orgName: string }) {
+  const dissolve = useDissolveOrg(orgId);
+  const [typed, setTyped] = useState("");
+
+  return (
+    <section className="card p-5">
+      <SectionTitle>조직 해산</SectionTitle>
+      <p className="text-[13px] text-ink-700">
+        <b>대표는 조직을 해산해야만 나갈 수 있습니다.</b> 해산하면 진행 중 프로젝트가 모두 중단되고, 초대가 취소되며,
+        레포 연결이 해제되고, 모든 멤버(본인 포함)가 조직에서 빠집니다. 계정은 남고, 새 조직을 만들거나 다른 초대를 받을
+        수 있습니다.
+      </p>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <Input
+          value={typed}
+          onChange={(e) => setTyped(e.target.value)}
+          disabled={dissolve.isPending}
+          placeholder={`확인을 위해 "${orgName}" 입력`}
+          aria-label="조직 이름 확인"
+          className="max-w-xs"
+        />
+        <Button
+          variant="danger"
+          size="sm"
+          disabled={!orgName || typed !== orgName || dissolve.isPending}
+          onClick={() => dissolve.mutate()}
+        >
+          {dissolve.isPending ? "해산하는 중…" : "조직 해산"}
+        </Button>
+      </div>
+      {dissolve.isError && (
+        <div className="mt-2">
+          <RemovalError error={dissolve.error} />
+        </div>
+      )}
     </section>
   );
 }

@@ -58,7 +58,7 @@ function open() {
   // URL에 실으면 프록시 로그에 남는다 — 연결 뒤 첫 메시지로 보낸다
   socket.onopen = () => socket.send(JSON.stringify({ type: "auth", token }));
   socket.onmessage = (e) => {
-    let m: { type?: string; projectId?: string | null; topics?: unknown };
+    let m: { type?: string; projectId?: string | null; topics?: unknown; reason?: string };
     try {
       m = JSON.parse(String(e.data));
     } catch {
@@ -75,6 +75,11 @@ function open() {
       emit({ kind: "changed", projectId: m.projectId ?? null, topics: m.topics.filter((t) => typeof t === "string") });
     } else if (m.type === "resync") {
       emit({ kind: "resync" });
+    } else if (m.type === "unsubscribed" && m.reason && m.projectId) {
+      // 서버가 끊은 구독 (프로젝트 삭제 → PROJECT_NOT_FOUND). 재연결 때 다시 구독하지 않게 빼고,
+      // 상세를 다시 읽게 해 404 화면(ProjectErrorView)으로 보낸다
+      subscriptions.delete(m.projectId);
+      emit({ kind: "changed", projectId: m.projectId, topics: ["project"] });
     }
   };
   socket.onclose = (e) => {

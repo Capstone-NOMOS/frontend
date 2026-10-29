@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react";
 import { errorMessage, getSession } from "@/shared/api";
 import { Button } from "@/shared/ui";
 import { useCurrentUser } from "@/entities/user";
+import { InboxAlerts } from "./InboxAlerts";
 import { SessionExpiryBanner } from "./SessionExpiryBanner";
 import { useRealtimeSync } from "./useRealtimeSync";
 
@@ -60,6 +61,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
     <>
       <SessionExpiryBanner />
       {children}
+      {me?.orgId && <InboxAlerts />}
     </>
   );
 }

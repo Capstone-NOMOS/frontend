@@ -79,3 +79,19 @@ export function useRemoveMember(orgId: string) {
     onSuccess: () => queryClient.invalidateQueries(),
   });
 }
+
+/**
+ * 대표 전용. 진행 중 프로젝트 중단·초대 취소·레포 해제 후 본인 포함 모든 멤버가 빠진다 (계정은 남는다).
+ * 작업 중 태스크가 있으면 409 ACTIVE_TASKS_HELD이고 아무것도 바뀌지 않는다.
+ * 성공하면 /me의 orgId가 null이 되므로 전부 다시 읽는다 (AuthGate가 /onboarding으로 보낸다)
+ */
+export function useDissolveOrg(orgId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      apiFetch<{ orgId: string; memberCount: number; abortedProjectIds: string[] }>(`/orgs/${orgId}`, {
+        method: "DELETE",
+      }),
+    onSuccess: () => queryClient.invalidateQueries(),
+  });
+}

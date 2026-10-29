@@ -16,11 +16,13 @@ import {
   useRequestFeatures,
   type PmStatus,
 } from "@/entities/plan";
-import { useProject } from "@/entities/project";
+import { ApprovalCard, useProjectApprovals } from "@/entities/approval";
+import { projectKeys, useProject } from "@/entities/project";
+import { QuestionCard, useProjectQuestions } from "@/entities/question";
 import { contractKeys } from "@/entities/contract";
 import { ROOM_META, RoomParticipants } from "@/entities/room";
 import { specKeys } from "@/entities/spec";
-import { taskKeys } from "@/entities/task";
+import { taskKeys, useTasks } from "@/entities/task";
 import { displayName, useCurrentUser } from "@/entities/user";
 import { PlanCard } from "./PlanCard";
 import { TaskSplitStep } from "./TaskSplitStep";
@@ -61,17 +63,44 @@ function Room({ projectId, meName }: { projectId: string; meName: string }) {
   const request = useRequestFeatures(projectId);
   const [draft, setDraft] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
+  // 에이전트가 PM에게 물은 질문 — PM 결정은 대표가 확정한다. 받은 편지함·토스트가 #질문id로 이리 보낸다
+  const questions = useProjectQuestions(projectId, "all");
+  const tasks = useTasks(projectId).data;
+  // 역할 룸이 없는 승인 — G3(완료 확인)와 역할 없는 태스크의 승인. 역할 태스크의 승인은 그 역할 룸에 뜬다
+  const approvals = useProjectApprovals(projectId);
+  const ownerApprovals = (approvals.data ?? []).filter((a) => a.gate === "G3" || !a.payload.teamRole);
+  const pmQuestions = (questions.data ?? []).filter(
+    (q) => q.targetRole === "PM" && (q.status === "pending" || q.status === "agent_answered"),
+  );
 
   const list = chronological(plans.data ?? []);
   const pending = list.some((p) => p.status === "pending");
   const s = status.data;
   const blocked = !s || !s.ready || s.pendingPlanId !== null || pending || request.isPending;
+  // 마지막 기능 명세 확정 뒤에 태스크 나누기가 진행 중·대기·확정이면 다음 단계 카드를 내린다 (실패·반려면 다시 보인다)
+  const lastTasks = list.findLast((p) => p.kind === "tasks");
+  const lastFeature = list.findLast((p) => p.kind === "feature" && p.status === "applied");
+  const splitDone =
+    !!lastTasks &&
+    lastTasks.status !== "failed" &&
+    lastTasks.status !== "rejected" &&
+    (!lastFeature || list.indexOf(lastTasks) > list.indexOf(lastFeature));
 
   // 새 계획·상태 변화가 오면 아래로
   const lastKey = list.map((p) => `${p.id}:${p.status}`).join(",");
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [lastKey]);
+  // #질문id·#승인id로 들어오면 계획·카드가 그려진 뒤 그 카드로 (한 번만)
+  const hashDone = useRef(false);
+  const cardsReady = plans.isSuccess && questions.isSuccess && approvals.isSuccess;
+  useEffect(() => {
+    if (!cardsReady || hashDone.current) return;
+    const el = document.getElementById(decodeURIComponent(window.location.hash.slice(1)));
+    if (!el) return;
+    hashDone.current = true;
+    el.scrollIntoView({ block: "center" });
+  }, [cardsReady]);
 
   const send = () => {
     const instruction = draft.trim();
@@ -117,35 +146,78 @@ function Room({ projectId, meName }: { projectId: string; meName: string }) {
           ) : plans.isError ? (
             <p className="text-center text-[13px] text-forbidden">{errorMessage(plans.error)}</p>
           ) : (
-            list.map((plan) => (
-              <div key={plan.id} className="space-y-3">
-                <MeLine name={meName}>
-                  {plan.feedback ? (
-                    <>
-                      <span className="mr-1.5 text-[12px] font-semibold text-brand-600">수정 요청</span>
-                      {plan.feedback}
-                    </>
-                  ) : (
-                    (plan.instruction ?? (plan.kind === "tasks" ? "태스크 나누기" : ""))
+            list.map((plan) => {
+              // 태스크 나누기 요청은 instruction이 빈 문자열로 온다
+              const said = plan.instruction?.trim() || (plan.kind === "tasks" ? "태스크 나누기" : "");
+              return (
+                <div key={plan.id} className="space-y-3">
+                  {(plan.feedback || said) && (
+                    <MeLine name={meName}>
+                      {plan.feedback ? (
+                        <>
+                          <span className="mr-1.5 text-[12px] font-semibold text-brand-600">수정 요청</span>
+                          {plan.feedback}
+                        </>
+                      ) : (
+                        said
+                      )}
+                    </MeLine>
                   )}
-                </MeLine>
-                <PlanCard
-                  projectId={projectId}
-                  plan={plan}
-                  plans={list}
-                  started={project.startedAt !== null}
-                  onRetry={(text) => setDraft(text)}
-                  // 기능 명세 확정은 명세·계약을, 태스크 확정은 태스크를 만든다. 다른 엔티티의 키라 위젯에서 무효화
-                  onApplied={() =>
-                    [taskKeys.all, specKeys.all, contractKeys.all].forEach(
-                      (queryKey) => void queryClient.invalidateQueries({ queryKey }),
-                    )
-                  }
-                />
-              </div>
-            ))
+                  <PlanCard
+                    projectId={projectId}
+                    plan={plan}
+                    plans={list}
+                    started={project.startedAt !== null}
+                    onRetry={(text) => setDraft(text)}
+                    // 기능 명세 확정은 명세·계약을, 태스크 확정은 태스크를 만든다. 다른 엔티티의 키라 위젯에서 무효화
+                    onApplied={() =>
+                      [taskKeys.all, specKeys.all, contractKeys.all].forEach(
+                        (queryKey) => void queryClient.invalidateQueries({ queryKey }),
+                      )
+                    }
+                  />
+                </div>
+              );
+            })
           )}
-          {plans.isSuccess && <TaskSplitStep projectId={projectId} blocked={blocked} />}
+          {plans.isSuccess && !splitDone && <TaskSplitStep projectId={projectId} blocked={blocked} />}
+          {ownerApprovals.length > 0 && (
+            <section className="space-y-2">
+              <h2 className="text-[12px] font-semibold tracking-wide text-ink-500 uppercase">
+                승인 대기 · {ownerApprovals.length}
+              </h2>
+              {ownerApprovals.map((a) => (
+                <ApprovalCard
+                  key={a.id}
+                  approval={a}
+                  canDecide
+                  taskHref={a.taskId ? `/p/${projectId}/tasks/${a.taskId}` : undefined}
+                  // 승인·반려로 태스크 상태가, G3면 프로젝트 상태가 바뀐다
+                  onDecided={() => {
+                    void queryClient.invalidateQueries({ queryKey: taskKeys.all });
+                    void queryClient.invalidateQueries({ queryKey: projectKeys.all });
+                  }}
+                />
+              ))}
+            </section>
+          )}
+          {pmQuestions.length > 0 && (
+            <section className="space-y-2">
+              <h2 className="text-[12px] font-semibold tracking-wide text-ink-500 uppercase">
+                PM이 답할 질문 · {pmQuestions.length}
+              </h2>
+              {pmQuestions.map((q) => (
+                <QuestionCard
+                  key={q.id}
+                  question={q}
+                  canAnswer
+                  canLabel
+                  taskHref={`/p/${projectId}/tasks/${q.taskId}`}
+                  taskTitle={tasks?.find((t) => t.id === q.taskId)?.title}
+                />
+              ))}
+            </section>
+          )}
         </div>
       </div>
 
