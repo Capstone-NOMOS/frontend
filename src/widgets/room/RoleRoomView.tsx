@@ -95,6 +95,16 @@ export function RoleRoomView({ projectId, role }: { projectId: string; role: Tea
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [newestId]);
+  // 받은 편지함·토스트에서 #질문id로 들어오면 그 카드로 (피드·질문이 그려진 뒤 한 번만, 맨 아래 스크롤보다 뒤에)
+  const hashDone = useRef(false);
+  const cardsReady = newestId !== undefined && questions.length > 0;
+  useEffect(() => {
+    if (!cardsReady || hashDone.current) return;
+    const el = document.getElementById(decodeURIComponent(window.location.hash.slice(1)));
+    if (!el) return;
+    hashDone.current = true;
+    el.scrollIntoView({ block: "center" });
+  }, [cardsReady]);
 
   return (
     <div className="flex h-full flex-col">

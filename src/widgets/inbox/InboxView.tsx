@@ -16,14 +16,14 @@ import {
   useMyInbox,
   useNotifications,
 } from "@/entities/inbox";
-import { projectKeys, useProject } from "@/entities/project";
-import { QuestionCard, useProjectQuestions } from "@/entities/question";
-import { taskKeys, useTasks } from "@/entities/task";
+import { projectKeys } from "@/entities/project";
+import { useMyQuestions } from "@/entities/question";
+import { taskKeys } from "@/entities/task";
 import { displayName, useCurrentUser } from "@/entities/user";
 
 /**
- * 처리할 일(조직 전체, 처리하면 빠진다) · 이 프로젝트의 승인·질문 카드(실제로 처리하는 곳) · 알림(일어난 일, 읽음).
- * 처리할 일·알림의 문장은 서버가 만든다
+ * 처리할 일(조직 전체, 처리하면 빠진다) · 이 프로젝트의 승인 카드(실제로 처리하는 곳) · 알림(일어난 일, 읽음).
+ * 처리할 일·알림의 문장은 서버가 만든다. 질문은 여기서 답하지 않는다 — 룸의 카드로 보내고, 답이 정해진 것은 결정기록에 쌓인다
  */
 export function InboxView({ projectId }: { projectId: string }) {
   // AuthGate·AppShell 안쪽이므로 me가 있다
@@ -43,14 +43,11 @@ export function InboxView({ projectId }: { projectId: string }) {
   };
   const inbox = useMyInbox();
   const notifications = useNotifications();
-  const pending = useProjectQuestions(projectId, "pending");
-  const agentAnswered = useProjectQuestions(projectId, "agent_answered");
-  // 답할 수 있는 사람: 답할 역할의 담당자와 대표 (최종 판정은 403 NOT_QUESTION_TARGET)
-  const myTeamRole = useProject(projectId).data?.members.find((m) => m.userId === me.userId)?.teamRole;
-  const questions = [...(pending.data ?? []), ...(agentAnswered.data ?? [])];
-  const tasks = useTasks(projectId).data;
+  // PM 질문은 묻는 쪽 룸에서 답한다 — 링크를 고를 때 묻는 역할이 필요하다 (내가 답할 질문만 안다)
+  const myQuestions = useMyQuestions().data;
+  const askerRoleOf = (id: string) => myQuestions?.find((q) => q.question.id === id)?.question.askerRole;
   useMarkReadOnOpen(notifications.data);
-  useScrollToHash(approvals.isSuccess && pending.isSuccess);
+  useScrollToHash(approvals.isSuccess);
 
   return (
     <div className="h-full overflow-y-auto">
@@ -83,7 +80,7 @@ export function InboxView({ projectId }: { projectId: string }) {
                   key={`${i.kind}:${i.approvalId ?? i.questionId ?? i.contractId ?? i.planId ?? i.taskId ?? i.agentId}`}
                 >
                   <Link
-                    href={inboxItemHref(i)}
+                    href={inboxItemHref(i, askerRoleOf)}
                     className="flex items-center gap-2 py-2.5 text-[13px] hover:text-ink-900"
                   >
                     <Badge tone={i.kind === "stuck_task" || i.kind === "agent_needed" ? "warn" : "info"}>
@@ -138,35 +135,6 @@ export function InboxView({ projectId }: { projectId: string }) {
         )}
 
         <section className="mt-8">
-          <SectionTitle>에이전트 질문 · {questions.length}</SectionTitle>
-          {pending.isPending ? (
-            <div className="flex justify-center py-6 text-ink-400" aria-busy="true">
-              <Loader2 size={18} className="animate-spin" aria-label="불러오는 중" />
-            </div>
-          ) : pending.isError ? (
-            <EmptyState title={errorMessage(pending.error)} />
-          ) : questions.length === 0 ? (
-            <EmptyState
-              title="답할 질문이 없습니다"
-              desc="에이전트가 다른 역할이 정해야 할 결정을 물으면 여기에 모입니다. 에이전트가 대신 답한 질문도 확인할 수 있습니다."
-            />
-          ) : (
-            <ul className="space-y-2">
-              {questions.map((q) => (
-                <li key={q.id}>
-                  <QuestionCard
-                    question={q}
-                    canAnswer={isRep || myTeamRole === q.targetRole}
-                    taskHref={`/p/${projectId}/tasks/${q.taskId}`}
-                    taskTitle={tasks?.find((t) => t.id === q.taskId)?.title}
-                  />
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        <section className="mt-8">
           <SectionTitle>알림</SectionTitle>
           {notifications.isPending ? (
             <div className="flex justify-center py-6 text-ink-400" aria-busy="true">
@@ -178,7 +146,7 @@ export function InboxView({ projectId }: { projectId: string }) {
             <ul className="card divide-y divide-ink-100 px-4">
               {notifications.data.notifications.map((n) => (
                 <li key={n.id}>
-                  <Link href={notificationHref(n)} className="flex items-center gap-2 py-2.5 text-[13px]">
+                  <Link href={notificationHref(n, askerRoleOf)} className="flex items-center gap-2 py-2.5 text-[13px]">
                     <span
                       className={cn("h-1.5 w-1.5 shrink-0 rounded-full", n.read ? "bg-transparent" : "bg-brand-600")}
                       aria-label={n.read ? undefined : "안 읽음"}
