@@ -125,7 +125,9 @@ export function describeEvent(e: ProjectEvent, l: EventLookup): { text: string; 
     case "AGENT_RUN_STARTED":
       return { text: `에이전트 실행 시작 · ${task()}`, tone: "default" };
     case "AGENT_RUN_ENDED":
-      return { text: `에이전트 실행 종료 · ${task()}`, tone: "default" };
+      return str("outcome") === "disconnected"
+        ? { text: `에이전트 연결 해제로 실행 중지 · ${task()}`, tone: "warn" }
+        : { text: `에이전트 실행 종료 · ${task()}`, tone: "default" };
     case "TASK_BLOCKED":
       return { text: `제출 없이 멈춤 · 대표 확인 필요 · ${task()}`, tone: "warn" };
     case "TASK_RESUMED":

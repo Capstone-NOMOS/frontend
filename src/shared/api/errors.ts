@@ -47,6 +47,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   TASK_NOT_FOUND: "태스크를 찾을 수 없습니다.",
   ARTIFACT_NOT_FOUND: "산출물을 찾을 수 없습니다.",
   PROJECT_NOT_FOUND: "프로젝트를 찾을 수 없습니다.",
+  ORG_NOT_FOUND: "조직을 찾을 수 없습니다. 이미 해산됐을 수 있습니다.",
   MEMBER_NOT_FOUND: "멤버를 찾을 수 없습니다.",
   PLAN_NOT_FOUND: "계획을 찾을 수 없습니다.",
   APPROVAL_NOT_FOUND: "승인 요청을 찾을 수 없습니다.",
@@ -82,7 +83,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   PROJECT_NOT_STARTED: "프로젝트가 아직 시작되지 않았습니다.",
   PROJECT_NOT_OPEN: "이미 끝났거나 중단된 프로젝트입니다.",
   // details에 진행 중 태스크 목록이 온다 (heldTasks)
-  ACTIVE_TASKS_HELD: "진행 중인 태스크가 있어 뺄 수 없습니다. 이 태스크가 끝나거나 멈춘 뒤에 다시 시도하세요.",
+  ACTIVE_TASKS_HELD: "진행 중인 태스크가 있어 지금은 할 수 없습니다. 이 태스크가 끝나거나 멈춘 뒤에 다시 시도하세요.",
   REPRESENTATIVE_CANNOT_LEAVE: "대표는 조직에서 나가거나 내보낼 수 없습니다.",
   NOTES_UNACKNOWLEDGED: "확인하지 않은 새 인계 노트가 있습니다.",
   PM_PLAN_IN_PROGRESS: "PM이 이미 계획을 작성하고 있습니다. 끝난 뒤 다시 요청해 주세요.",

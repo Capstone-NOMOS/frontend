@@ -125,3 +125,19 @@ export function useStartProject(projectId: string) {
     onError: useRefetchOnStale(projectId),
   });
 }
+
+/**
+ * 대표 전용. 진행 중이면 먼저 중단하고 지운다(abortedNow). 이후 그 프로젝트의 모든 API는 404 PROJECT_NOT_FOUND.
+ * 상세는 다시 부르면 404이므로 버리고 목록만 다시 읽는다 — 화면 이동은 부르는 쪽이 한다
+ */
+export function useDeleteProject(projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      apiFetch<{ projectId: string; abortedNow: boolean }>(`/projects/${projectId}`, { method: "DELETE" }),
+    onSuccess: () => {
+      queryClient.removeQueries({ queryKey: projectKeys.detail(projectId) });
+      return queryClient.invalidateQueries({ queryKey: [...projectKeys.all, "list"] });
+    },
+  });
+}

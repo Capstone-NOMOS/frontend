@@ -2,6 +2,7 @@ export {
   orgKeys,
   useCreateInvite,
   useCreateOrg,
+  useDissolveOrg,
   useInvites,
   useOrgMembers,
   useRemoveMember,
