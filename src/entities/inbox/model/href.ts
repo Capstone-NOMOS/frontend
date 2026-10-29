@@ -3,6 +3,12 @@ import type { Schemas } from "@/shared/api";
 // entities/room의 ROLE_ROOM과 같은 주소 조각 (entities끼리 import하지 않는다). PM에게 물은 질문은 대표 룸에서 답한다
 const QUESTION_ROOM: Record<string, string> = { FRONTEND: "frontend", BACKEND: "backend", PM: "owner" };
 
+/** 역할 태스크의 승인 카드는 그 역할 룸에, G3·역할 없는 승인은 대표 룸에 뜬다 */
+function approvalHref(i: Schemas["InboxItem"]) {
+  const slug = i.kind !== "release" && i.role ? QUESTION_ROOM[i.role] : undefined;
+  return `/p/${i.projectId}/rooms/${slug ?? "owner"}#${i.approvalId}`;
+}
+
 /** 답할 역할의 룸에 있는 질문 카드. 역할을 모르면 받은 편지함의 질문 칸으로 */
 function questionHref(projectId: string, questionId: string | null, targetRole: string | null) {
   const slug = targetRole ? QUESTION_ROOM[targetRole] : undefined;
@@ -10,14 +16,15 @@ function questionHref(projectId: string, questionId: string | null, targetRole: 
   return slug ? `/p/${projectId}/rooms/${slug}${hash}` : `/p/${projectId}/inbox${hash}`;
 }
 
-/** 처리할 일을 누르면 갈 곳. 승인은 받은 편지함의 카드, 질문은 답할 역할의 룸 카드(id 앵커)로 */
+/** 처리할 일을 누르면 갈 곳. 승인·질문은 그 카드가 뜬 룸(id 앵커)으로 */
 export function inboxItemHref(i: Schemas["InboxItem"]): string {
   const p = `/p/${i.projectId}`;
   switch (i.kind) {
     case "approval_role_review":
     case "approval_final":
     case "release":
-      return `${p}/inbox#${i.approvalId}`;
+      // 승인 항목의 role은 태스크 역할(payload.teamRole)이다
+      return approvalHref(i);
     case "question":
       // 처리할 일의 role은 답할 역할(targetRole)이다
       return questionHref(i.projectId, i.questionId, i.role);
