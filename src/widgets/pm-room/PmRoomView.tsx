@@ -17,10 +17,11 @@ import {
   type PmStatus,
 } from "@/entities/plan";
 import { useProject } from "@/entities/project";
+import { QuestionCard, useProjectQuestions } from "@/entities/question";
 import { contractKeys } from "@/entities/contract";
 import { ROOM_META, RoomParticipants } from "@/entities/room";
 import { specKeys } from "@/entities/spec";
-import { taskKeys } from "@/entities/task";
+import { taskKeys, useTasks } from "@/entities/task";
 import { displayName, useCurrentUser } from "@/entities/user";
 import { PlanCard } from "./PlanCard";
 import { TaskSplitStep } from "./TaskSplitStep";
@@ -61,6 +62,12 @@ function Room({ projectId, meName }: { projectId: string; meName: string }) {
   const request = useRequestFeatures(projectId);
   const [draft, setDraft] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
+  // 에이전트가 PM에게 물은 질문 — PM 결정은 대표가 확정한다. 받은 편지함·토스트가 #질문id로 이리 보낸다
+  const questions = useProjectQuestions(projectId, "all");
+  const tasks = useTasks(projectId).data;
+  const pmQuestions = (questions.data ?? []).filter(
+    (q) => q.targetRole === "PM" && (q.status === "pending" || q.status === "agent_answered"),
+  );
 
   const list = chronological(plans.data ?? []);
   const pending = list.some((p) => p.status === "pending");
@@ -80,6 +87,16 @@ function Room({ projectId, meName }: { projectId: string; meName: string }) {
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [lastKey]);
+  // #질문id로 들어오면 계획·질문이 그려진 뒤 그 카드로 (한 번만)
+  const hashDone = useRef(false);
+  const cardsReady = plans.isSuccess && questions.isSuccess;
+  useEffect(() => {
+    if (!cardsReady || hashDone.current) return;
+    const el = document.getElementById(decodeURIComponent(window.location.hash.slice(1)));
+    if (!el) return;
+    hashDone.current = true;
+    el.scrollIntoView({ block: "center" });
+  }, [cardsReady]);
 
   const send = () => {
     const instruction = draft.trim();
@@ -160,6 +177,23 @@ function Room({ projectId, meName }: { projectId: string; meName: string }) {
             })
           )}
           {plans.isSuccess && !splitDone && <TaskSplitStep projectId={projectId} blocked={blocked} />}
+          {pmQuestions.length > 0 && (
+            <section className="space-y-2">
+              <h2 className="text-[12px] font-semibold tracking-wide text-ink-500 uppercase">
+                PM이 답할 질문 · {pmQuestions.length}
+              </h2>
+              {pmQuestions.map((q) => (
+                <QuestionCard
+                  key={q.id}
+                  question={q}
+                  canAnswer
+                  canLabel
+                  taskHref={`/p/${projectId}/tasks/${q.taskId}`}
+                  taskTitle={tasks?.find((t) => t.id === q.taskId)?.title}
+                />
+              ))}
+            </section>
+          )}
         </div>
       </div>
 

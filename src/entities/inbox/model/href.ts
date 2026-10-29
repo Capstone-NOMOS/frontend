@@ -1,26 +1,17 @@
 import type { Schemas } from "@/shared/api";
 
-// entities/room의 ROLE_ROOM과 같은 주소 조각 (entities끼리 import하지 않는다)
-const ROOM_SLUG: Record<string, string> = { FRONTEND: "frontend", BACKEND: "backend" };
+// entities/room의 ROLE_ROOM과 같은 주소 조각 (entities끼리 import하지 않는다). PM에게 물은 질문은 대표 룸에서 답한다
+const QUESTION_ROOM: Record<string, string> = { FRONTEND: "frontend", BACKEND: "backend", PM: "owner" };
 
-/**
- * 질문 카드가 있는 룸. 답하는 역할의 룸에 나오고, PM 질문은 묻는 쪽 룸에서 대표가 답한다.
- * 묻는 역할을 모르면(목록에 아직 없음) 프로젝트 대시보드로
- */
-function questionRoomHref(projectId: string, questionId: string | null, targetRole: string | null, askerRole?: string) {
-  const role = targetRole === "PM" ? askerRole : targetRole;
-  const slug = role && ROOM_SLUG[role];
-  return slug ? `/p/${projectId}/rooms/${slug}${questionId ? `#${questionId}` : ""}` : `/p/${projectId}`;
+/** 답할 역할의 룸에 있는 질문 카드. 역할을 모르면 받은 편지함의 질문 칸으로 */
+function questionHref(projectId: string, questionId: string | null, targetRole: string | null) {
+  const slug = targetRole ? QUESTION_ROOM[targetRole] : undefined;
+  const hash = questionId ? `#${questionId}` : "";
+  return slug ? `/p/${projectId}/rooms/${slug}${hash}` : `/p/${projectId}/inbox${hash}`;
 }
 
-/**
- * 처리할 일을 누르면 갈 곳. 승인은 받은 편지함의 카드(id 앵커), 질문은 그 룸의 카드로.
- * askerRoleOf: 질문 id → 묻는 역할 (/me/questions에서). PM 질문의 룸을 고를 때만 쓴다
- */
-export function inboxItemHref(
-  i: Schemas["InboxItem"],
-  askerRoleOf: (questionId: string) => string | undefined,
-): string {
+/** 처리할 일을 누르면 갈 곳. 승인은 받은 편지함의 카드, 질문은 답할 역할의 룸 카드(id 앵커)로 */
+export function inboxItemHref(i: Schemas["InboxItem"]): string {
   const p = `/p/${i.projectId}`;
   switch (i.kind) {
     case "approval_role_review":
@@ -29,7 +20,7 @@ export function inboxItemHref(
       return `${p}/inbox#${i.approvalId}`;
     case "question":
       // 처리할 일의 role은 답할 역할(targetRole)이다
-      return questionRoomHref(i.projectId, i.questionId, i.role, i.questionId ? askerRoleOf(i.questionId) : undefined);
+      return questionHref(i.projectId, i.questionId, i.role);
     case "contract":
       return `${p}/docs/contract`;
     case "plan":
@@ -41,15 +32,11 @@ export function inboxItemHref(
   }
 }
 
-/** 알림을 누르면 갈 곳. 물은 질문은 그 룸의 카드로(role은 답할 역할), 답이 정해진 질문은 결정기록으로 */
-export function notificationHref(
-  n: Schemas["Notification"],
-  askerRoleOf: (questionId: string) => string | undefined,
-): string {
+/** 알림을 누르면 갈 곳. 물은 질문은 답할 역할의 룸으로(role = targetRole), 답이 정해진 질문은 결정기록으로 */
+export function notificationHref(n: Schemas["Notification"]): string {
   const p = `/p/${n.projectId}`;
   if (n.type === "task_done" && n.taskId) return `${p}/tasks/${n.taskId}`;
-  if (n.type === "question_asked")
-    return questionRoomHref(n.projectId, n.questionId, n.role, n.questionId ? askerRoleOf(n.questionId) : undefined);
+  if (n.type === "question_asked") return questionHref(n.projectId, n.questionId, n.role);
   if (n.type === "question_answered") return `${p}/docs/adr`;
   return `${p}/inbox`;
 }
