@@ -5,7 +5,6 @@ import type { ReactNode } from "react";
 import {
   AlertTriangle,
   ArrowRight,
-  BookOpen,
   CalendarDays,
   FileText,
   GitBranch,
@@ -74,12 +73,12 @@ export function DashboardView({ projectId }: { projectId: string }) {
     PM: mock.events.filter((e) => e.actor === "PM" && e.costKrw).reduce((a, e) => a + (e.costKrw ?? 0), 0),
   };
   const costMax = Math.max(1, costs.FE, costs.BE, costs.PM);
-  const latestDocs = (["CONSTITUTION", "SPEC", "CONTRACT", "ADR"] as const).map((type) => ({
+  const latestDocs = (["SPEC", "CONTRACT", "ADR"] as const).map((type) => ({
     type,
     doc: docs.filter((d) => d.type === type).sort((a, b) => b.version - a.version)[0],
   }));
-  const docLabel = { CONSTITUTION: "헌법", SPEC: "명세", CONTRACT: "계약", ADR: "결정기록" } as const;
-  const docHref = { CONSTITUTION: "constitution", SPEC: "spec", CONTRACT: "contract", ADR: "adr" } as const;
+  const docLabel = { SPEC: "명세", CONTRACT: "계약", ADR: "결정기록" } as const;
+  const docHref = { SPEC: "spec", CONTRACT: "contract", ADR: "adr" } as const;
 
   const taskList = tasks.data ?? [];
   const boardList = teamRole ? taskList.filter((t) => t.teamRole === teamRole) : taskList;
@@ -253,11 +252,7 @@ export function DashboardView({ projectId }: { projectId: string }) {
                       href={`/p/${projectId}/docs/${docHref[type]}`}
                       className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] hover:bg-ink-50"
                     >
-                      {type === "CONSTITUTION" ? (
-                        <BookOpen size={14} className="text-ink-500" />
-                      ) : (
-                        <FileText size={14} className="text-ink-500" />
-                      )}
+                      <FileText size={14} className="text-ink-500" />
                       <span className="flex-1">{docLabel[type]}</span>
                       {doc ? (
                         <span className="text-[11.5px] text-ink-500">
