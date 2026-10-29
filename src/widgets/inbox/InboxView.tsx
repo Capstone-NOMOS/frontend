@@ -31,7 +31,8 @@ export function InboxView({ projectId }: { projectId: string }) {
   const isRep = me.orgRole === "REPRESENTATIVE";
   const queryClient = useQueryClient();
   const approvals = useProjectApprovals(projectId);
-  // 내 차례: 대표는 최종 카드, 팀원은 내가 검토자인 1차 카드. 나머지(대표에게는 담당 검토 중 — 대신 처리할 수 있다)는 아래 칸
+  // 내 차례: 대표는 최종 카드, 팀원은 내가 검토자인 1차 카드.
+  // 대표에게만 나머지(담당 검토 중 — 대신 처리할 수 있다)를 아래 칸에 보인다. 팀원은 결정할 수 없는 카드를 보지 않는다
   const mine = (approvals.data ?? []).filter(
     (a) => canDecideApproval(a, me.userId, isRep) && !(isRep && a.stage === "role_review"),
   );
@@ -123,17 +124,13 @@ export function InboxView({ projectId }: { projectId: string }) {
           )}
         </section>
 
-        {others.length > 0 && (
+        {isRep && others.length > 0 && (
           <section className="mt-8">
-            <SectionTitle>
-              {isRep ? "담당 검토 중" : "승인 진행 중"} · {others.length}
-            </SectionTitle>
-            {isRep && (
-              <p className="mb-2 text-[12.5px] text-ink-500">
-                대신 처리할 수 있습니다. 대신 승인해도 최종 승인 카드가 다시 생기므로 한 번 더 승인해야 합니다.
-              </p>
-            )}
-            <ApprovalList approvals={others} projectId={projectId} canDecide={isRep} onDecided={onDecided} />
+            <SectionTitle>담당 검토 중 · {others.length}</SectionTitle>
+            <p className="mb-2 text-[12.5px] text-ink-500">
+              대신 처리할 수 있습니다. 대신 승인해도 최종 승인 카드가 다시 생기므로 한 번 더 승인해야 합니다.
+            </p>
+            <ApprovalList approvals={others} projectId={projectId} canDecide onDecided={onDecided} />
           </section>
         )}
 
