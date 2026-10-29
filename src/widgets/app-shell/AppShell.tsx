@@ -22,8 +22,8 @@ import { useProjectStream, type Schemas } from "@/shared/api";
 import { Avatar, Badge, Logo, MockBadge } from "@/shared/ui";
 import { cn } from "@/shared/lib/format";
 import { StatusDot } from "@/entities/agent";
-import { canDecideApproval, useProjectApprovals } from "@/entities/approval";
 import { ProjectErrorView, ProjectStatusBadge, useProject, useProjects } from "@/entities/project";
+import { useMyInbox, useNotifications } from "@/entities/inbox";
 import { useMyQuestions } from "@/entities/question";
 import { ROLE_ROOM, ROOM_META, useRooms } from "@/entities/room";
 import { AccountMenu, RoleBadge, displayName, useCurrentUser } from "@/entities/user";
@@ -172,10 +172,12 @@ function SidebarContent({
   const { state, me, actions } = useApp();
   const mock = useMockProject(projectId);
   const rooms = useRooms(projectId).data ?? [];
-  // 내가 답할 수 있는 질문(대표는 전부, 팀원은 자기 역할 대상)과, 내가 결정할 승인(대표는 전부, 팀원은 내 1차 검토)
+  // 룸 배지: 이 프로젝트에서 내가 답할 수 있는 질문(대표는 전부, 팀원은 자기 역할 대상)
   const myQuestions = (useMyQuestions().data ?? []).filter((q) => q.question.projectId === projectId);
-  const approvals = (useProjectApprovals(projectId).data ?? []).filter((a) => canDecideApproval(a, user.userId, isRep));
-  const inboxCount = myQuestions.length + approvals.length;
+  // 편지함 배지: 처리할 일(조직 전체) + 안 읽은 알림. 둘 다 서버가 센다
+  const inboxCounts = useMyInbox().data?.counts ?? {};
+  const inboxCount =
+    Object.values(inboxCounts).reduce((sum, n) => sum + n, 0) + (useNotifications().data?.unreadCount ?? 0);
   const pathname = usePathname();
   const router = useRouter();
   const [projOpen, setProjOpen] = useState(false);
