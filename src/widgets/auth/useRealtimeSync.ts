@@ -8,6 +8,7 @@ import { approvalKeys } from "@/entities/approval";
 import { artifactKeys } from "@/entities/artifact";
 import { contractKeys } from "@/entities/contract";
 import { eventKeys } from "@/entities/event";
+import { inboxKeys } from "@/entities/inbox";
 import { noteKeys } from "@/entities/note";
 import { orgKeys } from "@/entities/org";
 import { planKeys } from "@/entities/plan";
@@ -29,6 +30,8 @@ const ORG_TOPICS: Record<string, QueryKey[]> = {
   repos: [repoKeys.all],
   members: [orgKeys.all],
   questions: [questionKeys.all],
+  // 알림·처리할 일. 대표·팀원 모두에게 온다 — 새로 생긴 항목은 InboxAlerts가 토스트로 띄운다
+  inbox: [inboxKeys.all],
 };
 
 // 프로젝트 신호. 그 프로젝트를 구독한 화면에만 온다 (useProjectStream)

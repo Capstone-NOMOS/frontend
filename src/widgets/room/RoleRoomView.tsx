@@ -3,13 +3,15 @@
 import Link from "next/link";
 import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
 import { FilePlus, FileText, Loader2, Pencil, Search, Terminal, Wrench, type LucideIcon } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { errorMessage, type Schemas } from "@/shared/api";
 import type { TeamRole } from "@/shared/model";
 import { AgentMark, Avatar, Badge, Button, EmptyState } from "@/shared/ui";
 import { cn, fmtDate, fmtDateTime, fmtTime, sameDay } from "@/shared/lib/format";
+import { ApprovalCard, canDecideApproval, useProjectApprovals } from "@/entities/approval";
 import { ContractCard, useContracts } from "@/entities/contract";
 import { useOrgMembers } from "@/entities/org";
-import { useProject } from "@/entities/project";
+import { projectKeys, useProject } from "@/entities/project";
 import { QuestionCard, useProjectQuestions } from "@/entities/question";
 import {
   ROLE_ROOM,
@@ -20,7 +22,7 @@ import {
   useSendRoomMessage,
   type Participant,
 } from "@/entities/room";
-import { TEAM_ROLE_META } from "@/entities/task";
+import { TEAM_ROLE_META, taskKeys } from "@/entities/task";
 import { useCurrentUser } from "@/entities/user";
 import { Composer } from "./Composer";
 
@@ -95,6 +97,20 @@ export function RoleRoomView({ projectId, role }: { projectId: string; role: Tea
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [newestId]);
+  // 이 역할 태스크의 승인 대기 — 내가 결정할 수 있는 것만 (대표는 전부, 담당은 내 1차 검토). 최종 판정은 서버
+  const queryClient = useQueryClient();
+  const approvals = (useProjectApprovals(projectId).data ?? []).filter(
+    (a) => a.payload.teamRole === role && canDecideApproval(a, me.userId, isRep),
+  );
+  // 받은 편지함·토스트에서 #카드id(승인·질문)로 들어오면 그 카드로. 카드가 그려질 때까지 기다렸다가 한 번만, 맨 아래 스크롤보다 뒤에
+  const hashDone = useRef(false);
+  useEffect(() => {
+    if (newestId === undefined || hashDone.current) return;
+    const el = document.getElementById(decodeURIComponent(window.location.hash.slice(1)));
+    if (!el) return;
+    hashDone.current = true;
+    el.scrollIntoView({ block: "center" });
+  }, [newestId, questions.length, approvals.length]);
 
   return (
     <div className="flex h-full flex-col">
@@ -235,6 +251,27 @@ export function RoleRoomView({ projectId, role }: { projectId: string; role: Tea
               </h2>
               {openContracts.map((c) => (
                 <ContractCard key={c.id} projectId={projectId} contract={c} canDecide={canDecideContract} />
+              ))}
+            </section>
+          )}
+
+          {approvals.length > 0 && (
+            <section className="mt-6 space-y-2">
+              <h2 className="text-[12px] font-semibold uppercase tracking-wide text-ink-500">
+                승인 대기 · {approvals.length}
+              </h2>
+              {approvals.map((a) => (
+                <ApprovalCard
+                  key={a.id}
+                  approval={a}
+                  canDecide
+                  taskHref={a.taskId ? `/p/${projectId}/tasks/${a.taskId}` : undefined}
+                  // 승인·반려로 태스크·프로젝트 상태가 바뀐다 (entities끼리 키를 못 쓰므로 위젯에서 무효화)
+                  onDecided={() => {
+                    void queryClient.invalidateQueries({ queryKey: taskKeys.all });
+                    void queryClient.invalidateQueries({ queryKey: projectKeys.all });
+                  }}
+                />
               ))}
             </section>
           )}
