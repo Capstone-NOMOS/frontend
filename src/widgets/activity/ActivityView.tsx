@@ -21,7 +21,7 @@ export function ActivityView({ projectId }: { projectId: string }) {
   const tab = tabParam ?? "events";
 
   return (
-    <div className="h-full overflow-y-auto">
+    <div className="no-scrollbar h-full overflow-y-auto">
       <div className="mx-auto max-w-[960px] px-4 py-6 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
