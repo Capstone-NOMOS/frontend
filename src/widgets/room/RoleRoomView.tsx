@@ -133,7 +133,7 @@ export function RoleRoomView({ projectId, role }: { projectId: string; role: Tea
         )}
       </header>
 
-      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
+      <div ref={scrollRef} className="no-scrollbar min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto max-w-[860px] px-4 py-4 sm:px-6">
           {feed.isPending ? (
             <div className="flex justify-center py-10 text-ink-400" aria-busy="true">

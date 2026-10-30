@@ -30,7 +30,7 @@ export function DocsView({ projectId, slug }: { projectId: string; slug: string 
   const current = TYPES.find((t) => t.slug === slug) ?? TYPES[0];
 
   return (
-    <div className="h-full overflow-y-auto">
+    <div className="no-scrollbar h-full overflow-y-auto">
       <div className="mx-auto max-w-[820px] px-4 py-6 sm:px-8">
         {current.type === "SPEC" ? (
           <SpecDocs specs={specs} who={current.who} />

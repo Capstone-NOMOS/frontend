@@ -39,7 +39,7 @@ export function InboxView({ projectId }: { projectId: string }) {
   useScrollToHash(pending.isSuccess);
 
   return (
-    <div className="h-full overflow-y-auto">
+    <div className="no-scrollbar h-full overflow-y-auto">
       <div className="mx-auto max-w-[820px] px-4 py-6 sm:px-6 lg:px-8">
         <h1 className="text-[22px] font-semibold tracking-tight">받은 편지함</h1>
         <div className="mt-1 flex flex-wrap items-center gap-2">
