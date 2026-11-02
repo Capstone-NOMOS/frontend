@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
   AlertTriangle,
   ArrowRight,
@@ -19,11 +19,14 @@ import { cn, fmtDateTime, fmtKrw, fmtTokens, relTime } from "@/shared/lib/format
 import { useQueryParam } from "@/shared/lib/useQueryParam";
 import { StatusDot, useOrgAgents } from "@/entities/agent";
 import { useProjectApprovals } from "@/entities/approval";
+import { useContracts } from "@/entities/contract";
 import { EventRow, makeEventLookup, useProjectEvents } from "@/entities/event";
 import { useOrgMembers } from "@/entities/org";
 import { LEVELS } from "@/entities/policy";
 import { ProjectErrorView, ProjectStatusBadge, fmtUsd, useProject } from "@/entities/project";
+import { DECISIONS_MAX, useDecisions } from "@/entities/question";
 import { ROLE_ROOM, ROOM_META, useRooms } from "@/entities/room";
+import { useSpecs } from "@/entities/spec";
 import { ApiTaskBadge, BLOCKED_REASON, TASK_BOARD, TEAM_ROLE_META, TeamRoleBadge, useTasks } from "@/entities/task";
 import { useCurrentUser } from "@/entities/user";
 import { useProject as useMockProject } from "@/lib/store";
@@ -33,6 +36,7 @@ const ROLE_FILTERS: { value: TeamRole | undefined; label: string }[] = [
   { value: "FRONTEND", label: "FE" },
   { value: "BACKEND", label: "BE" },
 ];
+const BOARD_PREVIEW = 4;
 
 export function DashboardView({ projectId }: { projectId: string }) {
   // AppShell이 불러온 뒤에만 그려진다
@@ -49,13 +53,18 @@ export function DashboardView({ projectId }: { projectId: string }) {
   const approvals = useProjectApprovals(projectId);
   const events = useProjectEvents(projectId);
   const orgMembers = useOrgMembers(me?.orgId ?? "").data;
+  const specs = useSpecs(projectId);
+  const contracts = useContracts(projectId);
+  const decisions = useDecisions(projectId, null, DECISIONS_MAX);
+  // 칸마다 BOARD_PREVIEW장까지만 보여 세로로 길어지지 않게 한다
+  const [boardOpen, setBoardOpen] = useState(false);
 
   // 아래는 API가 없어 목업 스토어를 읽는 영역. 실제 프로젝트 id는 목업에 없으므로 대개 비어 있다
   const mock = useMockProject(projectId);
-  const { docs } = mock;
   const rooms = useRooms(projectId).data ?? [];
   // 대표는 Room 3(PM), 팀원은 자기 역할 룸
-  const myTeamRole = members.find((m) => m.userId === me?.userId)?.teamRole;
+  const myMember = members.find((m) => m.userId === me?.userId);
+  const myTeamRole = myMember?.teamRole;
   const myRoom = isRep
     ? { href: `/p/${projectId}/rooms/owner`, name: ROOM_META.OWNER.name }
     : myTeamRole && {
@@ -73,19 +82,34 @@ export function DashboardView({ projectId }: { projectId: string }) {
     PM: mock.events.filter((e) => e.actor === "PM" && e.costKrw).reduce((a, e) => a + (e.costKrw ?? 0), 0),
   };
   const costMax = Math.max(1, costs.FE, costs.BE, costs.PM);
-  const latestDocs = (["SPEC", "CONTRACT", "ADR"] as const).map((type) => ({
-    type,
-    doc: docs.filter((d) => d.type === type).sort((a, b) => b.version - a.version)[0],
-  }));
-  const docLabel = { SPEC: "명세", CONTRACT: "계약", ADR: "결정기록" } as const;
-  const docHref = { SPEC: "spec", CONTRACT: "contract", ADR: "adr" } as const;
+  const contractList = contracts.data ?? [];
+  const docRows = [
+    { href: "spec", label: "명세", count: specs.data?.length ?? 0, unit: "개" },
+    {
+      href: "contract",
+      label: "계약",
+      count: contractList.length,
+      unit: `개 · ${contractList.filter((c) => c.status === "approved").length} 확정`,
+    },
+    { href: "adr", label: "결정기록", count: decisions.data?.length ?? 0, unit: "건" },
+  ];
 
   const taskList = tasks.data ?? [];
   const boardList = teamRole ? taskList.filter((t) => t.teamRole === teamRole) : taskList;
+  const hiddenCount = TASK_BOARD.reduce(
+    (n, col) => n + Math.max(0, boardList.filter((t) => col.states.includes(t.state)).length - BOARD_PREVIEW),
+    0,
+  );
+  // 진행 중인데 내 에이전트가 꺼져 있으면 태스크를 못 받는다. 다시 켜는 1회용 명령은 연결 화면이 새로 발급한다
+  const myAgent = myMember?.agentId ? agents?.find((a) => a.agentId === myMember.agentId) : undefined;
+  const myAgentOff = project.status === "active" && myAgent?.online === false;
+  const myOpenTasks = taskList.filter(
+    (t) => t.teamRole === myTeamRole && ["READY", "CLAIMED", "IN_PROGRESS"].includes(t.state),
+  ).length;
   const lookup = makeEventLookup(taskList, agents, orgMembers);
 
   return (
-    <div className="h-full overflow-y-auto">
+    <div className="no-scrollbar h-full overflow-y-auto">
       <div className="mx-auto max-w-[1180px] px-4 py-6 sm:px-6 lg:px-8">
         {/* header */}
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
@@ -130,6 +154,20 @@ export function DashboardView({ projectId }: { projectId: string }) {
                 <Play size={14} /> 시작하러 가기
               </Button>
             )}
+          </div>
+        )}
+
+        {myAgentOff && (
+          <div className="mt-5 flex flex-col gap-3 rounded-xl border border-human bg-human-bg px-4 py-3 sm:flex-row sm:items-center">
+            <p className="flex-1 text-[13.5px] text-ink-900">
+              <strong>내 에이전트({myAgent.agentName})가 꺼져 있습니다.</strong>{" "}
+              {myOpenTasks > 0 ? `할 태스크 ${myOpenTasks}개가 기다리고 있습니다. ` : ""}
+              터미널에서 다시 연결해야 태스크를 받습니다 — 명령 끝에 <code className="font-mono">--background</code>를
+              붙이면 터미널을 닫아도 계속 돕니다.
+            </p>
+            <Button href="/connect" size="sm">
+              <Play size={14} /> 다시 연결하기
+            </Button>
           </div>
         )}
 
@@ -244,19 +282,20 @@ export function DashboardView({ projectId }: { projectId: string }) {
             </section>
 
             <section className="card p-4">
-              <SectionTitle action={<MockBadge />}>문서 (MCP)</SectionTitle>
+              <SectionTitle>문서 (MCP)</SectionTitle>
               <ul className="space-y-1">
-                {latestDocs.map(({ type, doc }) => (
-                  <li key={type}>
+                {docRows.map((d) => (
+                  <li key={d.href}>
                     <Link
-                      href={`/p/${projectId}/docs/${docHref[type]}`}
+                      href={`/p/${projectId}/docs/${d.href}`}
                       className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] hover:bg-ink-50"
                     >
                       <FileText size={14} className="text-ink-500" />
-                      <span className="flex-1">{docLabel[type]}</span>
-                      {doc ? (
+                      <span className="flex-1">{d.label}</span>
+                      {d.count > 0 ? (
                         <span className="text-[11.5px] text-ink-500">
-                          {type === "ADR" ? `${(doc.content.match(/## ADR-/g) ?? []).length}건` : `v${doc.version}`}
+                          {d.count}
+                          {d.unit}
                         </span>
                       ) : (
                         <span className="text-[11.5px] text-ink-400">없음</span>
@@ -343,7 +382,7 @@ export function DashboardView({ projectId }: { projectId: string }) {
                             <span>{items.length}</span>
                           </div>
                           <div className="space-y-2">
-                            {items.map((t) => (
+                            {(boardOpen ? items : items.slice(0, BOARD_PREVIEW)).map((t) => (
                               <Link
                                 key={t.id}
                                 href={`/p/${projectId}/tasks/${t.id}`}
@@ -374,6 +413,14 @@ export function DashboardView({ projectId }: { projectId: string }) {
                       );
                     })}
                   </div>
+                  {(hiddenCount > 0 || boardOpen) && (
+                    <button
+                      onClick={() => setBoardOpen((o) => !o)}
+                      className="mt-2 w-full rounded-lg py-1.5 text-[12px] font-medium text-ink-500 hover:bg-ink-50 hover:text-ink-900"
+                    >
+                      {boardOpen ? "접기" : `더 보기 (${hiddenCount}개)`}
+                    </button>
+                  )}
                 </div>
               )}
             </section>

@@ -142,7 +142,7 @@ export function RoomView({ projectId, roomId }: { projectId: string; roomId: str
         )}
 
         {/* messages */}
-        <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
+        <div ref={scrollRef} className="no-scrollbar min-h-0 flex-1 overflow-y-auto">
           <div className="mx-auto flex max-w-[780px] flex-col gap-1 px-4 pb-6 pt-4 sm:px-6">
             {messages.length === 0 && (
               <EmptyState

@@ -25,7 +25,7 @@ export function RoutingReportView({ projectId }: { projectId: string }) {
   const report = useRoutingReport(projectId, isRep);
 
   return (
-    <div className="h-full overflow-y-auto">
+    <div className="no-scrollbar h-full overflow-y-auto">
       <div className="mx-auto max-w-[1100px] space-y-6 px-4 py-6 sm:px-6 lg:px-8">
         <h1 className="text-[22px] font-semibold tracking-tight">질문 라우팅 평가</h1>
         {!isRep ? (
