@@ -107,6 +107,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   INVALID_AUTONOMY_PRESET: "허용 레벨은 L1~L4 중 하나여야 합니다.",
   REPO_OWNERSHIP_NOT_SET: "경로 소유 역할이 지정되지 않은 레포지토리입니다.",
   QUESTION_INVALID: "모든 질문에 답해 주세요.",
+  QUESTIONS_PENDING: '답을 기다리는 질문이 남아 있습니다. 답을 받거나 "가정으로 확정"을 쓰세요.',
+  QUESTION_MODE_INVALID: "실험 모드는 질문 중계가 켜져 있을 때만 켤 수 있습니다.",
   // 아래 둘은 details: [{ where, message }]에 이유가 전부 온다. 화면은 details를 목록으로 함께 보여준다
   PROJECT_START_INVALID: "프로젝트를 시작할 수 없습니다.",
   PLAN_INVALID: "명세·태스크 검증을 통과하지 못했습니다.",

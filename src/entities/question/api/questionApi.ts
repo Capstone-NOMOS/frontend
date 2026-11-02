@@ -1,5 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiFetch, livePoll, type Schemas } from "@/shared/api";
+import { apiFetch, livePoll, type ResponseData, type Schemas } from "@/shared/api";
 
 type AgentQuestion = Schemas["AgentQuestion"];
 /** pending = 사람이 답해야 함 · agent_answered = 에이전트가 답함(사람 확인 권장) · all = 룸 피드의 질문 카드용 */
@@ -69,6 +69,27 @@ export function useRoutingReport(projectId: string, enabled = true) {
     queryKey: [...questionKeys.all, "routing-report", projectId] as const,
     queryFn: () => apiFetch<Schemas["RoutingReport"]>(`/projects/${projectId}/routing-report`),
     enabled,
+  });
+}
+
+/**
+ * 대표 전용 라우팅 평가 데이터셋(라우터가 본 입력 그대로). 응답의 data를 JSON 파일로 내려받는다 —
+ * 백엔드의 eval-question-router 스크립트에 그대로 넣는다. 화면에 두지 않으므로 쿼리가 아니라 한 번 받는 동작이다
+ */
+export function useDownloadRoutingDataset(projectId: string) {
+  return useMutation({
+    mutationFn: async ({ labeledOnly }: { labeledOnly: boolean }) => {
+      const data = await apiFetch<ResponseData<"/projects/{projectId}/routing-dataset", "get">>(
+        `/projects/${projectId}/routing-dataset?labeledOnly=${labeledOnly}`,
+      );
+      const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `routing-dataset-${projectId}${labeledOnly ? "-labeled" : ""}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      return data.items.length;
+    },
   });
 }
 

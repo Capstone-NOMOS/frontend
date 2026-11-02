@@ -92,12 +92,16 @@ export function useRevisePlan(projectId: string) {
 
 /**
  * 초안을 그대로 명세·태스크(READY)로 만든다. **G1이 아니다** — 프로젝트 상태는 그대로.
- * 422 PLAN_INVALID면 아무것도 만들지 않고 계획은 ready로 남는다 (details)
+ * 422 PLAN_INVALID면 아무것도 만들지 않고 계획은 ready로 남는다 (details).
+ * 답 대기 질문이 남았으면 409 QUESTIONS_PENDING — acceptAssumptions면 남은 질문을 추천안(가정)으로 닫고 적용한다
  */
 export function useApplyPlan(projectId: string) {
   return useMutation({
-    mutationFn: (planId: string) =>
-      apiFetch<Schemas["PmPlan"]>(`${planPath(projectId, planId)}/apply`, { method: "POST" }),
+    mutationFn: ({ planId, acceptAssumptions }: { planId: string; acceptAssumptions?: boolean }) =>
+      apiFetch<Schemas["PmPlan"]>(`${planPath(projectId, planId)}/apply`, {
+        method: "POST",
+        body: acceptAssumptions ? { acceptAssumptions } : undefined,
+      }),
     onSettled: useInvalidatePlans(projectId),
   });
 }

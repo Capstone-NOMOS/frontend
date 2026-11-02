@@ -248,6 +248,7 @@ function SidebarContent({
       <div className="flex items-center gap-1.5 px-5 pb-2">
         <Badge tone="brand">{project.autonomyPreset}</Badge>
         <ProjectStatusBadge status={project.status} />
+        {project.questionMode === "experiment" && <Badge tone="warn">실험 모드</Badge>}
       </div>
 
       <nav className="flex-1 space-y-4 overflow-y-auto px-3 pb-3">

@@ -51,7 +51,15 @@ export function PlanCard({
   const latestTasks = plans.filter((p) => p.kind === "tasks" && p.status === "applied").at(-1)?.id === plan.id;
   const feature = plan.kind === "feature";
   const base = feature ? "기능 명세 초안" : "태스크 초안";
-  const title = depth > 0 ? `${base} · 수정 ${depth}` : base;
+  // answers = 질문의 답으로 서버가 다시 쓴 판, retry = 실험 모드 재시도 (둘 다 수정 한도에 세지 않는다)
+  const title = [
+    base,
+    depth > 0 && `수정 ${depth}`,
+    plan.revisionCause === "answers" && "답 반영",
+    plan.revisionCause === "retry" && "재시도",
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   if (plan.status === "pending") return <PendingCard plan={plan} title={title} />;
   if (plan.status === "failed") return <FailedCard plan={plan} title={title} onRetry={onRetry} />;
@@ -433,7 +441,7 @@ function FeatureBody({ draft, collapsed }: { draft: FeatureDraft; collapsed: boo
   );
 }
 
-type Mode = "idle" | "apply" | "revise" | "reject";
+type Mode = "idle" | "apply" | "assume" | "revise" | "reject";
 
 function Actions({
   projectId,
@@ -454,6 +462,8 @@ function Actions({
   const [reason, setReason] = useState("");
 
   const remaining = Math.max(0, MAX_REVISIONS - depth);
+  // 답 대기 질문이 남으면 적용은 409 QUESTIONS_PENDING — 답이 다 오면 PM이 그 답으로 새 판을 쓴다
+  const waiting = plan.pendingQuestionCount;
   const busy = apply.isPending || revise.isPending || reject.isPending;
   const error = apply.error ?? revise.error ?? reject.error;
   const details = errorDetails(error);
@@ -474,12 +484,21 @@ function Actions({
 
   return (
     <div className="mt-4 border-t border-ink-100 pt-3">
-      {mode === "apply" ? (
+      {mode === "apply" || mode === "assume" ? (
         <Confirm
-          text={applyText}
-          confirmLabel={apply.isPending ? "적용 중…" : "승인"}
+          text={
+            mode === "assume"
+              ? `답을 기다리는 질문 ${waiting}개를 추천안(첫 선택지)으로 가정하고 닫습니다. ${applyText}`
+              : applyText
+          }
+          confirmLabel={apply.isPending ? "적용 중…" : mode === "assume" ? "가정으로 확정" : "승인"}
           disabled={busy}
-          onConfirm={() => apply.mutate(plan.id, { onSuccess: onApplied, onSettled: () => setMode("idle") })}
+          onConfirm={() =>
+            apply.mutate(
+              { planId: plan.id, acceptAssumptions: mode === "assume" },
+              { onSuccess: onApplied, onSettled: () => setMode("idle") },
+            )
+          }
           onCancel={() => setMode("idle")}
         />
       ) : mode === "revise" ? (
@@ -539,9 +558,20 @@ function Actions({
         </div>
       ) : (
         <div className="flex flex-wrap items-center gap-2">
-          <Button size="sm" disabled={busy} onClick={() => open("apply")}>
-            <Check size={14} /> 승인
-          </Button>
+          {waiting > 0 ? (
+            <>
+              <Button size="sm" disabled>
+                답을 기다림 ({waiting}개)
+              </Button>
+              <Button size="sm" variant="outline" disabled={busy} onClick={() => open("assume")}>
+                가정으로 확정
+              </Button>
+            </>
+          ) : (
+            <Button size="sm" disabled={busy} onClick={() => open("apply")}>
+              <Check size={14} /> 승인
+            </Button>
+          )}
           <Button size="sm" variant="outline" disabled={busy || remaining === 0} onClick={() => open("revise")}>
             수정 요청 ({depth}/{MAX_REVISIONS})
           </Button>
@@ -549,9 +579,11 @@ function Actions({
             <X size={14} /> 반려
           </Button>
           <span className="text-[12px] text-ink-500">
-            {remaining === 0
-              ? "수정 요청은 최대 3회입니다."
-              : "승인 전에는 어떤 태스크도 에이전트에 전달되지 않습니다."}
+            {waiting > 0
+              ? "질문에 답하면 PM이 그 답으로 초안을 다시 씁니다."
+              : remaining === 0
+                ? "수정 요청은 최대 3회입니다."
+                : "승인 전에는 어떤 태스크도 에이전트에 전달되지 않습니다."}
           </span>
         </div>
       )}

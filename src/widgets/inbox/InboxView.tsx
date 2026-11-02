@@ -15,7 +15,7 @@ import {
   useNotifications,
 } from "@/entities/inbox";
 import { useProject } from "@/entities/project";
-import { QuestionCard, useProjectQuestions } from "@/entities/question";
+import { QuestionCard, questionTaskHref, useProjectQuestions } from "@/entities/question";
 import { useTasks } from "@/entities/task";
 import { displayName, useCurrentUser } from "@/entities/user";
 
@@ -105,7 +105,7 @@ export function InboxView({ projectId }: { projectId: string }) {
                   <QuestionCard
                     question={q}
                     canAnswer={isRep || myTeamRole === q.targetRole}
-                    taskHref={`/p/${projectId}/tasks/${q.taskId}`}
+                    taskHref={questionTaskHref(projectId, q)}
                     taskTitle={tasks?.find((t) => t.id === q.taskId)?.title}
                   />
                 </li>
