@@ -12,7 +12,7 @@ import { ApprovalCard, canDecideApproval, useProjectApprovals } from "@/entities
 import { ContractCard, useContracts } from "@/entities/contract";
 import { useOrgMembers } from "@/entities/org";
 import { projectKeys, useProject } from "@/entities/project";
-import { QuestionCard, useProjectQuestions } from "@/entities/question";
+import { QuestionCard, questionTaskHref, useProjectQuestions } from "@/entities/question";
 import {
   ROLE_ROOM,
   ROOM_META,
@@ -198,7 +198,7 @@ export function RoleRoomView({ projectId, role }: { projectId: string; role: Tea
                                   question={q}
                                   canAnswer={canAnswer(q)}
                                   canLabel={isRep}
-                                  taskHref={`/p/${projectId}/tasks/${q.taskId}`}
+                                  taskHref={questionTaskHref(projectId, q)}
                                   taskTitle={m.taskTitle ?? undefined}
                                 />
                                 {/* 같은 질문의 뒤 줄(답함·내려놓음 등)은 카드 아래로 접는다 */}
@@ -287,7 +287,7 @@ export function RoleRoomView({ projectId, role }: { projectId: string; role: Tea
                   question={q}
                   canAnswer={canAnswer(q)}
                   canLabel={isRep}
-                  taskHref={`/p/${projectId}/tasks/${q.taskId}`}
+                  taskHref={questionTaskHref(projectId, q)}
                 />
               ))}
             </section>

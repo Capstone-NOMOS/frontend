@@ -323,6 +323,11 @@ const RELAY_CHOICES = [
   { value: false, label: "꺼짐" },
 ];
 
+const MODE_CHOICES: { value: Schemas["Project"]["questionMode"]; label: string }[] = [
+  { value: "normal", label: "일반" },
+  { value: "experiment", label: "실험" },
+];
+
 function QuestionRelaySection({
   projectId,
   project,
@@ -358,7 +363,39 @@ function QuestionRelaySection({
         켜면 에이전트가 다른 역할이 정해야 할 결정을 질문하고, 답이 올 때까지 기다립니다. 끄면 에이전트가 묻지 않고
         가정하고 진행하며, 가정한 내용은 인계 노트(GOTCHA)로 남깁니다(대조군 실험 등).
       </p>
+
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-ink-100 pt-4">
+        <h3 className="text-[13.5px] font-semibold">질문 모드</h3>
+        {editable ? (
+          <Segmented
+            options={MODE_CHOICES}
+            value={project.questionMode}
+            onChange={(questionMode) => questionMode !== project.questionMode && update.mutate({ questionMode })}
+            disabled={update.isPending || !project.questionRelay}
+          />
+        ) : (
+          <Badge tone={project.questionMode === "experiment" ? "warn" : "neutral"}>
+            {project.questionMode === "experiment" ? "실험" : "일반"}
+          </Badge>
+        )}
+      </div>
+      <p className="mt-1.5 text-[13px] text-ink-700">
+        실험 모드는 질문 데이터를 모으는 무인 실행입니다. 질문은 라우팅만 기록하고 추천안(첫 선택지)으로 자동 답하며,
+        초안 확정·계약 확정·승인을 서버가 대신 합니다. 완료 승인(G3)만 사람이 합니다. 자동 답은 받은 편지함에 나오지
+        않습니다.
+      </p>
+      {editable && !project.questionRelay && (
+        <p className="mt-1.5 text-[12.5px] text-ink-500">질문 중계를 켜야 실험 모드를 고를 수 있습니다.</p>
+      )}
+
       {!editable && <p className="mt-1.5 text-[12.5px] text-ink-500">대표가 프로젝트 시작 전에만 바꿀 수 있습니다.</p>}
+      {update.data && update.data.warnings.length > 0 && (
+        <ul className="mt-2 space-y-0.5 rounded-lg bg-human-bg px-3 py-2 text-[12.5px] text-human">
+          {update.data.warnings.map((w) => (
+            <li key={w}>{w}</li>
+          ))}
+        </ul>
+      )}
       {update.isError && <p className="mt-2 text-[12.5px] text-forbidden">{errorMessage(update.error)}</p>}
     </section>
   );

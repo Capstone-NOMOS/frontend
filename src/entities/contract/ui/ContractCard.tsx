@@ -38,10 +38,14 @@ export function ContractCard({
   const approve = useApproveContract(projectId);
   const revise = useReviseContract(projectId);
   const [revising, setRevising] = useState(false);
+  const [assuming, setAssuming] = useState(false);
   const [feedback, setFeedback] = useState("");
   const busy = approve.isPending || revise.isPending;
   const error = approve.error ?? revise.error;
-  const remaining = Math.max(0, MAX_CONTRACT_REVISIONS - (c.attempt - 1));
+  // 질문의 답으로 다시 쓴 회차·실험 모드 재시도는 attempt에 들어가지만 수정 요청 한도에서는 뺀다
+  const remaining = Math.max(0, MAX_CONTRACT_REVISIONS - (c.attempt - 1 - c.questionRounds - c.experimentRetries));
+  // 답 대기 질문이 남으면 확정은 409 QUESTIONS_PENDING — 답이 다 오면 그 답으로 다음 회차가 열린다
+  const waiting = c.pendingQuestionCount;
   const decidable = canDecide && (c.status === "draft" || c.status === "failed");
 
   return (
@@ -131,11 +135,39 @@ export function ContractCard({
           </div>
         ) : (
           <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-ink-100 pt-3">
-            {c.status === "draft" && (
-              <Button size="sm" disabled={busy} onClick={() => approve.mutate(c.id)}>
-                {approve.isPending ? "확정 중…" : "확정"}
-              </Button>
-            )}
+            {c.status === "draft" &&
+              (waiting === 0 ? (
+                <Button size="sm" disabled={busy} onClick={() => approve.mutate({ contractId: c.id })}>
+                  {approve.isPending ? "확정 중…" : "확정"}
+                </Button>
+              ) : assuming ? (
+                <>
+                  <Button
+                    size="sm"
+                    disabled={busy}
+                    onClick={() =>
+                      approve.mutate(
+                        { contractId: c.id, acceptAssumptions: true },
+                        { onSettled: () => setAssuming(false) },
+                      )
+                    }
+                  >
+                    {approve.isPending ? "확정 중…" : `질문 ${waiting}개를 추천안으로 가정하고 확정`}
+                  </Button>
+                  <Button size="sm" variant="ghost" disabled={busy} onClick={() => setAssuming(false)}>
+                    취소
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button size="sm" disabled>
+                    답을 기다림 ({waiting}개)
+                  </Button>
+                  <Button size="sm" variant="outline" disabled={busy} onClick={() => setAssuming(true)}>
+                    가정으로 확정
+                  </Button>
+                </>
+              ))}
             <Button
               size="sm"
               variant="outline"
@@ -149,11 +181,13 @@ export function ContractCard({
               수정 요청 ({MAX_CONTRACT_REVISIONS - remaining}/{MAX_CONTRACT_REVISIONS})
             </Button>
             <span className="text-[12px] text-ink-500">
-              {remaining === 0
-                ? "수정 요청은 최대 3회입니다."
-                : c.status === "failed"
-                  ? "수정 요청으로 다시 쓰게 합니다."
-                  : "확정하면 잠기고 태스크 나누기에 쓰입니다."}
+              {c.status === "draft" && waiting > 0
+                ? "질문에 답하면 그 답으로 다음 회차가 열립니다."
+                : remaining === 0
+                  ? "수정 요청은 최대 3회입니다."
+                  : c.status === "failed"
+                    ? "수정 요청으로 다시 쓰게 합니다."
+                    : "확정하면 잠기고 태스크 나누기에 쓰입니다."}
             </span>
           </div>
         ))}

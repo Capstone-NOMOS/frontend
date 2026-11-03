@@ -18,7 +18,7 @@ import {
 } from "@/entities/plan";
 import { ApprovalCard, useProjectApprovals } from "@/entities/approval";
 import { projectKeys, useProject } from "@/entities/project";
-import { QuestionCard, useProjectQuestions } from "@/entities/question";
+import { QuestionCard, questionTaskHref, useProjectQuestions } from "@/entities/question";
 import { contractKeys } from "@/entities/contract";
 import { ROOM_META, RoomParticipants } from "@/entities/room";
 import { specKeys } from "@/entities/spec";
@@ -212,7 +212,7 @@ function Room({ projectId, meName }: { projectId: string; meName: string }) {
                   question={q}
                   canAnswer
                   canLabel
-                  taskHref={`/p/${projectId}/tasks/${q.taskId}`}
+                  taskHref={questionTaskHref(projectId, q)}
                   taskTitle={tasks?.find((t) => t.id === q.taskId)?.title}
                 />
               ))}

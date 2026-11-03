@@ -35,6 +35,7 @@ export function eventActor(e: ProjectEvent, l: EventLookup) {
     e.type === "MEMBER_ASSIGNED" || e.type === "MEMBER_UNASSIGNED" || e.type === "GITHUB_COLLABORATORS_INVITED";
   if (e.actorAgentId && !byPerson) return l.agent(e.actorAgentId) ?? "에이전트";
   if (e.onBehalfOf === "system:pm") return "PM";
+  if (e.onBehalfOf === "system:experiment") return "실험 자동";
   if (e.onBehalfOf.startsWith("system:")) return "시스템";
   return l.person(e.onBehalfOf) ?? "사람";
 }
@@ -45,6 +46,9 @@ export function describeEvent(e: ProjectEvent, l: EventLookup): { text: string; 
   const str = (k: string) => (typeof p[k] === "string" ? (p[k] as string) : "");
   const num = (k: string) => (typeof p[k] === "number" ? (p[k] as number) : 0);
   const task = () => l.task(str("taskId")) ?? "태스크";
+  // 기획 단계 질문은 태스크가 없다 (옛 이벤트에는 stage가 없다 = 구현 중)
+  const questionOf = () =>
+    str("stage") === "feature_spec" ? "기능 명세" : str("stage") === "contract" ? "API 계약" : task();
   const agent = () => l.agent(str("agentId")) ?? "에이전트";
   const role = () => ROLE[str("teamRole")] ?? str("teamRole");
 
@@ -148,16 +152,20 @@ export function describeEvent(e: ProjectEvent, l: EventLookup): { text: string; 
         : { text: `GitHub 협업자 초대 · 레포 ${results.length}개 · ${agent()}`, tone: "default" };
     }
     case "PROJECT_SETTINGS_UPDATED": {
-      const after = p.after as { questionRelay?: unknown } | undefined;
-      return { text: `질문 중계 ${after?.questionRelay === false ? "끔" : "켬"}`, tone: "default" };
+      const after = p.after as { questionRelay?: unknown; questionMode?: unknown } | undefined;
+      const mode = after?.questionMode === "experiment" ? " · 실험 모드" : "";
+      return { text: `질문 중계 ${after?.questionRelay === false ? "끔" : "켬"}${mode}`, tone: "default" };
     }
     case "QUESTION_ASKED":
       return {
-        text: `${ROLE[str("askerRole")] ?? "에이전트"} → ${ROLE[str("targetRole")] ?? "자기 소관"} 질문 · ${task()}`,
+        text: `${str("askerRole") === "PM" ? "PM" : (ROLE[str("askerRole")] ?? "에이전트")} → ${ROLE[str("targetRole")] ?? "자기 소관"} 질문 · ${questionOf()}`,
         tone: "default",
       };
     case "QUESTION_ANSWERED":
-      return { text: `질문에 답함 · ${task()}`, tone: "default" };
+      return {
+        text: `${str("source") === "auto_first_option" ? "자동 답(추천안)" : "질문에 답함"} · ${questionOf()}`,
+        tone: "default",
+      };
     case "TASK_COMPLETED_MANUALLY": {
       const paths = Array.isArray(p.changedPaths) ? p.changedPaths.length : 0;
       return {
@@ -168,7 +176,10 @@ export function describeEvent(e: ProjectEvent, l: EventLookup): { text: string; 
     case "QUESTION_GOLD_LABELED":
       return { text: `평가 · 질문에 정답 담당자를 붙임 · ${task()}`, tone: "default" };
     case "QUESTION_EXPIRED":
-      return { text: `질문 만료 · 답이 없음 · ${task()}`, tone: "danger" };
+      // 초안·계약을 "가정으로 확정"하면 남은 질문이 추천안으로 닫힌다
+      return str("reason") === "confirmed_with_assumptions"
+        ? { text: `가정으로 닫힌 질문 · 추천안 · ${questionOf()}`, tone: "default" }
+        : { text: `질문 만료 · 답이 없음 · ${questionOf()}`, tone: "danger" };
     default:
       return { text: e.type, tone: "default" };
   }

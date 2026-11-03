@@ -47,7 +47,8 @@ const PROJECT_TOPICS: Record<string, (projectId: string) => QueryKey[]> = {
   specs: (id) => [specKeys.list(id)],
   contracts: (id) => [contractKeys.list(id)],
   room: (id) => [roomKeys.project(id)],
-  questions: () => [questionKeys.all],
+  // 기획 단계 질문에 답하면 초안·계약의 답 대기 수(pendingQuestionCount)가 바뀐다
+  questions: (id) => [questionKeys.all, planKeys.project(id), contractKeys.list(id)],
 };
 
 /** 웹소켓 연결을 유지하고, 신호를 쿼리 무효화로 바꾼다. 무효화는 화면에 떠 있는 쿼리만 다시 부른다 */

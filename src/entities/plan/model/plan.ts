@@ -30,14 +30,17 @@ export const PLAN_FAILURE: Record<NonNullable<PmPlan["error"]>["reason"], string
   api_error: "PM 호출 중 오류가 났습니다.",
 };
 
-/** 수정 요청으로 이어진 몇 번째 초안인가 (원래 지시 = 0) */
+/**
+ * 대표의 수정 요청으로 이어진 몇 번째 초안인가 (원래 지시 = 0). 수정 한도에 센다.
+ * 질문의 답(answers)·실험 모드 재시도(retry)로 서버가 다시 쓴 판은 세지 않는다
+ */
 export function revisionDepth(plan: PmPlan, plans: PmPlan[]) {
   const byId = new Map(plans.map((p) => [p.id, p]));
   let depth = 0;
-  let cur = plan.parentPlanId ? byId.get(plan.parentPlanId) : undefined;
-  while (cur) {
-    depth++;
-    cur = cur.parentPlanId ? byId.get(cur.parentPlanId) : undefined;
+  let cur: PmPlan | undefined = plan;
+  while (cur?.parentPlanId) {
+    if (cur.revisionCause !== "answers" && cur.revisionCause !== "retry") depth++;
+    cur = byId.get(cur.parentPlanId);
   }
   return depth;
 }

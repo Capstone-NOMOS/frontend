@@ -31,10 +31,17 @@ function useInvalidateContracts(projectId: string) {
   return () => queryClient.invalidateQueries({ queryKey: contractKeys.list(projectId) });
 }
 
-/** BE 담당(없으면 대표)만. 그 외 403 NOT_CONTRACT_APPROVER. 확정하면 잠긴다 */
+/**
+ * BE 담당(없으면 대표)만. 그 외 403 NOT_CONTRACT_APPROVER. 확정하면 잠긴다.
+ * 답 대기 질문이 남았으면 409 QUESTIONS_PENDING — acceptAssumptions면 남은 질문을 추천안(가정)으로 닫고 확정한다
+ */
 export function useApproveContract(projectId: string) {
   return useMutation({
-    mutationFn: (contractId: string) => apiFetch<Contract>(`/contracts/${contractId}/approve`, { method: "POST" }),
+    mutationFn: ({ contractId, acceptAssumptions }: { contractId: string; acceptAssumptions?: boolean }) =>
+      apiFetch<Contract>(`/contracts/${contractId}/approve`, {
+        method: "POST",
+        body: acceptAssumptions ? { acceptAssumptions } : undefined,
+      }),
     onSettled: useInvalidateContracts(projectId),
   });
 }

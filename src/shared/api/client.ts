@@ -7,6 +7,8 @@ interface ApiFetchOptions {
   body?: unknown;
   /** false면 Authorization 헤더를 붙이지 않는다 (로그인·초대 미리보기 등) */
   auth?: boolean;
+  /** true면 data만 꺼내지 않고 본문 전체를 돌려준다 — data 옆에 warnings 등이 오는 응답용 */
+  envelope?: boolean;
 }
 
 interface ErrorBody {
@@ -53,7 +55,10 @@ export function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promis
   return pending as Promise<T>;
 }
 
-async function request<T>(path: string, { method = "GET", body, auth = true }: ApiFetchOptions): Promise<T> {
+async function request<T>(
+  path: string,
+  { method = "GET", body, auth = true, envelope = false }: ApiFetchOptions,
+): Promise<T> {
   const headers: Record<string, string> = {};
   if (body !== undefined) headers["Content-Type"] = "application/json";
   if (auth) {
@@ -82,5 +87,5 @@ async function request<T>(path: string, { method = "GET", body, auth = true }: A
     throw new ApiError(res.status, error?.code ?? "UNKNOWN_ERROR", error?.message ?? res.statusText, error?.details);
   }
 
-  return json?.data as T;
+  return (envelope ? json : json?.data) as T;
 }

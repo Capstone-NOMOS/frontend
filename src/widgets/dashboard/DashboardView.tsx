@@ -121,6 +121,7 @@ export function DashboardView({ projectId }: { projectId: string }) {
                 {level && ` · ${level.title}`}
               </Badge>
               <ProjectStatusBadge status={project.status} />
+              {project.questionMode === "experiment" && <Badge tone="warn">실험 모드</Badge>}
             </div>
             {project.deadline && (
               <p className="mt-1 inline-flex items-center gap-1 text-[13px] text-ink-500">
