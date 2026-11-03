@@ -5370,7 +5370,7 @@ export interface paths {
          *       - `TASK_CANCELLED` — `taskId, title, previousState, reason, expiredQuestionIds[], unblockedDependents[]`(대표가 취소, 027)
          *       - `TASK_COMPLETED_MANUALLY` — `taskId, title, artifactId, commitSha, changedPaths[], previousState, v3('PASS'), note`(사람이 직접 완료, 027)
          *       - `TASK_RESUMED` — `taskId, note, from('AGENT_STOPPED'|'ESCALATED'), previousRetryCount?`
-         *       - `QUESTION_ASKED` — `questionId, taskId, askerRole, targetRole('FRONTEND'|'BACKEND'|'PM'|'SELF'), routedBy, confidence, latencyMs, fallback, costUsd, questionCount`
+         *       - `QUESTION_ASKED` — `questionId, taskId, askerRole, targetRole('FRONTEND'|'BACKEND'|'PM'|'SELF'), routedBy, confidence, latencyMs, fallback, costUsd, modelLatencyMs(035 판정 시간), questionCount`
          *       - `QUESTION_GOLD_LABELED` — `questionId, goldTarget('FRONTEND'|'BACKEND'|'PM'|'SELF'), previousGoldTarget`(대표가 정답 담당자를 붙임, 026)
          *       - `MEMBER_AGENT_DETACHED` — `agentId, agentName?, teamRole, userId, cause('agent_disconnected')`(에이전트만 떨어짐 — 사람은 담당으로 남음, 028. 그 역할 룸에 줄로도 나온다)
          *       - `MEMBER_AGENT_ATTACHED` — `agentId, agentName?, teamRole, userId, cause('reconnected'|'assigned')`(빈 담당 자리에 에이전트가 다시 붙음, 028. 그 역할 룸에 줄로도 나온다)
@@ -7212,6 +7212,8 @@ export interface paths {
                             cacheWriteTokens: number;
                             cacheReadTokens: number;
                         };
+                        /** @description Claude Code의 duration_api_ms(모델 API 호출 시간) — 질문 라우팅의 판정 시간(035). CLI 0.1.19부터, 옛 CLI는 보내지 않는다 */
+                        modelLatencyMs?: number | null;
                     };
                 };
             };
@@ -9235,7 +9237,7 @@ export interface components {
              * @enum {string}
              */
             targetRole: "FRONTEND" | "BACKEND" | "PM";
-            /** @description 대상을 정한 라우터 구현(이름·버전). 운영 기본은 LLM('llm:<relay|anthropic>:<모델>:v2'), 실패하면 대표에게('fallback:representative', targetRole PM) 보내고 fallback에 사유 */
+            /** @description 대상을 정한 라우터 구현(이름·버전). 운영 기본은 LLM('llm:<relay|anthropic>:<모델>:v3'). 비교용으로 'openai:<모델>:v3'(OpenAI)·'jev:<모델>:v3'(TypeSafe Jev)도 고를 수 있다. 실패하면 대표에게('fallback:representative', targetRole PM) 보내고 fallback에 사유 */
             routedBy: string;
             /** @description 라우터 판정 상세 — 라우터 구현을 바꿔 가며 비교하는 근거 */
             routing: {
@@ -9247,6 +9249,8 @@ export interface components {
                 fallback: string | null;
                 /** @description 판정의 모델 비용(USD). 규칙 라우터·옛 질문은 없음 또는 null */
                 costUsd?: number | null;
+                /** @description 판정 시간(035) — 판정자에게 도달해 답이 나오기까지(모델 API 호출). latencyMs는 서버가 라우터를 부른 순간부터(중계면 대기열·CLI 기동 포함). 옛 질문은 없음, 모르면 null */
+                modelLatencyMs?: number | null;
             };
             /** @description Claude Code AskUserQuestion 형식 그대로 */
             questions: ({
@@ -9386,6 +9390,11 @@ export interface components {
                 /** @description 분류 지연 평균 */
                 avgLatencyMs: number | null;
                 p95LatencyMs: number | null;
+                /** @description 판정 시간 평균(035, 판정자에게 도달 ~ 답) — 라우터 비교는 이 값으로. 측정 위치가 다르다(API 라우터 = 서버, 중계 llm = 노트북의 Claude Code) */
+                avgModelLatencyMs: number | null;
+                p95ModelLatencyMs: number | null;
+                /** @description 판정 시간을 잰 판정 수(옛 CLI 중계 등 모르면 빠진다) */
+                modelLatencySamples: number;
                 /** @description 요청당 비용(USD) */
                 avgCostUsd: number | null;
                 totalCostUsd: number | null;

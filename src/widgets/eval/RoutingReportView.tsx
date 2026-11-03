@@ -27,7 +27,7 @@ const usd = (v: number | null) => (v === null ? "—" : `$${v.toFixed(4)}`);
 const TH = "px-3 py-2 text-left font-medium text-ink-500";
 const TD = "px-3 py-2";
 
-/** 대표 전용 발표 평가 화면. 라우터별 최초 수신자-정답 일치율 · 지연 · 비용과 질문별 판정. 사이드바에 없고 URL로만 들어온다 */
+/** 대표 전용 발표 평가 화면. 라우터별 최초 수신자-정답 일치율 · 판정 시간 · 전체 대기 · 비용과 질문별 판정. 사이드바에 없고 URL로만 들어온다 */
 export function RoutingReportView({ projectId }: { projectId: string }) {
   const isRep = useCurrentUser().me?.orgRole === "REPRESENTATIVE";
   const report = useRoutingReport(projectId, isRep);
@@ -64,8 +64,10 @@ export function RoutingReportView({ projectId }: { projectId: string }) {
                       <th className={TH}>판정</th>
                       <th className={TH}>실패</th>
                       <th className={TH}>일치율</th>
-                      <th className={TH}>평균 지연</th>
-                      <th className={TH}>p95 지연</th>
+                      <th className={TH}>평균 판정</th>
+                      <th className={TH}>p95 판정</th>
+                      <th className={TH}>평균 전체 대기</th>
+                      <th className={TH}>p95 전체 대기</th>
                       <th className={TH}>요청당 비용</th>
                     </tr>
                   </thead>
@@ -82,6 +84,10 @@ export function RoutingReportView({ projectId }: { projectId: string }) {
                             ({r.aligned}/{r.labeled})
                           </span>
                         </td>
+                        <td className={TD}>
+                          {ms(r.avgModelLatencyMs)} <span className="text-ink-500">({r.modelLatencySamples}건)</span>
+                        </td>
+                        <td className={TD}>{ms(r.p95ModelLatencyMs)}</td>
                         <td className={TD}>{ms(r.avgLatencyMs)}</td>
                         <td className={TD}>{ms(r.p95LatencyMs)}</td>
                         <td className={TD}>{usd(r.avgCostUsd)}</td>
