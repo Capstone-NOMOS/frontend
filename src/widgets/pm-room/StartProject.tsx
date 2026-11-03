@@ -5,8 +5,10 @@ import { Play } from "lucide-react";
 import { errorDetails, errorMessage } from "@/shared/api";
 import type { TeamRole } from "@/shared/model";
 import { Button } from "@/shared/ui";
+import { useOrgMembers } from "@/entities/org";
 import { useProject, useStartProject } from "@/entities/project";
 import { TeamRoleBadge } from "@/entities/task";
+import { useCurrentUser } from "@/entities/user";
 
 const ROLES: TeamRole[] = ["FRONTEND", "BACKEND"];
 
@@ -16,6 +18,11 @@ const ROLES: TeamRole[] = ["FRONTEND", "BACKEND"];
  */
 export function StartProject({ projectId }: { projectId: string }) {
   const members = useProject(projectId).data?.members ?? [];
+  const orgMembers = useOrgMembers(useCurrentUser().me?.orgId ?? "").data;
+  const ownerOf = (userId: string) => {
+    const o = orgMembers?.find((x) => x.userId === userId);
+    return o?.nickname ?? o?.name ?? "팀원";
+  };
   const start = useStartProject(projectId);
   const [confirming, setConfirming] = useState(false);
   const details = errorDetails(start.error);
@@ -31,7 +38,8 @@ export function StartProject({ projectId }: { projectId: string }) {
               const m = members.find((x) => x.teamRole === role);
               return (
                 <span key={role} className="inline-flex items-center gap-1">
-                  <TeamRoleBadge role={role} /> {m ? (m.agentName ?? "에이전트 연결 필요") : "없음"}
+                  <TeamRoleBadge role={role} />{" "}
+                  {m ? `${m.agentName ?? "에이전트 연결 필요"} · ${ownerOf(m.userId)}` : "없음"}
                 </span>
               );
             })}
