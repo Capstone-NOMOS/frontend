@@ -60,7 +60,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   LOGIN_ID_TAKEN: "이미 사용 중인 아이디입니다.",
   ALREADY_IN_ORG: "이미 다른 조직에 속해 있습니다.",
   GITHUB_ACCOUNT_TAKEN: "이 GitHub 계정은 다른 사용자에게 연결되어 있습니다.",
-  GITHUB_NOT_LINKED: "대표가 GitHub를 연결하지 않았습니다.",
+  // 서버는 미연결과 토큰 무효(GitHub 401)를 같은 코드로 보낸다
+  GITHUB_NOT_LINKED: "대표의 GitHub 연결을 확인할 수 없습니다. 계정 설정에서 GitHub를 다시 연결하세요.",
   GITHUB_REPO_NAME_TAKEN: "같은 이름의 레포가 이미 있습니다. 다른 이름을 쓰세요.",
   TASK_NOT_STOPPED: "멈췄거나 재시도를 다 쓴 태스크가 아닙니다.",
   TASK_IN_PROGRESS: "에이전트가 작업 중이거나 승인을 기다리는 태스크입니다.",
