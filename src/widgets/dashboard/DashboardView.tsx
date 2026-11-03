@@ -53,6 +53,10 @@ export function DashboardView({ projectId }: { projectId: string }) {
   const approvals = useProjectApprovals(projectId);
   const events = useProjectEvents(projectId);
   const orgMembers = useOrgMembers(me?.orgId ?? "").data;
+  const ownerOf = (userId: string) => {
+    const o = orgMembers?.find((x) => x.userId === userId);
+    return o?.nickname ?? o?.name ?? "팀원";
+  };
   const specs = useSpecs(projectId);
   const contracts = useContracts(projectId);
   const decisions = useDecisions(projectId, null, DECISIONS_MAX);
@@ -253,7 +257,11 @@ export function DashboardView({ projectId }: { projectId: string }) {
                       <AgentMark tone={tone} size={28} />
                       <span className="min-w-0 flex-1 truncate text-[13px]">
                         {m ? (
-                          <span className="font-semibold">{m.agentName ?? "에이전트 연결 필요"}</span>
+                          <>
+                            <span className="font-semibold">{m.agentName ?? "에이전트 연결 필요"}</span>
+                            {/* 한 노트북에서 연결한 에이전트는 기본 이름(컴퓨터 이름)이 같다 — 담당자로 구분 */}
+                            <span className="text-ink-500"> · {ownerOf(m.userId)}</span>
+                          </>
                         ) : (
                           <span className="text-ink-500">아직 배정되지 않음</span>
                         )}

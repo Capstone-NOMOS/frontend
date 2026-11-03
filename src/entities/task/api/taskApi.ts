@@ -27,7 +27,7 @@ export function useTasks(projectId: string, filters: TaskFilters = {}) {
 }
 
 /**
- * 대표 전용. 멈춘 태스크(BLOCKED · AGENT_STOPPED, 재시도 횟수 그대로)나 재시도를 다 쓴 태스크(ESCALATED, 재시도 0으로)를 READY로 되돌린다.
+ * 그 역할 담당 · 대표(그 밖은 403 NOT_TASK_OWNER). 멈춘 태스크(BLOCKED · AGENT_STOPPED, 재시도 횟수 그대로)나 재시도를 다 쓴 태스크(ESCALATED, 재시도 0으로)를 READY로 되돌린다.
  * 409 TASK_NOT_STOPPED도 상태가 바뀐 것이라 성공·실패 모두 목록을 다시 읽는다
  */
 export function useResumeTask() {

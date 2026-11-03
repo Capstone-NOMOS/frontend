@@ -81,8 +81,13 @@ export function TaskDetailView({ projectId, taskId }: { projectId: string; taskI
                 <div className="mt-3 rounded-lg bg-human-bg px-3 py-2.5 text-[13px]">
                   <p className="font-medium text-human">재시도를 다 썼습니다</p>
                   <p className="mt-1 text-ink-700">원인을 확인한 뒤 재개하면 재시도 횟수가 0으로 돌아갑니다.</p>
-                  <Resume taskId={task.id} />
+                  <Resume projectId={projectId} task={task} />
                 </div>
+              )}
+              {task.state === "AWAITING_APPROVAL" && (
+                <p className="mt-3 rounded-lg bg-review-bg px-3 py-2.5 text-[13px] text-review">
+                  승인을 기다리는 중입니다. 대표가 최종 승인하면 완료됩니다.
+                </p>
               )}
               {CLOSABLE.includes(task.state) && <TaskActions projectId={projectId} task={task} />}
             </header>
@@ -97,7 +102,7 @@ export function TaskDetailView({ projectId, taskId }: { projectId: string; taskI
   );
 }
 
-/** BLOCKED는 이유마다 풀리는 방법이 다르다. QUESTION은 답하면 자동으로, AGENT_STOPPED는 대표가 재개해야 풀린다 */
+/** BLOCKED는 이유마다 풀리는 방법이 다르다. QUESTION은 답하면 자동으로, AGENT_STOPPED는 담당(없으면 대표)이 재개해야 풀린다 */
 function Blocked({ projectId, task }: { projectId: string; task: Schemas["Task"] }) {
   const reason = task.blockedReason!;
   const roomHref = task.teamRole && `/p/${projectId}/rooms/${ROLE_ROOM[task.teamRole].slug}`;
@@ -128,20 +133,31 @@ function Blocked({ projectId, task }: { projectId: string; task: Schemas["Task"]
               </>
             )}
           </p>
-          <Resume taskId={task.id} />
+          <Resume projectId={projectId} task={task} />
         </>
       )}
     </div>
   );
 }
 
-/** 대표 전용 재개. BLOCKED · AGENT_STOPPED와 ESCALATED에서 쓴다 */
-function Resume({ taskId }: { taskId: string }) {
-  const isRep = useCurrentUser().me?.orgRole === "REPRESENTATIVE";
+/** 그 역할 담당이나 대표가 다룰 수 있다(재개 · 직접 완료). 최종 판정은 서버 — 403 NOT_TASK_OWNER */
+function useTaskHandler(projectId: string, task: Schemas["Task"]) {
+  const me = useCurrentUser().me!;
+  const isRep = me.orgRole === "REPRESENTATIVE";
+  const isOwner = !!useProject(projectId).data?.members.some(
+    (m) => m.userId === me.userId && m.teamRole === task.teamRole,
+  );
+  return { isRep, canHandle: isRep || isOwner };
+}
+
+/** 재개(그 역할 담당 · 대표). BLOCKED · AGENT_STOPPED와 ESCALATED에서 쓴다 */
+function Resume({ projectId, task }: { projectId: string; task: Schemas["Task"] }) {
+  const { canHandle } = useTaskHandler(projectId, task);
   const resume = useResumeTask();
   const [note, setNote] = useState("");
+  const taskId = task.id;
 
-  if (!isRep) return <p className="mt-1 text-ink-700">대표가 원인을 해결한 뒤 재개합니다.</p>;
+  if (!canHandle) return <p className="mt-1 text-ink-700">담당자가 원인을 해결한 뒤 재개합니다.</p>;
   return (
     <>
       <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -168,16 +184,13 @@ function Resume({ taskId }: { taskId: string }) {
 
 /**
  * 취소(대표) · 직접 완료(그 역할 담당 · 대표). READY · BLOCKED · ESCALATED에서만 보인다.
+ * 대표가 완료하면 DONE, 담당이 완료하면 AWAITING_APPROVAL(대표 최종 승인 카드).
  * 최종 판정은 서버 — 403 NOT_TASK_OWNER, 409 TASK_IN_PROGRESS · TASK_ALREADY_CLOSED
  */
 function TaskActions({ projectId, task }: { projectId: string; task: Schemas["Task"] }) {
-  const me = useCurrentUser().me!;
-  const isRep = me.orgRole === "REPRESENTATIVE";
-  const isOwner = useProject(projectId).data?.members.some(
-    (m) => m.userId === me.userId && m.teamRole === task.teamRole,
-  );
+  const { isRep, canHandle } = useTaskHandler(projectId, task);
   const [mode, setMode] = useState<"cancel" | "complete" | null>(null);
-  if (!isRep && !isOwner) return null;
+  if (!canHandle) return null;
 
   if (mode === "cancel") return <CancelForm taskId={task.id} onClose={() => setMode(null)} />;
   if (mode === "complete") return <CompleteForm taskId={task.id} onClose={() => setMode(null)} />;
@@ -241,7 +254,7 @@ function CompleteForm({ taskId, onClose }: { taskId: string; onClose: () => void
     <div className="card mt-3 space-y-2 p-3">
       <p className="text-[12.5px] text-ink-700">
         태스크 브랜치에 직접 커밋해 push한 뒤, 그 커밋 sha와 <b>기본 브랜치에서 갈라진 뒤 바꾼 파일 전부</b>를 적어
-        주세요.
+        주세요. 담당자가 완료하면 대표가 최종 승인한 뒤 완료됩니다.
       </p>
       <Input
         value={sha}
