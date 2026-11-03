@@ -104,11 +104,18 @@ export function useAbortProject(projectId: string) {
   });
 }
 
-/** 대표 전용, 시작 전에만 (시작 뒤 403 PROJECT_STARTED). 지금은 질문 중계 스위치뿐이다 */
+/**
+ * 대표 전용, 시작 전에만 (시작 뒤 403 PROJECT_STARTED). 질문 중계 스위치와 질문 모드(실험 모드).
+ * warnings는 PM 예산이 무인 실험에 모자라 보일 때 오는 경고 문장이다 — 그래서 본문 전체를 받는다
+ */
 export function useUpdateProjectSettings(projectId: string) {
   return useMutation({
     mutationFn: (body: RequestBody<"/projects/{projectId}/settings", "patch">) =>
-      apiFetch<Schemas["Project"]>(`/projects/${projectId}/settings`, { method: "PATCH", body }),
+      apiFetch<{ data: Schemas["Project"]; warnings: string[] }>(`/projects/${projectId}/settings`, {
+        method: "PATCH",
+        body,
+        envelope: true,
+      }),
     onSuccess: useInvalidateProject(projectId),
     onError: useRefetchOnStale(projectId),
   });

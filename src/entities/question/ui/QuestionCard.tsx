@@ -30,7 +30,18 @@ const SOURCE: Record<NonNullable<AgentQuestion["answerSource"]>, string> = {
   human: "사람이 답함",
   agent_confirmed: "에이전트 답을 사람이 확인함",
   human_override: "사람이 에이전트 답을 뒤집음",
+  auto_first_option: "자동 답(추천안) · 실험 모드",
 };
+
+/** 기획 단계 질문은 태스크가 없다 — 어느 초안에서 나왔는지 꼬리표로 보인다 */
+const STAGE: Partial<Record<AgentQuestion["stage"], string>> = {
+  feature_spec: "기능 명세 질문",
+  contract: "API 계약 질문",
+};
+
+/** 태스크 상세 링크. 기획 단계 질문(taskId null)은 링크가 없다 */
+export const questionTaskHref = (projectId: string, q: Pick<AgentQuestion, "taskId">) =>
+  q.taskId ? `/p/${projectId}/tasks/${q.taskId}` : null;
 
 const STATUS: Record<
   AgentQuestion["status"],
@@ -64,7 +75,7 @@ export function QuestionCard({
   canAnswer: boolean;
   /** 대표 전용 평가 — 답이 끝난 질문에 "원래 누구에게 갔어야 했나"를 붙인다 */
   canLabel?: boolean;
-  taskHref: string;
+  taskHref: string | null;
   taskTitle?: string;
 }) {
   const answer = useAnswerQuestion();
@@ -95,19 +106,31 @@ export function QuestionCard({
   return (
     <div id={q.id} className="card scroll-mt-6 p-4">
       <div className="flex flex-wrap items-center gap-1.5">
-        <Badge tone={ROLE[q.askerRole].tone}>{ROLE[q.askerRole].label} 에이전트</Badge>
+        <Badge tone={ROLE[q.askerRole].tone}>
+          {q.askerRole === "PM" ? "PM" : `${ROLE[q.askerRole].label} 에이전트`}
+        </Badge>
         <ArrowRight size={13} className="text-ink-400" aria-label="질문 대상" />
         <Badge tone={ROLE[q.targetRole].tone}>{ROLE[q.targetRole].label}</Badge>
-        <Badge tone={STATUS[q.status].tone}>{STATUS[q.status].label}</Badge>
+        {/* 기획 단계 질문은 태스크가 없다 — 만료는 넘어갈 태스크 없이 닫힘(가정으로 확정 포함) */}
+        {q.status === "expired" && !q.taskId ? (
+          <Badge tone="neutral">답 없이 닫힘</Badge>
+        ) : (
+          <Badge tone={STATUS[q.status].tone}>{STATUS[q.status].label}</Badge>
+        )}
         {/* 상담 초안이 있으면 몇 개를 코드에서 확인했는지 */}
         {q.status === "pending" && q.draft && (
           <Badge tone="info">
             {q.questions.filter((x) => q.draft?.decided[x.question]).length}/{q.questions.length} 코드에서 확인
           </Badge>
         )}
-        <Link href={taskHref} className="min-w-0 flex-1 truncate text-[13px] font-medium hover:underline">
-          {taskTitle ?? "태스크 보기"}
-        </Link>
+        {STAGE[q.stage] && <Badge tone="brand">{STAGE[q.stage]}</Badge>}
+        {taskHref ? (
+          <Link href={taskHref} className="min-w-0 flex-1 truncate text-[13px] font-medium hover:underline">
+            {taskTitle ?? "태스크 보기"}
+          </Link>
+        ) : (
+          <span className="flex-1" />
+        )}
         <span className="text-[11.5px] text-ink-500" title={fmtDateTime(q.createdAt)}>
           {relTime(q.createdAt)}
         </span>

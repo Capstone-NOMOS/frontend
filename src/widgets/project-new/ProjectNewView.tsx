@@ -130,7 +130,7 @@ export function ProjectNewView() {
         </ol>
       </header>
 
-      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
+      <div ref={scrollRef} className="no-scrollbar min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto max-w-[720px] space-y-4 px-4 py-6 sm:px-6">
           {lines.map((l, i) =>
             l.from === "nomos" ? (

@@ -433,6 +433,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{projectId}/routing-dataset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 라우팅 평가 데이터셋 내보내기 (대표)
+         * @description 이 프로젝트에서 실제로 나온 질문을 **라우터가 본 입력 그대로** 오프라인 평가 데이터셋(v2) 형식으로 낸다. 응답을 파일로 저장해
+         *     `npx tsx scripts/eval-question-router.ts <라우터> --data <파일>`에 그대로 넣는다 — 같은 입력으로 라우터들을 몇 번이든 다시 비교한다.
+         *     입력이 저장되기 전(마이그레이션 032 이전)의 질문은 빠진다. `labeledOnly=true`면 정답 라벨이 붙은 질문만. 대표만. 읽기는 이벤트를 남기지 않는다.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    labeledOnly?: "true" | "false";
+                    /** @description 이 단계의 질문만 */
+                    stage?: "implementation" | "feature_spec" | "contract";
+                };
+                header?: never;
+                path: {
+                    /** @example {{PROJECT_ID}} */
+                    projectId: components["parameters"]["ProjectId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 질문 시각순 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                items: components["schemas"]["RoutingDatasetItem"][];
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{projectId}/routing-report": {
         parameters: {
             query?: never;
@@ -3979,7 +4031,8 @@ export interface paths {
         head?: never;
         /**
          * 프로젝트 설정 (대표 전용, 시작 전에만)
-         * @description 지금은 질문 중계 스위치(`questionRelay`)뿐이다. **시작(G1) 뒤에는 403 `PROJECT_STARTED`** — 실행 중에 바뀌면 같은 프로젝트 안에서 결과가 섞인다.
+         * @description 질문 중계 스위치(`questionRelay`)와 질문 모드(`questionMode`, 033 — 실험 모드). **시작(G1) 뒤에는 403 `PROJECT_STARTED`** — 실행 중에 바뀌면 같은 프로젝트 안에서 결과가 섞인다.
+         *     실험 모드는 질문 중계가 켜져 있을 때만 켤 수 있다(422 `QUESTION_MODE_INVALID`).
          *     바뀌면 이벤트 `PROJECT_SETTINGS_UPDATED`(before·after). 같은 값이면 그대로 돌려준다.
          */
         patch: {
@@ -3996,11 +4049,14 @@ export interface paths {
                 content: {
                     /**
                      * @example {
-                     *       "questionRelay": false
+                     *       "questionRelay": true,
+                     *       "questionMode": "experiment"
                      *     }
                      */
                     "application/json": {
-                        questionRelay: boolean;
+                        questionRelay?: boolean;
+                        /** @enum {string} */
+                        questionMode?: "normal" | "experiment";
                     };
                 };
             };
@@ -4013,6 +4069,8 @@ export interface paths {
                     content: {
                         "application/json": {
                             data: components["schemas"]["Project"];
+                            /** @description 실험 모드(034)를 켤 때 PM 예산이 무인 실험 요구사항 하나의 최대 어림보다 작으면 경고 문장(막지는 않는다). 없으면 빈 목록 */
+                            warnings: string[];
                         };
                     };
                 };
@@ -5069,7 +5127,8 @@ export interface paths {
                                 questions: {
                                     question: components["schemas"]["AgentQuestion"];
                                     projectName: string;
-                                    taskTitle: string;
+                                    /** @description 기획 단계 질문(033)은 태스크가 없어 null */
+                                    taskTitle: string | null;
                                 }[];
                             };
                         };
@@ -5311,7 +5370,7 @@ export interface paths {
          *       - `TASK_CANCELLED` — `taskId, title, previousState, reason, expiredQuestionIds[], unblockedDependents[]`(대표가 취소, 027)
          *       - `TASK_COMPLETED_MANUALLY` — `taskId, title, artifactId, commitSha, changedPaths[], previousState, v3('PASS'), note`(사람이 직접 완료, 027)
          *       - `TASK_RESUMED` — `taskId, note, from('AGENT_STOPPED'|'ESCALATED'), previousRetryCount?`
-         *       - `QUESTION_ASKED` — `questionId, taskId, askerRole, targetRole('FRONTEND'|'BACKEND'|'PM'|'SELF'), routedBy, confidence, latencyMs, fallback, costUsd, questionCount`
+         *       - `QUESTION_ASKED` — `questionId, taskId, askerRole, targetRole('FRONTEND'|'BACKEND'|'PM'|'SELF'), routedBy, confidence, latencyMs, fallback, costUsd, modelLatencyMs(035 판정 시간), questionCount`
          *       - `QUESTION_GOLD_LABELED` — `questionId, goldTarget('FRONTEND'|'BACKEND'|'PM'|'SELF'), previousGoldTarget`(대표가 정답 담당자를 붙임, 026)
          *       - `MEMBER_AGENT_DETACHED` — `agentId, agentName?, teamRole, userId, cause('agent_disconnected')`(에이전트만 떨어짐 — 사람은 담당으로 남음, 028. 그 역할 룸에 줄로도 나온다)
          *       - `MEMBER_AGENT_ATTACHED` — `agentId, agentName?, teamRole, userId, cause('reconnected'|'assigned')`(빈 담당 자리에 에이전트가 다시 붙음, 028. 그 역할 룸에 줄로도 나온다)
@@ -6189,6 +6248,8 @@ export interface paths {
          * 계약 확정 (BE 담당, 없으면 대표)
          * @description 초안(`draft`)만 확정된다(아니면 409 `CONTRACT_NOT_DRAFT`). 확정한 계약은 잠기고 FE·BE 태스크 브리핑에 들어간다.
          *     확정할 수 있는 사람은 이 프로젝트의 BACKEND 담당(에이전트 주인)이다. BACKEND 담당이 없을 때만 대표가 대신한다(아니면 403 `NOT_CONTRACT_APPROVER`).
+         *     **답 대기 질문(033)이 남았으면 409 `QUESTIONS_PENDING`**(details에 질문들) — 답이 오면 그 답으로 다음 회차가 저절로 열린다.
+         *     `acceptAssumptions: true`면 남은 질문을 가정(추천안)으로 닫고 확정한다("가정으로 확정").
          */
         post: {
             parameters: {
@@ -6199,7 +6260,14 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @description 답 대기 질문을 가정으로 닫고 확정한다 */
+                        acceptAssumptions?: boolean;
+                    };
+                };
+            };
             responses: {
                 /** @description 확정됨 */
                 200: {
@@ -6362,7 +6430,19 @@ export interface paths {
                         /** @description OpenAPI 조각(paths·components) YAML */
                         openapiYaml: string;
                         summary: string;
-                        openQuestions?: string[];
+                        /**
+                         * @description 정하지 못한 것. 질문 형식({ question, options — 2개 이상, 추천안 맨 앞 })이면 서버가 라우팅해 FE·BE·PM에게 묻고(033, CLI 0.1.18),
+                         *     답이 다 오면 다음 회차가 저절로 열린다. 문자열(CLI 0.1.17 이하)은 기록만 한다
+                         */
+                        openQuestions?: (string | {
+                            question: string;
+                            header?: string;
+                            options: {
+                                label: string;
+                                description?: string;
+                            }[];
+                            multiSelect?: boolean;
+                        })[];
                     };
                 };
             };
@@ -6919,6 +6999,8 @@ export interface paths {
          *
          *     - 두 번 적용하거나 같은 수정 체인의 다른 초안을 적용하면 409 `PLAN_NOT_APPLICABLE`
          *     - 초안 뒤에 상황이 바뀌어 검증에 걸리면 422 `PLAN_INVALID` — 아무것도 만들지 않고 계획은 `ready`로 남는다. 수정 요청으로 이어가면 된다
+         *     - **기능 명세 초안의 답 대기 질문(033)이 남았으면 409 `QUESTIONS_PENDING`**(details에 질문들) — 답이 다 오면 PM이 그 답으로 초안을 다시 쓴다(새 초안, `revisionCause: answers`).
+         *       `acceptAssumptions: true`면 남은 질문을 가정(추천안)으로 닫고 적용한다("가정으로 확정")
          */
         post: {
             parameters: {
@@ -6931,7 +7013,14 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @description 답 대기 질문을 가정으로 닫고 적용한다 */
+                        acceptAssumptions?: boolean;
+                    };
+                };
+            };
             responses: {
                 /** @description 적용됨(status=applied) */
                 200: {
@@ -7123,6 +7212,8 @@ export interface paths {
                             cacheWriteTokens: number;
                             cacheReadTokens: number;
                         };
+                        /** @description Claude Code의 duration_api_ms(모델 API 호출 시간) — 질문 라우팅의 판정 시간(035). CLI 0.1.19부터, 옛 CLI는 보내지 않는다 */
+                        modelLatencyMs?: number | null;
                     };
                 };
             };
@@ -8757,6 +8848,12 @@ export interface components {
              *     대표가 시작(G1) 전까지 `PATCH /projects/{projectId}/settings`로 바꿀 수 있다.
              */
             questionRelay: boolean;
+            /**
+             * @description 질문 모드(033). experiment = 질문 데이터를 모으는 실험 — 기획 단계 질문 상한 없음, 질문의 라우팅이 기록된 **뒤** 첫 번째 선택지로 자동 답(answerSource auto_first_option),
+             *     상담 실행·PM 답 초안 생략, 받은 편지함·사람 지표에서 빠짐. 질문 중계가 켜져 있어야 켤 수 있다. 시작(G1) 전에만 바꾼다
+             * @enum {string}
+             */
+            questionMode: "normal" | "experiment";
         };
         RepoListItem: {
             /** Format: uuid */
@@ -8857,6 +8954,89 @@ export interface components {
             /** @description 서버가 만든 한 줄 */
             text: string;
         };
+        /**
+         * @description 질문을 라우팅할 때 라우터가 본 입력 그대로(`src/domain/question/router.ts`의 `RoutingInputSnapshot` — 서버 전용 context는 뺀다).
+         *     질문을 올리는 순간 저장한다(`agent_questions.routing_input`, 032) — 명세·계약이 나중에 바뀌어도 그때의 맥락이 남는다.
+         */
+        RoutingInputSnapshot: {
+            /**
+             * @description 질문이 나온 단계 — implementation(태스크 구현 중) · feature_spec(PM이 기능 명세 초안을 쓰는 중) · contract(BE가 API 계약 초안을 쓰는 중). 지금은 implementation만 생긴다
+             * @enum {string}
+             */
+            stage: "implementation" | "feature_spec" | "contract";
+            /**
+             * @description 묻는 쪽(기능 명세 초안의 질문은 PM)
+             * @enum {string}
+             */
+            askerRole: "FRONTEND" | "BACKEND" | "PM";
+            /** @description 이 프로젝트에 있는 역할 */
+            roles: ("FRONTEND" | "BACKEND")[];
+            /** @description 기획 단계(feature_spec·contract)에는 null */
+            task: {
+                title: string;
+                kind: string;
+            } | null;
+            /** @description implementation·contract는 확정한 기능 명세, feature_spec은 쓰고 있는 초안 */
+            spec: {
+                featureKey: string;
+                title: string;
+                content: string;
+            } | null;
+            repo: {
+                fullName: string;
+            } | null;
+            /** @description Claude Code AskUserQuestion 형식 그대로 */
+            questions: ({
+                question: string;
+                header?: string;
+                multiSelect?: boolean;
+                options: {
+                    [key: string]: unknown;
+                }[];
+            } & {
+                [key: string]: unknown;
+            })[];
+            /** @description 그 기능의 확정한 API 계약 요약 — implementation에서만(없으면 null, contract 단계도 null) */
+            contract?: {
+                featureKey: string;
+                summary: string | null;
+            } | null;
+        };
+        /**
+         * @description 오프라인 라우터 평가 데이터셋(v2) 항목 하나 — `scripts/eval-question-router.ts`가 이 응답 파일을 그대로 읽는다.
+         *     평가는 `input`을 **다시 조립하지 않고 그대로** 라우터에 넣는다. 필드 이름(snake_case 일부)은 데이터셋 파일 형식을 따른다.
+         */
+        RoutingDatasetItem: {
+            /**
+             * Format: uuid
+             * @description 질문 id
+             */
+            id: string;
+            /**
+             * @description input.stage와 같다(거르고 세기 편하게 위로 꺼낸 것)
+             * @enum {string}
+             */
+            stage: "implementation" | "feature_spec" | "contract";
+            input: components["schemas"]["RoutingInputSnapshot"];
+            /** @description 정답 담당자 — 사람이 붙인 gold 라벨(POST /questions/{questionId}/gold). 없으면 빈 배열(평가에서 건너뛴다) */
+            accept: ("FRONTEND" | "BACKEND" | "PM" | "SELF")[];
+            /** @enum {string} */
+            source: "real-run";
+            /** Format: date-time */
+            askedAt: string;
+            /** @description 실제로 질문을 보낸 판정(라우터 이름·대상, 자기 소관이면 SELF) */
+            primary: {
+                router: string;
+                /** @enum {string} */
+                target: "FRONTEND" | "BACKEND" | "PM" | "SELF";
+            };
+            goldLabeled: boolean;
+            /**
+             * @description 답의 출처 — auto_first_option(실험 모드 자동 답)은 정답이 아니다. 정답은 accept(사람이 붙인 gold 라벨)
+             * @enum {string|null}
+             */
+            answerSource: "agent" | "human" | "agent_confirmed" | "human_override" | "auto_first_option" | null;
+        };
         Approval: {
             /** Format: uuid */
             id: string;
@@ -8953,16 +9133,32 @@ export interface components {
              */
             questionId: string;
             /**
-             * Format: uuid
-             * @description 질문한 태스크
+             * @description 질문이 나온 단계(033) — implementation 태스크 구현 중 · feature_spec PM이 기능 명세 초안을 쓰다가(taskId·askedByAgentId null, askerRole PM) · contract BE가 API 계약 초안을 쓰다가(taskId null). 질문 카드에 단계를 표시한다
+             * @enum {string}
              */
-            taskId: string;
-            taskTitle: string;
+            stage: "implementation" | "feature_spec" | "contract";
+            /**
+             * Format: uuid
+             * @description feature_spec이면 그 기능 명세 초안(계획)
+             */
+            planId: string | null;
+            /**
+             * Format: uuid
+             * @description contract면 그 계약
+             */
+            contractId: string | null;
+            /**
+             * Format: uuid
+             * @description 질문한 태스크(기획 단계 질문은 null)
+             */
+            taskId: string | null;
+            taskTitle: string | null;
             /** Format: date-time */
             askedAt: string;
             /** @enum {string} */
-            askerRole: "FRONTEND" | "BACKEND";
-            askedByAgentName: string;
+            askerRole: "FRONTEND" | "BACKEND" | "PM";
+            /** @description 기능 명세 초안의 질문(PM)이면 null */
+            askedByAgentName: string | null;
             /** @enum {string} */
             targetRole: "FRONTEND" | "BACKEND" | "PM";
             routedBy: string;
@@ -8974,8 +9170,11 @@ export interface components {
             multiSelect: boolean;
             /** @description 답이 없으면(pending·expired·self_owned) null */
             answer: string | null;
-            /** @enum {string|null} */
-            answerSource: "agent" | "human" | "agent_confirmed" | "human_override" | null;
+            /**
+             * @description auto_first_option = 실험 모드 자동 답(첫 선택지, 033) — 사람이 정한 결정이 아니라 다른 태스크로 전달하지 않는다
+             * @enum {string|null}
+             */
+            answerSource: "agent" | "human" | "agent_confirmed" | "human_override" | "auto_first_option" | null;
             /** @description answered면 답한 사람(user), agent_answered면 코드에서 답을 찾은 에이전트(agent), 그 밖에는 null */
             decidedBy: ({
                 /** @enum {string} */
@@ -9005,19 +9204,40 @@ export interface components {
             id: string;
             /** Format: uuid */
             projectId: string;
-            /** Format: uuid */
-            taskId: string;
-            /** Format: uuid */
-            askedByAgentId: string;
+            /**
+             * @description 질문이 나온 단계(033) — implementation 태스크 구현 중 · feature_spec PM이 기능 명세 초안을 쓰다가(taskId·askedByAgentId null, askerRole PM) · contract BE가 API 계약 초안을 쓰다가(taskId null). 질문 카드에 단계를 표시한다
+             * @enum {string}
+             */
+            stage: "implementation" | "feature_spec" | "contract";
+            /**
+             * Format: uuid
+             * @description feature_spec이면 그 기능 명세 초안(계획)
+             */
+            planId: string | null;
+            /**
+             * Format: uuid
+             * @description contract면 그 계약
+             */
+            contractId: string | null;
+            /**
+             * Format: uuid
+             * @description 구현 단계 질문의 태스크(기획 단계는 null — 태스크를 멈추지 않는다)
+             */
+            taskId: string | null;
+            /**
+             * Format: uuid
+             * @description 기능 명세 초안의 질문(PM)이면 null
+             */
+            askedByAgentId: string | null;
             /** @enum {string} */
-            askerRole: "FRONTEND" | "BACKEND";
+            askerRole: "FRONTEND" | "BACKEND" | "PM";
             /**
              * @description 답할 쪽. 서버의 질문 라우터가 정한다(routedBy에 근거). PM(025) = 요구사항·정책 같은 제품 결정 — 대표가 운용하는 PM 에이전트가 답 초안(draft)을 쓰고
              *     **대표가 확정한다**(PM 질문은 초안이 곧 답이 되지 않는다, draftedByAgentId가 null일 수 있다). 답할 수 있는 사람은 대표뿐이다.
              * @enum {string}
              */
             targetRole: "FRONTEND" | "BACKEND" | "PM";
-            /** @description 대상을 정한 라우터 구현(이름·버전). 운영 기본은 LLM('llm:<relay|anthropic>:<모델>:v2'), 실패하면 대표에게('fallback:representative', targetRole PM) 보내고 fallback에 사유 */
+            /** @description 대상을 정한 라우터 구현(이름·버전). 운영 기본은 LLM('llm:<relay|anthropic>:<모델>:v3'). 비교용으로 'openai:<모델>:v3'(OpenAI)·'jev:<모델>:v3'(TypeSafe Jev)도 고를 수 있다. 실패하면 대표에게('fallback:representative', targetRole PM) 보내고 fallback에 사유 */
             routedBy: string;
             /** @description 라우터 판정 상세 — 라우터 구현을 바꿔 가며 비교하는 근거 */
             routing: {
@@ -9029,6 +9249,8 @@ export interface components {
                 fallback: string | null;
                 /** @description 판정의 모델 비용(USD). 규칙 라우터·옛 질문은 없음 또는 null */
                 costUsd?: number | null;
+                /** @description 판정 시간(035) — 판정자에게 도달해 답이 나오기까지(모델 API 호출). latencyMs는 서버가 라우터를 부른 순간부터(중계면 대기열·CLI 기동 포함). 옛 질문은 없음, 모르면 null */
+                modelLatencyMs?: number | null;
             };
             /** @description Claude Code AskUserQuestion 형식 그대로 */
             questions: ({
@@ -9068,10 +9290,10 @@ export interface components {
             /** Format: date-time */
             draftedAt: string | null;
             /**
-             * @description agent(에이전트가 찾음, 사람 미확인) · human · agent_confirmed(같은 답으로 확인) · human_override(다른 답으로 뒤집음 — 고치는 태스크 자동 생성은 미구현)
+             * @description agent(에이전트가 찾음, 사람 미확인) · human · agent_confirmed(같은 답으로 확인) · human_override(다른 답으로 뒤집음 — 고치는 태스크 자동 생성은 미구현) · auto_first_option(실험 모드 자동 답 — 첫 번째 선택지, answeredBy null. 정답이 아니다)
              * @enum {string|null}
              */
-            answerSource: "agent" | "human" | "agent_confirmed" | "human_override" | null;
+            answerSource: "agent" | "human" | "agent_confirmed" | "human_override" | "auto_first_option" | null;
             /** @description 키는 질문 문장 그대로. 값은 선택지 label이거나 자유 문장(근거를 덧붙여도 된다) */
             answers: {
                 [key: string]: string;
@@ -9168,9 +9390,27 @@ export interface components {
                 /** @description 분류 지연 평균 */
                 avgLatencyMs: number | null;
                 p95LatencyMs: number | null;
+                /** @description 판정 시간 평균(035, 판정자에게 도달 ~ 답) — 라우터 비교는 이 값으로. 측정 위치가 다르다(API 라우터 = 서버, 중계 llm = 노트북의 Claude Code) */
+                avgModelLatencyMs: number | null;
+                p95ModelLatencyMs: number | null;
+                /** @description 판정 시간을 잰 판정 수(옛 CLI 중계 등 모르면 빠진다) */
+                modelLatencySamples: number;
                 /** @description 요청당 비용(USD) */
                 avgCostUsd: number | null;
                 totalCostUsd: number | null;
+            }[];
+            /** @description 단계별(implementation 구현 중 · feature_spec 기능 명세 초안 · contract API 계약 초안) 질문 수와 라우터별 일치율 — 정답이 붙은 판정이 있는 라우터만. 질문이 없는 단계도 나온다 */
+            byStage: {
+                /** @enum {string} */
+                stage: "implementation" | "feature_spec" | "contract";
+                questions: number;
+                labeled: number;
+                routers: {
+                    router: string;
+                    labeled: number;
+                    aligned: number;
+                    alignmentRate: number | null;
+                }[];
             }[];
             answer: {
                 answered: number;
@@ -9178,8 +9418,15 @@ export interface components {
                 medianMs: number | null;
             };
             rows: {
+                /** @description 답의 출처(auto_first_option = 실험 모드 자동 답 — 답까지 걸린 시간 지표에서 뺀다) */
+                answerSource: string | null;
                 /** Format: uuid */
                 questionId: string;
+                /**
+                 * @description 질문이 나온 단계(입력이 저장되기 전 질문은 implementation)
+                 * @enum {string}
+                 */
+                stage: "implementation" | "feature_spec" | "contract";
                 /** Format: date-time */
                 askedAt: string;
                 askerRole: string;
@@ -9811,6 +10058,14 @@ export interface components {
         };
         /** @description API 계약(023). BE 노트북의 에이전트가 BE 코드를 읽고 초안을 쓰고, BE 담당이 확정한다 */
         Contract: {
+            /** @description 이 계약 초안의 기획 단계 질문 수(033) */
+            questionCount: number;
+            /** @description 답 대기 질문 수 — 0이 아니면 확정은 409 QUESTIONS_PENDING(가정으로 확정은 acceptAssumptions) */
+            pendingQuestionCount: number;
+            /** @description 질문의 답으로 다시 쓴 회차 수 — attempt에 들어가지만 수정 요청 한도에서는 뺀다 */
+            questionRounds: number;
+            /** @description 실험 모드(034)에서 실패한 초안을 자동으로 다시 시킨 횟수 — attempt에 들어가지만 수정 요청 한도에서는 뺀다. 기본 모드는 늘 0 */
+            experimentRetries: number;
             /** Format: uuid */
             id: string;
             /** Format: uuid */
@@ -9832,7 +10087,7 @@ export interface components {
             schemaYaml: string | null;
             /** @description 사람이 읽는 요약 */
             summary: string | null;
-            /** @description 작성한 에이전트가 정하지 못한 것 */
+            /** @description 작성한 에이전트가 정하지 못한 것(문장). 질문 형식으로 낸 것(033)은 그 질문 문장이고, 따로 질문으로 라우팅된다(GET /projects/{id}/questions의 contractId) */
             openQuestions: string[];
             /** Format: uuid */
             draftedByAgentId: string | null;
@@ -9849,6 +10104,19 @@ export interface components {
             updatedAt: string;
         };
         ContractJob: {
+            /** @description 이 계약 초안의 기획 단계 질문 수(033) */
+            questionCount: number;
+            /** @description 답 대기 질문 수 — 0이 아니면 확정은 409 QUESTIONS_PENDING(가정으로 확정은 acceptAssumptions) */
+            pendingQuestionCount: number;
+            /** @description 질문의 답으로 다시 쓴 회차 수 — attempt에 들어가지만 수정 요청 한도에서는 뺀다 */
+            questionRounds: number;
+            /** @description 실험 모드(034)에서 실패한 초안을 자동으로 다시 시킨 횟수 — attempt에 들어가지만 수정 요청 한도에서는 뺀다. 기본 모드는 늘 0 */
+            experimentRetries: number;
+            /** @description 이 계약의 질문에 받은 답(033) — 다음 회차 프롬프트에 넣는다(CLI 0.1.18) */
+            answers: {
+                question: string;
+                answer: string;
+            }[];
             /** Format: uuid */
             id: string;
             /** Format: uuid */
@@ -9892,6 +10160,19 @@ export interface components {
             summary: string;
             /** @description 요구가 모호해 가정한 것 — 대표가 확인한다 */
             assumptions: string[];
+            /** @description 혼자 정하면 안 되는 것(033) — 서버가 라우터로 FE·BE·PM에게 보내고, 답이 다 오면 그 답을 붙여 초안을 다시 쓴다. 일반 모드는 상한을 넘는 질문을 assumptions로 옮긴다 */
+            questions?: {
+                /** @description 어느 기능에 대한 질문인지 */
+                featureKey?: string;
+                question: string;
+                header?: string;
+                /** @description 추천안이 맨 앞 */
+                options: {
+                    label: string;
+                    description?: string;
+                }[];
+                multiSelect?: boolean;
+            }[];
             features: {
                 featureKey: string;
                 title: string;
@@ -9951,6 +10232,15 @@ export interface components {
             rejectedAt: string | null;
             /** @description 반려 사유(선택) */
             rejectReason: string | null;
+            /**
+             * @description 수정 체인이면 왜 다시 썼나(033) — feedback 대표의 수정 요청(한도에 센다) · answers 질문의 답을 붙여 자동으로 다시 씀(따로 센다) · retry 실험 모드에서 실패한 초안을 같은 요청으로 다시 냄(034, 따로 센다). 원본은 null
+             * @enum {string|null}
+             */
+            revisionCause: "feedback" | "answers" | "retry" | null;
+            /** @description 이 초안의 기획 단계 질문 수(033) */
+            questionCount: number;
+            /** @description 답 대기 질문 수 — 0이 아니면 적용은 409 QUESTIONS_PENDING("가정으로 확정"은 acceptAssumptions) */
+            pendingQuestionCount: number;
             /**
              * @description 초안의 태스크마다 **누가 받게 되는가**(draft.tasks와 같은 순서, ref로 대응). PM이 정하지 않고 서버가 조회 시점에 계산한다 —
              *     프로젝트에서 역할당 에이전트는 하나라 teamRole이면 담당이 정해진다. 초안이 없으면(pending·failed) 빈 배열.
@@ -10074,7 +10364,7 @@ export interface components {
                 question: string;
                 answer: string | null;
                 /** @enum {string} */
-                askerRole: "FRONTEND" | "BACKEND";
+                askerRole: "FRONTEND" | "BACKEND" | "PM";
                 /** @enum {string} */
                 targetRole: "FRONTEND" | "BACKEND" | "PM";
                 /** @description 정한 사람의 닉네임 */

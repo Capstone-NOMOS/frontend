@@ -18,7 +18,7 @@ import {
 } from "@/entities/plan";
 import { ApprovalCard, useProjectApprovals } from "@/entities/approval";
 import { projectKeys, useProject } from "@/entities/project";
-import { QuestionCard, useProjectQuestions } from "@/entities/question";
+import { QuestionCard, questionTaskHref, useProjectQuestions } from "@/entities/question";
 import { contractKeys } from "@/entities/contract";
 import { ROOM_META, RoomParticipants } from "@/entities/room";
 import { specKeys } from "@/entities/spec";
@@ -131,7 +131,7 @@ function Room({ projectId, meName }: { projectId: string; meName: string }) {
 
       <StatusBar status={status.data} error={status.error} />
 
-      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
+      <div ref={scrollRef} className="no-scrollbar min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto max-w-[860px] space-y-5 px-4 py-6 sm:px-6">
           <PmLine>
             만들 기능을 적어주시면 기능 명세 초안(무엇을 하고 무엇이 보이는지 + 수용 기준)을 만들어 드립니다. 확정하면
@@ -212,7 +212,7 @@ function Room({ projectId, meName }: { projectId: string; meName: string }) {
                   question={q}
                   canAnswer
                   canLabel
-                  taskHref={`/p/${projectId}/tasks/${q.taskId}`}
+                  taskHref={questionTaskHref(projectId, q)}
                   taskTitle={tasks?.find((t) => t.id === q.taskId)?.title}
                 />
               ))}

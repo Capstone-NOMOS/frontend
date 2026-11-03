@@ -39,7 +39,7 @@ export function TaskDetailView({ projectId, taskId }: { projectId: string; taskI
   const task = tasks.data?.find((t) => t.id === taskId);
 
   return (
-    <div className="h-full overflow-y-auto">
+    <div className="no-scrollbar h-full overflow-y-auto">
       <div className="mx-auto max-w-[960px] px-4 py-6 sm:px-6 lg:px-8">
         <Link
           href={`/p/${projectId}`}
