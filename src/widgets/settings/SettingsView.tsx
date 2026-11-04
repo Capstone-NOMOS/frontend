@@ -19,6 +19,7 @@ import {
 } from "@/shared/ui";
 import { cn, fmtDateTime } from "@/shared/lib/format";
 import { agentKeys, useOrgAgents } from "@/entities/agent";
+import { useOrgMembers } from "@/entities/org";
 import { DECIDER_META, LEVELS, LevelGates, POLICY_TABLE } from "@/entities/policy";
 import {
   ProjectStatusBadge,
@@ -153,6 +154,7 @@ function MembersSection({
   const queryClient = useQueryClient();
   const assign = useAssignMember(projectId);
   const unassign = useUnassignMember(projectId);
+  const orgMembers = useOrgMembers(orgId).data;
   // 배정이 바뀌면 에이전트의 assignment도 바뀐다 (entities끼리 키를 못 쓰므로 위젯에서 무효화)
   const refreshAgents = () => queryClient.invalidateQueries({ queryKey: agentKeys.org(orgId) });
   // 시작 뒤에도 빼고 넣을 수 있다 — 빠진 역할의 태스크는 새로 배정할 때까지 기다린다
@@ -204,6 +206,7 @@ function MembersSection({
                     member={member}
                     isRep={isRep}
                     mine={member.userId === myUserId}
+                    githubLinked={!!orgMembers?.find((o) => o.userId === member.userId)?.githubLogin}
                   />
                 </>
               ) : editable ? (
@@ -257,11 +260,12 @@ function MembersSection({
 
 const INVITE_META: Record<
   Member["githubInvites"][number]["status"],
-  { label: string; tone: "info" | "warn" | "danger" | "success" }
+  { label: string; tone: "info" | "neutral" | "danger" | "success" }
 > = {
   invited: { label: "초대 보냄", tone: "info" },
   already_collaborator: { label: "접근 가능", tone: "success" },
-  skipped: { label: "보내지 못함", tone: "warn" },
+  // 멤버가 GitHub를 연결하지 않아 건너뛴 것 — 실패가 아니다
+  skipped: { label: "건너뜀", tone: "neutral" },
   failed: { label: "초대 실패", tone: "danger" },
 };
 
@@ -274,16 +278,19 @@ function GithubInvites({
   member,
   isRep,
   mine,
+  githubLinked,
 }: {
   projectId: string;
   member: Member;
   isRep: boolean;
   mine: boolean;
+  /** 멤버가 지금 GitHub를 연결했는가. 건너뛴 초대는 연결한 뒤에야 다시 보낼 수 있다 */
+  githubLinked: boolean;
 }) {
   const resend = useResendGithubInvite(projectId);
   const invites = member.githubInvites.filter((i) => i.status !== "already_collaborator");
   if (invites.length === 0) return null;
-  const retryable = invites.some((i) => i.status === "skipped" || i.status === "failed");
+  const retryable = invites.some((i) => i.status === "failed" || (i.status === "skipped" && githubLinked));
 
   return (
     <div className="basis-full space-y-1.5 pl-[52px] text-[12.5px] text-ink-700">
@@ -296,10 +303,14 @@ function GithubInvites({
               <span>
                 {mine ? "GitHub 초대 메일을 수락하세요" : "멤버가 GitHub에서 수락해야 클론·push할 수 있습니다"}
               </span>
+            ) : i.status === "skipped" ? (
+              <span className="text-ink-500">
+                {githubLinked ? "멤버가 GitHub를 연결했습니다 — 다시 초대하세요" : "멤버가 GitHub를 연결하지 않음"}
+              </span>
             ) : (
               i.reason && <span>{i.reason}</span>
             )}
-            {mine && i.status === "skipped" && (
+            {mine && i.status === "skipped" && !githubLinked && (
               <Link href="/settings/account" className="font-medium text-ink-900 underline underline-offset-2">
                 GitHub 연결
               </Link>

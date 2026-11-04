@@ -22,7 +22,7 @@ import {
   useSendRoomMessage,
   type Participant,
 } from "@/entities/room";
-import { TEAM_ROLE_META, taskKeys } from "@/entities/task";
+import { TEAM_ROLE_META, taskKeys, useTasks } from "@/entities/task";
 import { useCurrentUser } from "@/entities/user";
 import { Composer } from "./Composer";
 
@@ -73,8 +73,10 @@ export function RoleRoomView({ projectId, role }: { projectId: string; role: Tea
       : []),
   ];
 
-  // API는 최신 줄부터 준다 — 대화처럼 오래된 줄이 위로 가게 뒤집는다
-  const messages = [...(feed.data ?? [])].reverse();
+  const tasks = useTasks(projectId).data ?? [];
+  // API는 최신 줄부터 준다 — 대화처럼 오래된 줄이 위로 가게 뒤집는다.
+  // 룸은 그 역할의 대화만 담는다(명세 §1-4·F-07): 다른 역할의 질문·태스크 줄은 거른다
+  const messages = [...(feed.data ?? [])].reverse().filter(belongsTo(role, questions, tasks));
   const rows = toRows(messages, questions);
   const inline = new Set(rows.flatMap((r) => (r.question ? [r.question.id] : [])));
   // 질문 줄이 아직 불러오지 않은 이전 페이지에 있으면 카드가 피드에 없다 — 답할 질문은 아래에 따로 둔다
@@ -464,6 +466,21 @@ function ToolBlock({ activity: a }: { activity: Activity }) {
       {a.ok === false && <Badge tone="danger">실패</Badge>}
     </div>
   );
+}
+
+/**
+ * 이 역할 룸에 보일 줄인가. 질문은 묻는 쪽·답하는 쪽 룸에만(PM→PM 질문은 대표 룸에만), 태스크 줄은 그 태스크 역할 룸에만.
+ * 아직 못 읽은 질문·태스크의 줄은 판단할 수 없어 남긴다
+ */
+function belongsTo(role: TeamRole, questions: Question[], tasks: Schemas["Task"][]) {
+  const qs = new Map(questions.map((q) => [q.id, q]));
+  const taskRoles = new Map(tasks.map((t) => [t.id, t.teamRole]));
+  return (m: RoomMessage) => {
+    const q = m.questionId ? qs.get(m.questionId) : undefined;
+    if (q) return q.askerRole === role || q.targetRole === role;
+    const r = m.taskId ? taskRoles.get(m.taskId) : undefined;
+    return !r || r === role;
+  };
 }
 
 type Row = { message: RoomMessage; question?: Question; folded: RoomMessage[] };

@@ -76,7 +76,6 @@ export function InviteView({ token }: { token: string }) {
             <dt className="text-ink-500">역할</dt>
             <dd className="flex items-center gap-1.5">
               <TeamRoleBadge role={teamRole} />
-              <span className="text-[12px] text-ink-500">참고용 · 실제 역할은 프로젝트에서 배정됩니다</span>
             </dd>
           </div>
         )}

@@ -21,11 +21,15 @@ function githubError(error: unknown) {
 export function GithubConnect({ githubLogin, onConnected }: { githubLogin: string | null; onConnected?: () => void }) {
   const { state, start, cancel } = useGithubDeviceFlow({ onConnected });
 
-  if (githubLogin && state.step !== "connected") {
+  // 연동돼 있어도 토큰이 GitHub에서 무효가 될 수 있다(권한 회수 등 → 서버 401 → GITHUB_NOT_LINKED). 다시 연결할 길을 남긴다
+  if (githubLogin && state.step === "idle") {
     return (
-      <p className="flex items-center gap-2 text-[14px]">
+      <div className="flex flex-wrap items-center gap-2 text-[14px]">
         <Link2 size={16} /> 연동됨 <Badge tone="success">@{githubLogin}</Badge>
-      </p>
+        <Button variant="ghost" size="sm" onClick={() => void start()}>
+          다시 연결
+        </Button>
+      </div>
     );
   }
   if (state.step === "connected") {

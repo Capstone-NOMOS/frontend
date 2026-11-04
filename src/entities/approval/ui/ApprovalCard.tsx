@@ -63,6 +63,10 @@ export function ApprovalCard({
   const release = a.gate === "G3";
   const checks = strings(p.integrationChecks);
   const tasks = releaseTasks(p.tasks);
+  // 멈춘 태스크를 역할 담당이 직접 완료해 올린 최종 카드 — 에이전트 산출물이 아니다
+  const manual = p.roleReviewSkipped === "manual_completion";
+  const mc = p.manualCompletion as { note?: unknown } | undefined;
+  const manualNote = typeof mc?.note === "string" ? mc.note : null;
 
   const run = (decision: "approve" | "reject") =>
     decide.mutate(
@@ -174,6 +178,12 @@ export function ApprovalCard({
             : `담당 ${rr.nickname ?? "팀원"}이 1차 승인`}
           <span className="text-ink-500"> · {fmtDateTime(rr.at)}</span>
           {rr.note && <span className="block text-ink-500">메모: {rr.note}</span>}
+        </p>
+      )}
+      {manual && (
+        <p className="mt-2 text-[12.5px] text-ink-700">
+          담당자가 직접 완료한 결과
+          {manualNote && <span className="block text-ink-500">메모: {manualNote}</span>}
         </p>
       )}
       {p.backfilled === true && (

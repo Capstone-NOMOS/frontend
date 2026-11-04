@@ -125,7 +125,8 @@ export function ConnectRepos({
       ) : (
         <div className="space-y-2">
           <p className="text-[12.5px] text-ink-500">
-            대표가 GitHub를 연결하면 목록이 보입니다. 지금은 레포 이름을 직접 입력하세요.
+            GitHub 레포 목록을 불러오지 못했습니다. 대표가 GitHub를 연결하지 않았거나 연결이 만료됐을 수 있습니다. 계정
+            설정에서 GitHub를 다시 연결하세요.
           </p>
           <div className="flex items-start gap-2">
             <div className="flex-1">

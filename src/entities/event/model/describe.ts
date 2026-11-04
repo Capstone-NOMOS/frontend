@@ -133,7 +133,7 @@ export function describeEvent(e: ProjectEvent, l: EventLookup): { text: string; 
         ? { text: `에이전트 연결 해제로 실행 중지 · ${task()}`, tone: "warn" }
         : { text: `에이전트 실행 종료 · ${task()}`, tone: "default" };
     case "TASK_BLOCKED":
-      return { text: `제출 없이 멈춤 · 대표 확인 필요 · ${task()}`, tone: "warn" };
+      return { text: `제출 없이 멈춤 · 담당 확인 필요 · ${task()}`, tone: "warn" };
     case "TASK_RESUMED":
       return { text: `재개 · ${task()}${str("note") && ` — ${str("note")}`}`, tone: "default" };
     case "RELEASE_REQUESTED":
@@ -146,10 +146,14 @@ export function describeEvent(e: ProjectEvent, l: EventLookup): { text: string; 
       return { text: `행동 감지 · ${str("actionKey")} · ${task()}`, tone: "warn" };
     case "GITHUB_COLLABORATORS_INVITED": {
       const results = Array.isArray(p.results) ? (p.results as { status?: unknown }[]) : [];
-      const bad = results.filter((r) => r.status === "skipped" || r.status === "failed").length;
-      return bad > 0
-        ? { text: `GitHub 협업자 초대 · ${results.length}개 레포 중 ${bad}개 보내지 못함 · ${agent()}`, tone: "warn" }
-        : { text: `GitHub 협업자 초대 · 레포 ${results.length}개 · ${agent()}`, tone: "default" };
+      // skipped는 멤버가 GitHub를 연결하지 않아 건너뛴 것 — 실패가 아니다
+      const failed = results.filter((r) => r.status === "failed").length;
+      const skipped = results.filter((r) => r.status === "skipped").length;
+      if (failed > 0)
+        return { text: `GitHub 협업자 초대 · ${results.length}개 레포 중 ${failed}개 실패 · ${agent()}`, tone: "warn" };
+      if (skipped > 0)
+        return { text: `GitHub 협업자 초대 건너뜀 · 멤버가 GitHub를 연결하지 않음 · ${agent()}`, tone: "default" };
+      return { text: `GitHub 협업자 초대 · 레포 ${results.length}개 · ${agent()}`, tone: "default" };
     }
     case "PROJECT_SETTINGS_UPDATED": {
       const after = p.after as { questionRelay?: unknown; questionMode?: unknown } | undefined;
