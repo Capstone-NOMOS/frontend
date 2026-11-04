@@ -82,3 +82,4 @@ AI 에이전트 팀 협업 도구의 웹 프론트엔드. 백엔드는 별도 �
 - 이슈는 `.github/ISSUE_TEMPLATE/custom.md`를 따를 것. 제목은 `[FEAT/BUG/REFACTOR/CHORE] 이슈 이름`, Description과 To Do를 채울 것
 - PR은 `.github/pull_request_template.md`를 따를 것. 제목은 `feat: 로그인 기능 구현` 형식, `Closes #N`으로 이슈 연결, UI 변경 시 스크린샷 첨부
 - 새 결정을 내렸으면 `docs/adr/`에 한 장 남길 것
+- 이슈 작성 -> 브랜치 생성 -> 작업 진행 -> PR -> Notion 기록(https://app.notion.com/p/NOMOS-3e10f88396ba805891bdeff901fe29f4) 순으로 진행할 것
