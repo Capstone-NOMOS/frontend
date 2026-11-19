@@ -93,9 +93,6 @@ export function Landing() {
             <Button href={primary.href} size="lg">
               {primary.label} <ArrowRight size={16} />
             </Button>
-            <Button href="/login" size="lg" variant="outline">
-              데모 계정으로 둘러보기
-            </Button>
           </div>
           <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-ink-200 bg-white px-3 py-1.5 font-mono text-[12.5px] text-ink-600">
             <span className="text-ink-400">$</span> {CLI_NPX} connect

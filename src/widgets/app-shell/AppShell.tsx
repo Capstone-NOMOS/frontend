@@ -13,13 +13,12 @@ import {
   MessageSquare,
   Plug,
   Plus,
-  RefreshCcw,
   Settings,
   X,
   NotebookPen,
 } from "lucide-react";
 import { useProjectStream, type Schemas } from "@/shared/api";
-import { Avatar, Badge, Logo, MockBadge } from "@/shared/ui";
+import { Avatar, Badge, Logo } from "@/shared/ui";
 import { cn } from "@/shared/lib/format";
 import { StatusDot } from "@/entities/agent";
 import { ProjectErrorView, ProjectStatusBadge, useProject, useProjects } from "@/entities/project";
@@ -27,7 +26,6 @@ import { useMyInbox, useNotifications } from "@/entities/inbox";
 import { useMyQuestions } from "@/entities/question";
 import { ROLE_ROOM, ROOM_META, useRooms } from "@/entities/room";
 import { AccountMenu, RoleBadge, displayName, useCurrentUser } from "@/entities/user";
-import { useApp, useProject as useMockProject } from "@/lib/store";
 
 export function AppShell({ projectId, children }: { projectId: string; children: ReactNode }) {
   const detail = useProject(projectId);
@@ -168,9 +166,6 @@ function SidebarContent({
   const user = useCurrentUser().me!;
   const isRep = user.orgRole === "REPRESENTATIVE";
   const projects = useProjects(project.orgId);
-  // 데모 역할 전환만 목업 스토어를 읽는다. 실제 프로젝트 id는 목업에 없으므로 대개 비어 있다
-  const { state, me, actions } = useApp();
-  const mock = useMockProject(projectId);
   const rooms = useRooms(projectId).data ?? [];
   // 룸 배지: 이 프로젝트에서 내가 답할 수 있는 질문(대표는 전부, 팀원은 자기 역할 대상)
   const myQuestions = (useMyQuestions().data ?? []).filter((q) => q.question.projectId === projectId);
@@ -334,7 +329,7 @@ function SidebarContent({
           <NavItem
             href={`${base}/activity`}
             icon={<Activity size={16} />}
-            label="활동 · 비용"
+            label="활동"
             active={is(`${base}/activity`)}
             onNavigate={onNavigate}
           />
@@ -371,51 +366,12 @@ function SidebarContent({
               <AccountMenu />
             </div>
             <div className="my-1 border-t border-ink-100" />
-            {mock.members.length > 0 && (
-              <>
-                <div className="flex items-center gap-1.5 px-2.5 pb-1 pt-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
-                  데모: 역할 전환 <MockBadge />
-                </div>
-                {mock.members.map((m) => {
-                  const u = state.users.find((x) => x.id === m.userId)!;
-                  return (
-                    <button
-                      key={m.userId}
-                      onClick={() => {
-                        actions.switchUser(m.userId);
-                        setMenuOpen(false);
-                        router.push(base);
-                      }}
-                      className={cn(
-                        "flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] hover:bg-ink-100",
-                        me?.id === u.id && "font-semibold",
-                      )}
-                    >
-                      <Avatar name={u.nickname} size={20} />
-                      <span className="flex-1 truncate">{u.nickname}</span>
-                      <RoleBadge role={m.role} />
-                    </button>
-                  );
-                })}
-                <div className="my-1 border-t border-ink-100" />
-              </>
-            )}
             <Link
               href="/connect"
               className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-[13px] text-ink-700 hover:bg-ink-100"
             >
               <Plug size={14} /> 에이전트 연결
             </Link>
-            <button
-              onClick={() => {
-                actions.resetDemo();
-                setMenuOpen(false);
-                router.push("/projects");
-              }}
-              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[13px] text-ink-700 hover:bg-ink-100"
-            >
-              <RefreshCcw size={14} /> 데모 데이터 초기화 <MockBadge />
-            </button>
           </div>
         )}
       </div>

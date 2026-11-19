@@ -67,9 +67,7 @@ export function SettingsView({ projectId }: { projectId: string }) {
       </div>
 
       <section className="card p-5">
-        <SectionTitle action={<span className="text-[12px] text-ink-400">변경 기능은 준비 중입니다</span>}>
-          기본 정보
-        </SectionTitle>
+        <SectionTitle>기본 정보</SectionTitle>
         <dl className="grid grid-cols-1 gap-x-8 gap-y-3 text-[13.5px] sm:grid-cols-2">
           <Row k="이름">{project.name}</Row>
           <Row k="상태">
