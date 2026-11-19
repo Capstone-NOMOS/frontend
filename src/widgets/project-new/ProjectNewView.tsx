@@ -101,7 +101,7 @@ export function ProjectNewView() {
   const stepIndex = STEPS.findIndex((s) => s.key === step);
 
   return (
-    <div className="flex h-dvh flex-col bg-white">
+    <div data-fixed-shell className="flex h-dvh flex-col bg-white">
       <header className="flex h-14 shrink-0 items-center justify-between border-b border-ink-200 px-4 sm:px-6">
         <div className="flex items-center gap-3">
           <Link href="/projects" aria-label="프로젝트 목록">
@@ -110,17 +110,17 @@ export function ProjectNewView() {
           <span className="hidden text-ink-300 sm:inline">/</span>
           <span className="hidden text-[13.5px] font-medium sm:inline">새 프로젝트</span>
         </div>
-        <ol className="flex items-center gap-1.5">
+        <ol className="flex items-center gap-2.5">
           {STEPS.map((s, i) => (
             <li
               key={s.key}
               className={cn(
-                "flex items-center gap-1 text-[11.5px]",
-                i < stepIndex ? "text-auto" : i === stepIndex ? "font-medium text-ink-900" : "text-ink-400",
+                "flex items-center gap-1.5 text-[13px]",
+                i < stepIndex ? "text-auto" : i === stepIndex ? "font-medium text-ink-900" : "text-ink-500",
               )}
             >
               {i < stepIndex ? (
-                <Check size={11} />
+                <Check size={13} />
               ) : (
                 <span className={cn("h-1.5 w-1.5 rounded-full", i === stepIndex ? "bg-ink-900" : "bg-ink-300")} />
               )}

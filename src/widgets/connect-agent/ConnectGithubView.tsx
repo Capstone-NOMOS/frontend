@@ -42,7 +42,7 @@ export function ConnectGithubView() {
           >
             <ArrowLeft size={14} /> 에이전트 연결
           </Link>
-          <StepLabel step={4} />
+          <StepLabel step={3} />
           <h1 className="text-[22px] font-semibold tracking-tight">GitHub 연동</h1>
           <p className="mt-1 text-[13.5px] text-ink-500">
             {me.orgRole === "MEMBER"

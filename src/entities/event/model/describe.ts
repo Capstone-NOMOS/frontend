@@ -40,7 +40,7 @@ export function eventActor(e: ProjectEvent, l: EventLookup) {
   return l.person(e.onBehalfOf) ?? "사람";
 }
 
-/** 이벤트 한 줄 요약과 색. 모르는 type은 type 이름을 그대로 보여 준다 */
+/** 이벤트 한 줄 요약과 색. 모르는 type은 서버 이름을 드러내지 않고 "기타 활동"으로 보인다 */
 export function describeEvent(e: ProjectEvent, l: EventLookup): { text: string; tone: EventTone } {
   const p = e.payload as Record<string, unknown>;
   const str = (k: string) => (typeof p[k] === "string" ? (p[k] as string) : "");
@@ -184,7 +184,36 @@ export function describeEvent(e: ProjectEvent, l: EventLookup): { text: string; 
       return str("reason") === "confirmed_with_assumptions"
         ? { text: `가정으로 닫힌 질문 · 추천안 · ${questionOf()}`, tone: "default" }
         : { text: `질문 만료 · 답이 없음 · ${questionOf()}`, tone: "danger" };
+    case "CONTRACT_REQUESTED": {
+      const n = Array.isArray(p.contractIds) ? p.contractIds.length : 0;
+      return { text: `API 계약 작성 요청 · ${n}개`, tone: "default" };
+    }
+    case "CONTRACT_DRAFTED":
+      return { text: `API 계약 초안 · ${str("featureKey")}`, tone: "default" };
+    case "CONTRACT_REVISION_REQUESTED":
+      return {
+        text: `API 계약 수정 요청 · ${str("featureKey")}${str("feedback") && ` — ${str("feedback")}`}`,
+        tone: "warn",
+      };
+    case "CONTRACT_APPROVED":
+      return { text: `API 계약 확정 · ${str("featureKey")}`, tone: "success" };
+    case "CONTRACT_FAILED":
+      return { text: `API 계약 초안 실패 · ${str("featureKey")}`, tone: "danger" };
+    case "PROJECT_ABORTED":
+      return { text: `프로젝트 중단${str("reason") && ` — ${str("reason")}`}`, tone: "danger" };
+    case "PROJECT_DELETED":
+      return { text: "프로젝트 삭제", tone: "danger" };
+    case "GITHUB_COLLABORATORS_REMOVED":
+      return { text: `GitHub 협업자 제거 · ${agent()}`, tone: "default" };
+    case "QUESTION_DRAFTED":
+      return { text: `질문 초안 · ${questionOf()}`, tone: "default" };
+    case "TASK_BLOCKED_ON_QUESTION":
+      return { text: `질문 답을 기다리며 멈춤 · ${task()}`, tone: "warn" };
+    case "TASK_MERGED_TO_DEFAULT":
+      return { text: `기본 브랜치에 병합 · ${task()}`, tone: "success" };
+    case "EXPERIMENT_SKIPPED":
+      return { text: "실험 모드 · 자동으로 넘어감", tone: "default" };
     default:
-      return { text: e.type, tone: "default" };
+      return { text: "기타 활동", tone: "default" };
   }
 }

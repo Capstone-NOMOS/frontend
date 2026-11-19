@@ -7,14 +7,8 @@ import { Badge, Button, CopyField, Logo } from "@/shared/ui";
 import { cn, fmtDateTime } from "@/shared/lib/format";
 import { errorMessage } from "@/shared/api";
 import { CLI_NPX, useCreateConnectCode, useOrgAgents } from "@/entities/agent";
-import { AccountMenu, HomeLink, RotateConnectKey, useCurrentUser } from "@/entities/user";
+import { AccountMenu, HomeLink, useCurrentUser } from "@/entities/user";
 import { GITHUB_STEP, StepLabel } from "./steps";
-
-// Executor는 오리진만 받는다 (/api는 스스로 붙인다)
-const API_ORIGIN = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "").replace(/\/api\/?$/, "");
-// CLI connect의 --server 기본값 (backend#7). 다른 서버일 때만 명시한다
-const CLI_DEFAULT_SERVER = "https://nomos-team.duckdns.org";
-const SERVER_FLAG = API_ORIGIN === CLI_DEFAULT_SERVER ? "" : ` --server ${API_ORIGIN}`;
 
 const CODE = "font-mono text-ink-700";
 
@@ -63,7 +57,7 @@ const CLIS = [
 ];
 
 /**
- * 가입 흐름 3단계: 에이전트 연결. 다음은 GitHub 연동(/connect/github)이다.
+ * 가입 흐름 2단계: 에이전트 연결. 다음은 GitHub 연동(/connect/github)이다.
  * joined: 초대 수락 직후. 이미 연결한 에이전트가 있으면 이 단계를 건너뛴다
  */
 export function ConnectAgentView({ joined = false }: { joined?: boolean }) {
@@ -94,7 +88,7 @@ export function ConnectAgentView({ joined = false }: { joined?: boolean }) {
               {me.orgName ?? "조직"}에 합류했습니다. 에이전트를 연결하세요.
             </p>
           )}
-          <StepLabel step={3} />
+          <StepLabel step={2} />
           <h1 className="text-[22px] font-semibold tracking-tight">에이전트 연결</h1>
           <p className="mt-1 text-[13.5px] text-ink-500">
             내 노트북의 코딩 에이전트를 NOMOS에 연결합니다. 프로젝트에 배정되기 전까지 에이전트는 어떤 태스크도 받지
@@ -145,25 +139,6 @@ export function ConnectAgentView({ joined = false }: { joined?: boolean }) {
             <p className="mt-4 text-[12.5px] text-ink-500">
               막히면 <code className={CODE}>{CLI_NPX} doctor</code>로 git·Claude Code·연결 상태를 점검하세요.
             </p>
-
-            <details className="mt-5 rounded-xl border border-ink-200 p-4">
-              <summary className="cursor-pointer text-[13.5px] font-medium text-ink-900">
-                브라우저를 열 수 없는 환경(SSH 등)이라면 연결 키로 로그인
-              </summary>
-              {/* connect에 --connect-key를 주면 로그인 → 배정 대기 → 실행이 한 번에 된다 */}
-              <div className="mt-3">
-                <CopyField value={`${CLI_NPX} connect --connect-key${SERVER_FLAG}`} />
-              </div>
-              <p className="mt-2 text-[12.5px] text-ink-500">
-                키를 물으면 <b>가입하면서 받은 연결 키</b>를 붙여넣으세요(환경변수{" "}
-                <code className={CODE}>NOMOS_CONNECT_KEY</code>로 줘도 됩니다). 키는 서버에 해시로만 저장되어 다시
-                보여줄 수 없습니다. 잃어버렸다면 아래에서 재발급하세요.
-              </p>
-
-              <div className="mt-3">
-                <RotateConnectKey />
-              </div>
-            </details>
           </section>
 
           <section className="mt-6">

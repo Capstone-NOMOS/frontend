@@ -47,7 +47,7 @@ ink 스케일은 50 · 100 · 200 · 300 · 400 · 500 · 600 · 700 · 800 · 9
 
 | tone | 토큰 | 쓰는 곳 |
 | --- | --- | --- |
-| `neutral` | ink-100 / ink-700 | 기본, READY, CLAIMED, CANCELLED, QUEUED, 검증 SKIPPED, "목업" 배지 |
+| `neutral` | ink-100 / ink-700 | 기본, READY, CLAIMED, CANCELLED, QUEUED, 검증 SKIPPED |
 | `brand` | brand-50 / brand-600 | SUBMITTED, VERIFYING, 재제출 |
 | `success` | auto-bg / auto | DONE, AUTO, 검증 PASS |
 | `warn` | human-bg / human | WAITING\_HUMAN, AWAITING\_APPROVAL, BLOCKED, HUMAN |

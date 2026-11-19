@@ -59,7 +59,7 @@ export function LoginForm({ next }: { next?: string }) {
             href={target ? `/signup?next=${encodeURIComponent(target)}` : "/signup"}
             className="font-medium text-ink-900 underline-offset-2 hover:underline"
           >
-            가입하고 연결 키 받기
+            가입하기
           </Link>
         </div>
       </div>

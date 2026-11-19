@@ -35,6 +35,11 @@ export function InboxView({ projectId }: { projectId: string }) {
   const myTeamRole = useProject(projectId).data?.members.find((m) => m.userId === me.userId)?.teamRole;
   const questions = [...(pending.data ?? []), ...(agentAnswered.data ?? [])];
   const tasks = useTasks(projectId).data;
+  // 열자마자 읽음 처리되므로, 처음 받은 목록에서 안 읽었던 것을 기억해 이번 방문 동안 "새"로 보인다
+  const [fresh, setFresh] = useState<Set<string> | null>(null);
+  if (fresh === null && notifications.data) {
+    setFresh(new Set(notifications.data.notifications.filter((n) => !n.read).map((n) => n.id)));
+  }
   useMarkReadOnOpen(notifications.data);
   useScrollToHash(pending.isSuccess);
 
@@ -135,7 +140,17 @@ export function InboxView({ projectId }: { projectId: string }) {
                       {fmtTime(n.ts)}
                     </span>
                     <span className={cn("mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full", NOTIFICATION_DOT[n.type])} />
-                    <span className={cn("min-w-0 flex-1", n.read ? "text-ink-600" : "font-medium text-ink-900")}>
+                    <span
+                      className={cn(
+                        "min-w-0 flex-1",
+                        n.read && !fresh?.has(n.id) ? "text-ink-600" : "font-medium text-ink-900",
+                      )}
+                    >
+                      {fresh?.has(n.id) && (
+                        <Badge tone="brand" className="mr-1.5">
+                          새
+                        </Badge>
+                      )}
                       {n.text}
                       {n.projectId !== projectId && <span className="text-ink-400"> · {n.projectName}</span>}
                     </span>
