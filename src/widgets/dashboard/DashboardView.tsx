@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { ArrowRight, CalendarDays, FileText, GitBranch, Loader2, MessageSquare, Play } from "lucide-react";
 import type { TeamRole } from "@/shared/model";
 import { AgentMark, Badge, Button, EmptyState, SectionTitle } from "@/shared/ui";
@@ -54,15 +54,8 @@ export function DashboardView({ projectId }: { projectId: string }) {
   const [boardOpen, setBoardOpen] = useState(false);
 
   const rooms = useRooms(projectId).data ?? [];
-  // 대표는 Room 3(PM), 팀원은 자기 역할 룸
   const myMember = members.find((m) => m.userId === me?.userId);
   const myTeamRole = myMember?.teamRole;
-  const myRoom = isRep
-    ? { href: `/p/${projectId}/rooms/owner`, name: ROOM_META.OWNER.name }
-    : myTeamRole && {
-        href: `/p/${projectId}/rooms/${ROLE_ROOM[myTeamRole].slug}`,
-        name: ROOM_META[ROLE_ROOM[myTeamRole].type].name,
-      };
 
   const level = LEVELS.find((l) => l.id === project.autonomyPreset);
   const contractList = contracts.data ?? [];
@@ -79,6 +72,8 @@ export function DashboardView({ projectId }: { projectId: string }) {
 
   const taskList = tasks.data ?? [];
   const boardList = teamRole ? taskList.filter((t) => t.teamRole === teamRole) : taskList;
+  // 제목 옆 "완료" 수는 칸반 완료 칸과 같은 기준으로 센다
+  const DONE_STATES = TASK_BOARD.find((c) => c.key === "done")!.states;
   const hiddenCount = TASK_BOARD.reduce(
     (n, col) => n + Math.max(0, boardList.filter((t) => col.states.includes(t.state)).length - BOARD_PREVIEW),
     0,
@@ -106,21 +101,14 @@ export function DashboardView({ projectId }: { projectId: string }) {
               <ProjectStatusBadge status={project.status} />
               {project.questionMode === "experiment" && <Badge tone="warn">실험 모드</Badge>}
             </div>
-            {project.deadline && (
-              <p className="mt-1 inline-flex items-center gap-1 text-[13px] text-ink-500">
-                <CalendarDays size={13} /> 마감 {project.deadline}
-              </p>
-            )}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {myRoom && (
-              <Button href={myRoom.href} size="md">
-                <MessageSquare size={15} /> {myRoom.name.split(" · ")[0]} 열기
-              </Button>
-            )}
-            <Button href={`/p/${projectId}/activity`} variant="outline">
-              <FileText size={15} /> 활동
-            </Button>
+            <p className="mt-1 inline-flex items-center gap-1 text-[13px] text-ink-500">
+              {project.deadline && (
+                <>
+                  <CalendarDays size={13} /> 마감 {project.deadline} ·{" "}
+                </>
+              )}
+              PM 예산 {fmtUsd(project.pmBudgetUsd)}
+            </p>
           </div>
         </div>
 
@@ -154,20 +142,6 @@ export function DashboardView({ projectId }: { projectId: string }) {
             </Button>
           </div>
         )}
-
-        {/* summary */}
-        <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <Tile label="PM 예산" value={fmtUsd(project.pmBudgetUsd)} />
-          <Tile label="태스크" value={`${taskList.filter((t) => t.state === "DONE").length} / ${taskList.length} 완료`}>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {TASK_BOARD.map((c) => (
-                <span key={c.key} className="rounded-md bg-ink-100 px-1.5 py-0.5 text-[11px] font-medium text-ink-600">
-                  {c.label} {taskList.filter((t) => c.states.includes(t.state)).length}
-                </span>
-              ))}
-            </div>
-          </Tile>
-        </div>
 
         <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[300px_1fr]">
           {/* left column */}
@@ -286,7 +260,10 @@ export function DashboardView({ projectId }: { projectId: string }) {
                   </div>
                 }
               >
-                태스크
+                태스크{" "}
+                <span className="normal-case tracking-normal text-ink-400">
+                  · {taskList.filter((t) => DONE_STATES.includes(t.state)).length} / {taskList.length} 완료
+                </span>
               </SectionTitle>
               {tasks.isPending ? (
                 <div className="flex justify-center py-10 text-ink-400" aria-busy="true">
@@ -434,16 +411,6 @@ export function DashboardView({ projectId }: { projectId: string }) {
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-function Tile({ label, value, children }: { label: ReactNode; value: string; children?: ReactNode }) {
-  return (
-    <div className="card p-4">
-      <div className="text-[11.5px] font-medium uppercase tracking-wide text-ink-500">{label}</div>
-      <div className="mt-1 text-[17px] font-semibold tabular-nums tracking-tight">{value}</div>
-      {children}
     </div>
   );
 }

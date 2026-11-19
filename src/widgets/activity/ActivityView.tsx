@@ -29,10 +29,12 @@ function Events({ projectId }: { projectId: string }) {
   const events = useProjectEvents(projectId);
   const tasks = useTasks(projectId).data;
   const agents = useOrgAgents(me.orgId).data?.agents;
-  const members = useOrgMembers(me.orgId!).data;
+  const orgMembers = useOrgMembers(me.orgId!);
+  const members = orgMembers.data;
   const lookup = makeEventLookup(tasks, agents, members);
 
-  if (events.isPending) {
+  // 멤버 목록 없이 그리면 이름 자리에 "사람"이 잠깐 보인다
+  if (events.isPending || orgMembers.isPending) {
     return (
       <div className="flex justify-center py-10 text-ink-400" aria-busy="true">
         <Loader2 size={20} className="animate-spin" aria-label="불러오는 중" />

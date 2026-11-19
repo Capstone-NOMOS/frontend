@@ -136,9 +136,7 @@ export function QuestionCard({
         </span>
       </div>
       {q.routedBy.startsWith("fallback:") && (
-        <p className="mt-1.5 text-[11.5px] text-ink-500">
-          자동 분류에 실패해 대표에게 왔습니다{q.routing.fallback && ` · ${q.routing.fallback}`}
-        </p>
+        <p className="mt-1.5 text-[11.5px] text-ink-500">자동 분류에 실패해 대표에게 왔습니다</p>
       )}
 
       <ol className="mt-3 space-y-4">
@@ -206,7 +204,9 @@ export function QuestionCard({
               ) : (
                 <p className="mt-1.5 whitespace-pre-wrap rounded-lg bg-ink-50 px-3 py-2 text-[13px] text-ink-900">
                   {(open ? initial : q.answers)?.[x.question] ?? (
-                    <span className="text-ink-500">아직 답이 없습니다</span>
+                    <span className="text-ink-500">
+                      {q.status === "expired" ? "답을 받지 못하고 닫혔습니다" : "아직 답이 없습니다"}
+                    </span>
                   )}
                 </p>
               )}

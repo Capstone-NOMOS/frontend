@@ -11,7 +11,6 @@ import {
   LayoutDashboard,
   Menu,
   MessageSquare,
-  Plug,
   Plus,
   Settings,
   X,
@@ -20,8 +19,8 @@ import {
 import { useProjectStream, type Schemas } from "@/shared/api";
 import { Avatar, Badge, Logo } from "@/shared/ui";
 import { cn } from "@/shared/lib/format";
-import { StatusDot } from "@/entities/agent";
-import { ProjectErrorView, ProjectStatusBadge, useProject, useProjects } from "@/entities/project";
+import { useDismiss } from "@/shared/lib/useDismiss";
+import { ProjectErrorView, useProject, useProjects } from "@/entities/project";
 import { useMyInbox, useNotifications } from "@/entities/inbox";
 import { useMyQuestions } from "@/entities/question";
 import { ROLE_ROOM, ROOM_META, useRooms } from "@/entities/room";
@@ -44,7 +43,7 @@ export function AppShell({ projectId, children }: { projectId: string; children:
   }
 
   return (
-    <div className="flex h-dvh w-full overflow-hidden bg-white">
+    <div data-fixed-shell className="flex h-dvh w-full overflow-hidden bg-white">
       {/* desktop sidebar */}
       <aside className="hidden w-[264px] shrink-0 border-r border-ink-200 bg-ink-50/60 lg:flex lg:flex-col">
         <SidebarContent projectId={projectId} detail={detail.data} />
@@ -92,7 +91,7 @@ export function AppShell({ projectId, children }: { projectId: string; children:
 
 function ShellSkeleton() {
   return (
-    <div className="flex h-dvh w-full">
+    <div data-fixed-shell className="flex h-dvh w-full">
       <div className="hidden w-[264px] border-r border-ink-200 bg-ink-50/60 lg:block" />
       <div className="flex-1 p-6">
         <div className="h-6 w-40 animate-pulse rounded bg-ink-100" />
@@ -177,6 +176,9 @@ function SidebarContent({
   const router = useRouter();
   const [projOpen, setProjOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  // 바깥 클릭·Esc로 닫는다. 한쪽을 열면 다른 쪽은 바깥 클릭이 되어 닫힌다
+  const projRef = useDismiss<HTMLDivElement>(projOpen, setProjOpen);
+  const menuRef = useDismiss<HTMLDivElement>(menuOpen, setMenuOpen);
 
   const base = `/p/${projectId}`;
   const is = (p: string) => pathname === p;
@@ -188,7 +190,7 @@ function SidebarContent({
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-2 px-3 pt-4 pb-2">
-        <div className="relative min-w-0 flex-1">
+        <div ref={projRef} className="relative min-w-0 flex-1">
           <button
             onClick={() => setProjOpen((v) => !v)}
             className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-ink-100"
@@ -199,22 +201,25 @@ function SidebarContent({
           </button>
           {projOpen && (
             <div className="absolute left-0 right-0 top-full z-20 mt-1 rounded-xl border border-ink-200 bg-white p-1.5 shadow-pop animate-rise">
-              {(projects.data ?? []).map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => {
-                    setProjOpen(false);
-                    router.push(`/p/${p.id}`);
-                  }}
-                  className={cn(
-                    "flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-[13px] hover:bg-ink-100",
-                    p.id === projectId && "font-semibold",
-                  )}
-                >
-                  <span className="truncate">{p.name}</span>
-                  <Badge tone="brand">{p.autonomyPreset}</Badge>
-                </button>
-              ))}
+              {/* 7개(한 줄 36px)까지만 보이고 넘치면 스크롤 — 아래 "전체 프로젝트"·"새 프로젝트"가 화면 밖으로 밀리지 않게 */}
+              <div className="max-h-[252px] overflow-y-auto">
+                {(projects.data ?? []).map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => {
+                      setProjOpen(false);
+                      router.push(`/p/${p.id}`);
+                    }}
+                    className={cn(
+                      "flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-[13px] hover:bg-ink-100",
+                      p.id === projectId && "font-semibold",
+                    )}
+                  >
+                    <span className="truncate">{p.name}</span>
+                    <Badge tone="brand">{p.autonomyPreset}</Badge>
+                  </button>
+                ))}
+              </div>
               <div className="my-1 border-t border-ink-100" />
               <Link
                 href="/projects"
@@ -240,11 +245,12 @@ function SidebarContent({
         )}
       </div>
 
-      <div className="flex items-center gap-1.5 px-5 pb-2">
-        <Badge tone="brand">{project.autonomyPreset}</Badge>
-        <ProjectStatusBadge status={project.status} />
-        {project.questionMode === "experiment" && <Badge tone="warn">실험 모드</Badge>}
-      </div>
+      {/* 레벨·상태는 대시보드 머리에 있다. 실험 모드만 어느 화면에서든 보이게 남긴다 */}
+      {project.questionMode === "experiment" && (
+        <div className="px-5 pb-2">
+          <Badge tone="warn">실험 모드</Badge>
+        </div>
+      )}
 
       <nav className="flex-1 space-y-4 overflow-y-auto px-3 pb-3">
         <div className="space-y-0.5">
@@ -288,7 +294,6 @@ function SidebarContent({
                 active={startsWith(href)}
                 onNavigate={onNavigate}
                 badge={myQuestions.filter((q) => q.question.targetRole === room.role).length}
-                trailing={room.agent && <StatusDot status={room.agent.online ? "online" : "offline"} />}
               />
             );
           })}
@@ -343,7 +348,7 @@ function SidebarContent({
         </div>
       </nav>
 
-      <div className="relative border-t border-ink-200 p-3">
+      <div ref={menuRef} className="relative border-t border-ink-200 p-3">
         <button
           onClick={() => setMenuOpen((v) => !v)}
           className="flex w-full items-center gap-2.5 rounded-lg px-1.5 py-1.5 text-left hover:bg-ink-100"
@@ -354,9 +359,11 @@ function SidebarContent({
               <span className="truncate text-[13.5px] font-semibold">{displayName(user)}</span>
               {isRep && <RoleBadge role="OWNER" />}
             </span>
-            <span className="mt-0.5 block truncate text-[11.5px] text-ink-500">
-              {isRep ? "대표" : (myAgentName ?? "이 프로젝트에 배정된 에이전트 없음")}
-            </span>
+            {!isRep && (
+              <span className="mt-0.5 block truncate text-[11.5px] text-ink-500">
+                {myAgentName ?? "이 프로젝트에 배정된 에이전트 없음"}
+              </span>
+            )}
           </span>
           <ChevronDown size={14} className="text-ink-500" />
         </button>
@@ -365,13 +372,6 @@ function SidebarContent({
             <div className="px-2.5 py-1.5">
               <AccountMenu />
             </div>
-            <div className="my-1 border-t border-ink-100" />
-            <Link
-              href="/connect"
-              className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-[13px] text-ink-700 hover:bg-ink-100"
-            >
-              <Plug size={14} /> 에이전트 연결
-            </Link>
           </div>
         )}
       </div>

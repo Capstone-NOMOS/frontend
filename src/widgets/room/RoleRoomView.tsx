@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
 import { FilePlus, FileText, Loader2, Pencil, Search, Terminal, Wrench, type LucideIcon } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { errorMessage, type Schemas } from "@/shared/api";
+import { ApiError, errorMessage, type Schemas } from "@/shared/api";
 import type { TeamRole } from "@/shared/model";
 import { AgentMark, Avatar, Badge, Button, EmptyState } from "@/shared/ui";
 import { cn, fmtDate, fmtDateTime, fmtTime, sameDay } from "@/shared/lib/format";
@@ -16,6 +16,7 @@ import { QuestionCard, questionTaskHref, useProjectQuestions } from "@/entities/
 import {
   ROLE_ROOM,
   ROOM_META,
+  RoomForbidden,
   RoomParticipants,
   useRoomFeed,
   useRooms,
@@ -113,6 +114,11 @@ export function RoleRoomView({ projectId, role }: { projectId: string; role: Tea
     hashDone.current = true;
     el.scrollIntoView({ block: "center" });
   }, [newestId, questions.length, approvals.length]);
+
+  // 다른 역할의 룸은 서버가 403으로 막는다 — 대표 룸과 같은 화면으로 보인다
+  if (feed.error instanceof ApiError && feed.error.status === 403) {
+    return <RoomForbidden projectId={projectId} type={ROLE_ROOM[role].type} />;
+  }
 
   return (
     <div className="flex h-full flex-col">

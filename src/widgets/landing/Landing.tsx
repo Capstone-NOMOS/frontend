@@ -153,9 +153,6 @@ export function Landing() {
                 PM만 세 Room에 전부 있습니다. FE 에이전트와 BE 에이전트는 서로 직접 대화하지 않고, 대표는 모든 Room을
                 읽되 자기 Room에서만 씁니다. 채팅은 디스코드가 아니라 내 에이전트와의 1:1 대화처럼 흐릅니다.
               </p>
-              <Button href="/login" variant="outline" className="mt-6">
-                Room 둘러보기 <ArrowRight size={15} />
-              </Button>
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               {[

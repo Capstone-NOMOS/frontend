@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ConfirmButton, RemovalError, SectionTitle } from "@/shared/ui";
+import { Plug } from "lucide-react";
+import { Button, ConfirmButton, RemovalError, SectionTitle } from "@/shared/ui";
 import { orgKeys, useRemoveMember } from "@/entities/org";
-import { GithubConnect, RotateConnectKey, displayName, useCurrentUser } from "@/entities/user";
+import { GithubConnect, displayName, useCurrentUser } from "@/entities/user";
 
 export function AccountSettingsView() {
   // AuthGate 안쪽이므로 me와 조직이 있다
@@ -24,16 +25,16 @@ export function AccountSettingsView() {
         </dl>
       </section>
 
-      <section className="card p-5">
-        <SectionTitle>연결 키</SectionTitle>
-        <p className="mb-3 text-[13px] text-ink-500">
-          브라우저를 열 수 없는 환경(SSH 등)에서 CLI를 연결할 때 씁니다. 키는 서버에 해시로만 저장되어 다시 보여줄 수
-          없습니다.{" "}
-          <Link href="/connect" className="font-medium text-ink-900 underline underline-offset-2">
-            연결 안내
-          </Link>
-        </p>
-        <RotateConnectKey />
+      <section className="card flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <SectionTitle>에이전트</SectionTitle>
+          <p className="text-[13px] text-ink-500">
+            내 노트북의 코딩 에이전트를 NOMOS에 연결합니다. 꺼진 에이전트를 다시 켤 때도 여기서 명령을 받습니다.
+          </p>
+        </div>
+        <Button href="/connect" className="shrink-0">
+          <Plug size={15} /> 에이전트 연결
+        </Button>
       </section>
 
       <GithubSection githubLogin={me.githubLogin} />
