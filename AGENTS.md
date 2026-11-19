@@ -76,7 +76,7 @@ AI 에이전트 팀 협업 도구의 웹 프론트엔드. 백엔드는 별도 �
 
 - **패키지 추가 전 반드시 물어볼 것** (`dep:add`는 승인 대상)
 - 패키지 매니저는 **pnpm**. `npm install`을 쓰지 말 것 (`package-lock.json`이 되살아난다 → adr/0005)
-- 커밋 전 `pnpm format` · `pnpm lint` · `pnpm typecheck`. CI가 같은 것을 돌린다 (→ adr/0006)
+- 커밋 전 `pnpm format` · `pnpm lint` · `pnpm typecheck` · `pnpm test`. CI가 같은 것을 돌린다 (→ adr/0006)
 - **레이어 경계는 린트가 판정한다.** `pnpm lint` 실패를 우회하려 예외를 추가하지 말 것
 - `.env*` 수정 금지
 - 이슈는 `.github/ISSUE_TEMPLATE/custom.md`를 따를 것. 제목은 `[FEAT/BUG/REFACTOR/CHORE] 이슈 이름`, Description과 To Do를 채울 것

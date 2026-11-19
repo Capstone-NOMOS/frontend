@@ -51,6 +51,11 @@ const PROJECT_TOPICS: Record<string, (projectId: string) => QueryKey[]> = {
   questions: (id) => [questionKeys.all, planKeys.project(id), contractKeys.list(id)],
 };
 
+/** 신호 하나가 무효화할 쿼리 키. projectId가 null이면 조직 신호다. 모르는 topic은 건너뛴다 */
+export function keysForSignal(projectId: string | null, topics: string[]): QueryKey[] {
+  return topics.flatMap((t) => (projectId ? (PROJECT_TOPICS[t]?.(projectId) ?? []) : (ORG_TOPICS[t] ?? [])));
+}
+
 /** 웹소켓 연결을 유지하고, 신호를 쿼리 무효화로 바꾼다. 무효화는 화면에 떠 있는 쿼리만 다시 부른다 */
 export function useRealtimeSync(accessToken: string | null) {
   const queryClient = useQueryClient();
@@ -59,10 +64,7 @@ export function useRealtimeSync(accessToken: string | null) {
   const onSignal = useCallback(
     (s: StreamSignal) => {
       if (s.kind === "resync") return void queryClient.invalidateQueries();
-      const keys = s.topics.flatMap((t) =>
-        s.projectId ? (PROJECT_TOPICS[t]?.(s.projectId) ?? []) : (ORG_TOPICS[t] ?? []),
-      );
-      keys.forEach((queryKey) => void queryClient.invalidateQueries({ queryKey }));
+      keysForSignal(s.projectId, s.topics).forEach((queryKey) => void queryClient.invalidateQueries({ queryKey }));
     },
     [queryClient],
   );
