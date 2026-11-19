@@ -12,13 +12,11 @@ const eslintConfig = defineConfig([
     plugins: { boundaries },
     settings: {
       // FSD 레이어. widgets·entities는 슬라이스 하나가 요소 하나다.
-      // mock-store는 해체 예정인 src/lib 예외 (docs/architecture.md §8).
       "boundaries/elements": [
         { type: "app", pattern: "src/app" },
         { type: "widgets", pattern: "src/widgets/*" },
         { type: "entities", pattern: "src/entities/*" },
         { type: "shared", pattern: "src/shared" },
-        { type: "mock-store", pattern: "src/lib" },
       ],
       "boundaries/include": ["src/**"],
     },
@@ -32,20 +30,15 @@ const eslintConfig = defineConfig([
           policies: [
             {
               from: { element: { type: "app" } },
-              allow: { to: { element: { types: { anyOf: ["widgets", "entities", "shared", "mock-store"] } } } },
+              allow: { to: { element: { types: { anyOf: ["widgets", "entities", "shared"] } } } },
             },
             {
               from: { element: { type: "widgets" } },
-              allow: { to: { element: { types: { anyOf: ["entities", "shared", "mock-store"] } } } },
+              allow: { to: { element: { types: { anyOf: ["entities", "shared"] } } } },
             },
             {
               from: { element: { type: "entities" } },
               allow: { to: { element: { type: "shared" } } },
-            },
-            // 스토어는 엔티티 타입을 읽는다. 해체되면 이 줄도 사라진다.
-            {
-              from: { element: { type: "mock-store" } },
-              allow: { to: { element: { types: { anyOf: ["entities", "shared"] } } } },
             },
             // 슬라이스 바깥에서는 index.ts를 통해서만 접근한다.
             {

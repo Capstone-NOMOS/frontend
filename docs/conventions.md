@@ -35,10 +35,7 @@ src/
   widgets/    화면 블록
   entities/   도메인 타입·API·쿼리키·도메인 배지
   shared/     도메인을 모르는 부품·fetch 래퍼·(추후) 실시간 클라이언트·포맷 유틸
-  lib/        ⚠ 목업 스토어 전용 예외 — 아래 참조
 ```
-
-**`src/lib/`은 레이어가 아니다.** `store.tsx`와 `mock/seed.ts`만 남아 있고, 해체 예정이라(`architecture.md` §8) 이번 이행에서 일부러 옮기지 않았다. 여기에 새 파일을 추가하지 말 것.
 
 엔티티 슬라이스 18개: `task` `agent` `user` `org` `invite` `project` `repo` `plan` `artifact` `note` `room` `message` `document` `event` `policy` `approval` `spec` `question`.
 위젯 슬라이스 20개: `room` `pm-room` `dashboard` `inbox` `activity` `docs` `settings` `account-settings` `landing` `invite` `org` `repo-paths` `app-shell` `auth` `connect-agent` `connect-device` `onboarding` `project-list` `project-new` `task-detail`.
@@ -75,7 +72,7 @@ src/
 - `proxy.ts`·`middleware.ts` 생성 (인증은 클라이언트 가드 — adr/0007)
 - Tailwind 기본 팔레트 직접 사용 (→ `docs/design.md`의 토큰)
 - 태스크 칸반에 드래그 이동 추가 (→ adr/0003)
-- `lib/store.tsx`에 새 기능 추가 (해체 예정 — `docs/architecture.md` §8)
+- API가 없는 화면 요소를 목업 데이터로 만들기 (→ adr/0017)
 - 경계 린트 예외 추가 (`eslint.config.mjs`의 `boundaries` — adr/0006)
 
 ## 검사

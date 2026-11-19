@@ -37,12 +37,6 @@ export function useLogin() {
   });
 }
 
-export function useRotateConnectKey() {
-  return useMutation({
-    mutationFn: () => apiFetch<Schemas["ConnectKey"]>("/me/connect-key/rotate", { method: "POST" }),
-  });
-}
-
 export function useLogout() {
   const queryClient = useQueryClient();
   const router = useRouter();

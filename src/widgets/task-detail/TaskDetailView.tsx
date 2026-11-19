@@ -31,6 +31,7 @@ import { useCurrentUser } from "@/entities/user";
 const CLOSABLE: Schemas["Task"]["state"][] = ["READY", "BLOCKED", "ESCALATED"];
 
 // 결과가 늦게 오는 단계(V2·V4는 브릿지 보고). INTEGRATION은 아직 돌지 않으므로 빈자리로 보이지 않는다
+const TASK_KIND: Record<string, string> = { IMPLEMENT: "구현", INTEGRATION: "통합", REWORK: "재작업" };
 const EXPECTED_STAGES = VERIFICATION_ORDER.filter((s) => s !== "INTEGRATION");
 
 export function TaskDetailView({ projectId, taskId }: { projectId: string; taskId: string }) {
@@ -62,7 +63,7 @@ export function TaskDetailView({ projectId, taskId }: { projectId: string; taskI
               <div className="flex flex-wrap items-center gap-2">
                 <ApiTaskBadge state={task.state} />
                 {task.teamRole && <TeamRoleBadge role={task.teamRole} />}
-                <Badge>{task.kind}</Badge>
+                <Badge>{TASK_KIND[task.kind]}</Badge>
                 {task.retryCount > 0 && <span className="text-[12px] text-ink-500">재시도 {task.retryCount}회</span>}
               </div>
               <h1 className="mt-2 text-[22px] font-semibold tracking-tight">{task.title}</h1>
@@ -393,9 +394,15 @@ function VerificationRow({ v }: { v: Schemas["Verification"] }) {
         </span>
       </div>
       {/* detail은 단계마다 형식이 다르다. SKIPPED면 reason(문자열)이 반드시 있다 */}
-      {typeof v.detail.reason === "string" && (
-        <p className="mt-1 pl-26 text-[12.5px] text-ink-600">{v.detail.reason}</p>
-      )}
+      {typeof v.detail.reason === "string" &&
+        (v.result === "SKIPPED" ? (
+          <details className="mt-1 pl-26 text-[12.5px] text-ink-600">
+            <summary className="cursor-pointer text-ink-500">돌릴 조건이 갖춰지지 않아 건너뛰었습니다 · 자세히</summary>
+            <p className="mt-1 font-mono text-[12px]">{v.detail.reason}</p>
+          </details>
+        ) : (
+          <p className="mt-1 pl-26 text-[12.5px] text-ink-600">{v.detail.reason}</p>
+        ))}
     </li>
   );
 }

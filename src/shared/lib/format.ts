@@ -48,3 +48,11 @@ export function uid(prefix = "id") {
 export function cn(...parts: Array<string | false | null | undefined>) {
   return parts.filter(Boolean).join(" ");
 }
+
+/** 받침에 맞는 조사를 붙인다. josa("민수", "이/가") → "민수가". 한글로 끝나지 않으면 받침 없는 쪽을 쓴다 */
+export function josa(word: string, pair: "이/가" | "은/는" | "을/를" | "과/와") {
+  const code = word.charCodeAt(word.length - 1) - 0xac00;
+  const hasBatchim = code >= 0 && code <= 11171 && code % 28 !== 0;
+  const [withBatchim, without] = pair.split("/");
+  return word + (hasBatchim ? withBatchim : without);
+}

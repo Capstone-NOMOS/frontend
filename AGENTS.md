@@ -50,7 +50,7 @@ AI 에이전트 팀 협업 도구의 웹 프론트엔드. 백엔드는 별도 �
 - API 연결 규칙은 docs/architecture.md §10
 - 실시간 데이터에 `revalidate`·`use cache` 금지
 - `page.tsx`는 위젯을 부르는 얇은 셸로 유지
-- `lib/store.tsx`는 해체 예정이다. **새 기능을 여기 덧붙이지 말 것**
+- 목업 스토어(`lib/store`)는 지웠다 (`docs/adr/0017`). **API가 없는 화면 요소는 목업으로 채우지 말고 만들지 말 것**
 
 ## UI 규칙
 

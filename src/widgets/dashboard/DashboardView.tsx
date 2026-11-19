@@ -1,21 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
-import {
-  AlertTriangle,
-  ArrowRight,
-  CalendarDays,
-  FileText,
-  GitBranch,
-  Loader2,
-  MessageSquare,
-  Play,
-} from "lucide-react";
+import { useState } from "react";
+import { ArrowRight, CalendarDays, FileText, GitBranch, Loader2, MessageSquare, Play } from "lucide-react";
 import type { TeamRole } from "@/shared/model";
-import { AgentMark, Badge, Button, EmptyState, MockBadge, SectionTitle } from "@/shared/ui";
+import { AgentMark, Badge, Button, EmptyState, SectionTitle } from "@/shared/ui";
 import { errorMessage } from "@/shared/api";
-import { cn, fmtDateTime, fmtKrw, fmtTokens, relTime } from "@/shared/lib/format";
+import { cn, fmtDateTime, relTime } from "@/shared/lib/format";
 import { useQueryParam } from "@/shared/lib/useQueryParam";
 import { StatusDot, useOrgAgents } from "@/entities/agent";
 import { useProjectApprovals } from "@/entities/approval";
@@ -29,7 +20,6 @@ import { ROLE_ROOM, ROOM_META, useRooms } from "@/entities/room";
 import { useSpecs } from "@/entities/spec";
 import { ApiTaskBadge, BLOCKED_REASON, TASK_BOARD, TEAM_ROLE_META, TeamRoleBadge, useTasks } from "@/entities/task";
 import { useCurrentUser } from "@/entities/user";
-import { useProject as useMockProject } from "@/lib/store";
 
 const ROLE_FILTERS: { value: TeamRole | undefined; label: string }[] = [
   { value: undefined, label: "전체" },
@@ -63,29 +53,11 @@ export function DashboardView({ projectId }: { projectId: string }) {
   // 칸마다 BOARD_PREVIEW장까지만 보여 세로로 길어지지 않게 한다
   const [boardOpen, setBoardOpen] = useState(false);
 
-  // 아래는 API가 없어 목업 스토어를 읽는 영역. 실제 프로젝트 id는 목업에 없으므로 대개 비어 있다
-  const mock = useMockProject(projectId);
   const rooms = useRooms(projectId).data ?? [];
-  // 대표는 Room 3(PM), 팀원은 자기 역할 룸
   const myMember = members.find((m) => m.userId === me?.userId);
   const myTeamRole = myMember?.teamRole;
-  const myRoom = isRep
-    ? { href: `/p/${projectId}/rooms/owner`, name: ROOM_META.OWNER.name }
-    : myTeamRole && {
-        href: `/p/${projectId}/rooms/${ROLE_ROOM[myTeamRole].slug}`,
-        name: ROOM_META[ROLE_ROOM[myTeamRole].type].name,
-      };
 
   const level = LEVELS.find((l) => l.id === project.autonomyPreset);
-  const mockBudgetPct = mock.project
-    ? Math.min(100, Math.round((mock.project.pmSpentTokens / mock.project.pmBudgetTokens) * 100))
-    : null;
-  const costs = {
-    FE: mock.tasks.filter((t) => t.role === "FE").reduce((a, t) => a + t.costKrw, 0),
-    BE: mock.tasks.filter((t) => t.role === "BE").reduce((a, t) => a + t.costKrw, 0),
-    PM: mock.events.filter((e) => e.actor === "PM" && e.costKrw).reduce((a, e) => a + (e.costKrw ?? 0), 0),
-  };
-  const costMax = Math.max(1, costs.FE, costs.BE, costs.PM);
   const contractList = contracts.data ?? [];
   const docRows = [
     { href: "spec", label: "명세", count: specs.data?.length ?? 0, unit: "개" },
@@ -100,6 +72,8 @@ export function DashboardView({ projectId }: { projectId: string }) {
 
   const taskList = tasks.data ?? [];
   const boardList = teamRole ? taskList.filter((t) => t.teamRole === teamRole) : taskList;
+  // 제목 옆 "완료" 수는 칸반 완료 칸과 같은 기준으로 센다
+  const DONE_STATES = TASK_BOARD.find((c) => c.key === "done")!.states;
   const hiddenCount = TASK_BOARD.reduce(
     (n, col) => n + Math.max(0, boardList.filter((t) => col.states.includes(t.state)).length - BOARD_PREVIEW),
     0,
@@ -127,21 +101,14 @@ export function DashboardView({ projectId }: { projectId: string }) {
               <ProjectStatusBadge status={project.status} />
               {project.questionMode === "experiment" && <Badge tone="warn">실험 모드</Badge>}
             </div>
-            {project.deadline && (
-              <p className="mt-1 inline-flex items-center gap-1 text-[13px] text-ink-500">
-                <CalendarDays size={13} /> 마감 {project.deadline}
-              </p>
-            )}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {myRoom && (
-              <Button href={myRoom.href} size="md">
-                <MessageSquare size={15} /> {myRoom.name.split(" · ")[0]} 열기
-              </Button>
-            )}
-            <Button href={`/p/${projectId}/activity`} variant="outline">
-              <FileText size={15} /> 활동
-            </Button>
+            <p className="mt-1 inline-flex items-center gap-1 text-[13px] text-ink-500">
+              {project.deadline && (
+                <>
+                  <CalendarDays size={13} /> 마감 {project.deadline} ·{" "}
+                </>
+              )}
+              PM 예산 {fmtUsd(project.pmBudgetUsd)}
+            </p>
           </div>
         </div>
 
@@ -175,72 +142,6 @@ export function DashboardView({ projectId }: { projectId: string }) {
             </Button>
           </div>
         )}
-
-        {/* summary */}
-        <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <Tile label="PM 예산" value={fmtUsd(project.pmBudgetUsd)}>
-            <div className="mt-2 flex items-center gap-1.5 text-[11.5px] text-ink-500">
-              사용량 <MockBadge />
-            </div>
-            {mockBudgetPct !== null && mock.project ? (
-              <>
-                <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-ink-100">
-                  <div
-                    className={cn("h-full rounded-full", mockBudgetPct >= 80 ? "bg-human" : "bg-brand-500")}
-                    style={{ width: `${mockBudgetPct}%` }}
-                  />
-                </div>
-                <div className="mt-1.5 flex items-center justify-between text-[11.5px] text-ink-500">
-                  <span>
-                    {fmtTokens(mock.project.pmSpentTokens)} / {fmtTokens(mock.project.pmBudgetTokens)} 토큰
-                  </span>
-                  {mockBudgetPct >= 80 && (
-                    <span className="inline-flex items-center gap-1 text-human">
-                      <AlertTriangle size={11} /> 80% 경고
-                    </span>
-                  )}
-                </div>
-              </>
-            ) : (
-              <p className="mt-1 text-[11.5px] text-ink-400">사용량 API 연결 전</p>
-            )}
-          </Tile>
-          <Tile label="태스크" value={`${taskList.filter((t) => t.state === "DONE").length} / ${taskList.length} 완료`}>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {TASK_BOARD.map((c) => (
-                <span key={c.key} className="rounded-md bg-ink-100 px-1.5 py-0.5 text-[11px] font-medium text-ink-600">
-                  {c.label} {taskList.filter((t) => c.states.includes(t.state)).length}
-                </span>
-              ))}
-            </div>
-          </Tile>
-          <Tile
-            label={
-              <span className="flex items-center gap-1.5">
-                이번 기능 비용 <MockBadge />
-              </span>
-            }
-            value={fmtKrw(costs.FE + costs.BE + costs.PM)}
-          >
-            <ul className="mt-2 space-y-1">
-              {(["FE", "BE", "PM"] as const).map((k) => (
-                <li key={k} className="flex items-center gap-2 text-[11.5px]">
-                  <span className="w-6 font-medium text-ink-600">{k}</span>
-                  <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-ink-100">
-                    <span
-                      className={cn(
-                        "block h-full rounded-full",
-                        k === "FE" ? "bg-fe-500" : k === "BE" ? "bg-be-500" : "bg-pm-chart",
-                      )}
-                      style={{ width: `${(costs[k] / costMax) * 100}%` }}
-                    />
-                  </span>
-                  <span className="w-14 text-right tabular-nums text-ink-600">{fmtKrw(costs[k])}</span>
-                </li>
-              ))}
-            </ul>
-          </Tile>
-        </div>
 
         <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[300px_1fr]">
           {/* left column */}
@@ -359,7 +260,10 @@ export function DashboardView({ projectId }: { projectId: string }) {
                   </div>
                 }
               >
-                태스크
+                태스크{" "}
+                <span className="normal-case tracking-normal text-ink-400">
+                  · {taskList.filter((t) => DONE_STATES.includes(t.state)).length} / {taskList.length} 완료
+                </span>
               </SectionTitle>
               {tasks.isPending ? (
                 <div className="flex justify-center py-10 text-ink-400" aria-busy="true">
@@ -507,16 +411,6 @@ export function DashboardView({ projectId }: { projectId: string }) {
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-function Tile({ label, value, children }: { label: ReactNode; value: string; children?: ReactNode }) {
-  return (
-    <div className="card p-4">
-      <div className="text-[11.5px] font-medium uppercase tracking-wide text-ink-500">{label}</div>
-      <div className="mt-1 text-[17px] font-semibold tabular-nums tracking-tight">{value}</div>
-      {children}
     </div>
   );
 }

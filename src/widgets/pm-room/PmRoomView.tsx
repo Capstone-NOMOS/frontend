@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowUp, Loader2, Lock } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { errorMessage } from "@/shared/api";
-import { AgentMark, Badge, Button, CopyField, EmptyState } from "@/shared/ui";
+import { AgentMark, Badge, CopyField } from "@/shared/ui";
 import { cn, fmtDateTime } from "@/shared/lib/format";
 import { CLI_NPX } from "@/entities/agent";
 import {
@@ -20,7 +20,7 @@ import { ApprovalCard, useProjectApprovals } from "@/entities/approval";
 import { projectKeys, useProject } from "@/entities/project";
 import { QuestionCard, questionTaskHref, useProjectQuestions } from "@/entities/question";
 import { contractKeys } from "@/entities/contract";
-import { ROOM_META, RoomParticipants } from "@/entities/room";
+import { ROOM_META, RoomForbidden, RoomParticipants } from "@/entities/room";
 import { specKeys } from "@/entities/spec";
 import { taskKeys, useTasks } from "@/entities/task";
 import { displayName, useCurrentUser } from "@/entities/user";
@@ -37,21 +37,7 @@ export function PmRoomView({ projectId }: { projectId: string }) {
   const me = useCurrentUser().me!;
   const isRep = me.orgRole === "REPRESENTATIVE";
 
-  if (!isRep) {
-    return (
-      <div className="flex h-full items-center justify-center p-6">
-        <EmptyState
-          title="403 · 이 룸에 접근할 수 없습니다"
-          desc={`${ROOM_META.OWNER.name}는 ${ROOM_META.OWNER.who}의 공간입니다. FE·BE는 자기 룸만 볼 수 있습니다.`}
-          action={
-            <Button href={`/p/${projectId}`} variant="outline">
-              대시보드로
-            </Button>
-          }
-        />
-      </div>
-    );
-  }
+  if (!isRep) return <RoomForbidden projectId={projectId} type="OWNER" />;
   return <Room projectId={projectId} meName={displayName(me)} />;
 }
 

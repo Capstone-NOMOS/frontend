@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Check, X } from "lucide-react";
 import { errorMessage, type Schemas } from "@/shared/api";
 import { Badge, Button, Textarea } from "@/shared/ui";
-import { fmtDateTime, relTime } from "@/shared/lib/format";
+import { fmtDateTime, josa, relTime } from "@/shared/lib/format";
 import { useDecideApproval } from "../api/approvalApi";
 
 type Approval = Schemas["Approval"];
@@ -175,7 +175,7 @@ export function ApprovalCard({
         <p className="mt-2 text-[12.5px] text-ink-700">
           {rr.decidedByRepresentative
             ? "대표가 담당 검토를 대신해 1차 승인"
-            : `담당 ${rr.nickname ?? "팀원"}이 1차 승인`}
+            : `담당 ${josa(rr.nickname ?? "팀원", "이/가")} 1차 승인`}
           <span className="text-ink-500"> · {fmtDateTime(rr.at)}</span>
           {rr.note && <span className="block text-ink-500">메모: {rr.note}</span>}
         </p>
