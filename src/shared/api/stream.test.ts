@@ -352,3 +352,19 @@ describe("livePoll — 대비용 폴링 주기", () => {
     expect(interval()).toBe(5_000);
   });
 });
+
+describe("liveStaleTime — 신호 연결 중에는 다시 읽지 않는다", () => {
+  it("신호를 받는 동안은 30초, 끊겨 있으면 0", async () => {
+    const stream = await load();
+    expect(stream.liveStaleTime()).toBe(0);
+
+    stream.acquire("token-a");
+    last().serverOpen();
+    expect(stream.liveStaleTime()).toBe(0); // 열렸지만 아직 인증 전
+    last().serverSend({ type: "ready" });
+    expect(stream.liveStaleTime()).toBe(30_000);
+
+    last().serverClose(1006);
+    expect(stream.liveStaleTime()).toBe(0);
+  });
+});

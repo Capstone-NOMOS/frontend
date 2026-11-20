@@ -53,7 +53,8 @@
 1. **데이터 조회는 반드시 쿼리 훅으로 감싼다.** 컴포넌트에서 `fetch`를 직접 부르지 않는다.
    나중에 실시간 채널이 붙으면 훅 내부만 바꾸면 되도록 하기 위해서다
 2. **폴링 주기는 화면별로 정한다.** 실시간 데이터는 `livePoll(4000~5000)`(연결 중 30초), 문서·설정은 폴링하지 않음
-3. **탭이 숨겨지면 멈춘다.** 돌아왔을 때 즉시 한 번 갱신한다 (`refetchIntervalInBackground: false`, `refetchOnWindowFocus: true`)
+3. **탭이 숨겨지면 멈춘다.** 돌아왔을 때 낡은 쿼리만 갱신한다 (`refetchIntervalInBackground: false`, `refetchOnWindowFocus: true`).
+   신호 연결 중에는 30초 동안 낡지 않은 것으로 본다 — 화면 이동·탭 복귀로 다시 읽지 않는다 (`staleTime: liveStaleTime`, adr/0020)
 4. **증분 조회가 가능한 곳은 증분으로.** 노트는 `since_seq`로 이후 분만 받아 이어 붙인다
 5. **에이전트 오프라인 판정은 서버 신호로.** 프론트 타이머로 추정하지 않는다. `GET /orgs/{orgId}/agents`의 `online`과 `agents` 신호를 쓴다
 
