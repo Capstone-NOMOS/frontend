@@ -1,17 +1,17 @@
 {
   "name": "prod-2000-baseline-running",
-  "at": "2026-11-20T09:25:39.455Z",
+  "at": "2026-11-20T09:49:59.290Z",
   "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
   "url": "http://localhost:3001/p/perf-project/rooms/frontend",
   "summary": {
     "tick": {
-      "median": 570.7999997138977,
-      "max": 626.6999988555908,
+      "median": 619.7000036239624,
+      "max": 692.2000017166138,
       "all": [
-        570.7999997138977,
-        626.6999988555908,
-        566.000002861023,
-        566.8000001907349,
+        664.5000004768372,
+        596.8000016212463,
+        692.2000017166138,
+        612.5000042915344,
         619.7000036239624
       ]
     }
@@ -19,16 +19,16 @@
   "scenarios": {
     "tick": [
       {
-        "ms": 570.7999997138977,
+        "ms": 664.5000004768372,
         "lines": 1978,
         "commits": [
           {
             "id": "room",
             "phase": "update",
-            "actualDuration": 570.7999997138977,
-            "baseDuration": 560.2000012397766,
-            "startTime": 52791.59999990463,
-            "commitTime": 53383.40000009537
+            "actualDuration": 664.5000004768372,
+            "baseDuration": 653.5,
+            "startTime": 209048.59999990463,
+            "commitTime": 209735.69999980927
           }
         ],
         "rendered": {
@@ -135,44 +135,44 @@
         }
       },
       {
-        "ms": 626.6999988555908,
+        "ms": 596.8000016212463,
         "lines": 1978,
         "commits": [
           {
             "id": "room",
             "phase": "update",
-            "actualDuration": 626.6999988555908,
-            "baseDuration": 616.6999969482422,
-            "startTime": 53676.300000190735,
-            "commitTime": 54323.5
+            "actualDuration": 596.8000016212463,
+            "baseDuration": 585.5000019073486,
+            "startTime": 210056.90000009537,
+            "commitTime": 210673.7999997139
           }
         ]
       },
       {
-        "ms": 566.000002861023,
+        "ms": 692.2000017166138,
         "lines": 1978,
         "commits": [
           {
             "id": "room",
             "phase": "update",
-            "actualDuration": 566.000002861023,
-            "baseDuration": 552.3000025749207,
-            "startTime": 54674.5,
-            "commitTime": 55260.90000009537
+            "actualDuration": 692.2000017166138,
+            "baseDuration": 677.600001335144,
+            "startTime": 211057.59999990463,
+            "commitTime": 211770.40000009537
           }
         ]
       },
       {
-        "ms": 566.8000001907349,
+        "ms": 612.5000042915344,
         "lines": 1978,
         "commits": [
           {
             "id": "room",
             "phase": "update",
-            "actualDuration": 566.8000001907349,
-            "baseDuration": 556.6999983787537,
-            "startTime": 55674.09999990463,
-            "commitTime": 56259
+            "actualDuration": 612.5000042915344,
+            "baseDuration": 600.5000081062317,
+            "startTime": 212051.2999997139,
+            "commitTime": 212686
           }
         ]
       },
@@ -184,9 +184,9 @@
             "id": "room",
             "phase": "update",
             "actualDuration": 619.7000036239624,
-            "baseDuration": 607.4000039100647,
-            "startTime": 56673.2000002861,
-            "commitTime": 57315.59999990463
+            "baseDuration": 608.8000001907349,
+            "startTime": 213062.2999997139,
+            "commitTime": 213713
           }
         ]
       }
