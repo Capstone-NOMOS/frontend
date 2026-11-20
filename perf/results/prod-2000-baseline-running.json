@@ -1,0 +1,195 @@
+{
+  "name": "prod-2000-baseline-running",
+  "at": "2026-11-20T09:25:39.455Z",
+  "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+  "url": "http://localhost:3001/p/perf-project/rooms/frontend",
+  "summary": {
+    "tick": {
+      "median": 570.7999997138977,
+      "max": 626.6999988555908,
+      "all": [
+        570.7999997138977,
+        626.6999988555908,
+        566.000002861023,
+        566.8000001907349,
+        619.7000036239624
+      ]
+    }
+  },
+  "scenarios": {
+    "tick": [
+      {
+        "ms": 570.7999997138977,
+        "lines": 1978,
+        "commits": [
+          {
+            "id": "room",
+            "phase": "update",
+            "actualDuration": 570.7999997138977,
+            "baseDuration": 560.2000012397766,
+            "startTime": 52791.59999990463,
+            "commitTime": 53383.40000009537
+          }
+        ],
+        "rendered": {
+          "(이름 없음)": {
+            "count": 1179,
+            "why": {
+              "state": 1,
+              "props(people)": 1,
+              "parent": 1101,
+              "props(onChange)": 38,
+              "props(onClick)": 38
+            }
+          },
+          "k": {
+            "count": 839,
+            "why": {
+              "parent": 839
+            }
+          },
+          "v": {
+            "count": 65,
+            "why": {
+              "parent": 65
+            }
+          },
+          "H": {
+            "count": 1977,
+            "why": {
+              "props(children)": 1977
+            }
+          },
+          "V": {
+            "count": 1862,
+            "why": {
+              "parent": 1862
+            }
+          },
+          "G": {
+            "count": 1001,
+            "why": {
+              "parent": 1001
+            }
+          },
+          "Terminal": {
+            "count": 127,
+            "why": {
+              "parent": 127
+            }
+          },
+          "FileText": {
+            "count": 253,
+            "why": {
+              "parent": 253
+            }
+          },
+          "FilePlus": {
+            "count": 128,
+            "why": {
+              "parent": 128
+            }
+          },
+          "Search": {
+            "count": 144,
+            "why": {
+              "parent": 144
+            }
+          },
+          "Wrench": {
+            "count": 123,
+            "why": {
+              "parent": 123
+            }
+          },
+          "Pencil": {
+            "count": 226,
+            "why": {
+              "parent": 226
+            }
+          },
+          "x": {
+            "count": 241,
+            "why": {
+              "parent": 241
+            }
+          },
+          "ArrowRight": {
+            "count": 50,
+            "why": {
+              "parent": 50
+            }
+          },
+          "g": {
+            "count": 50,
+            "why": {
+              "parent": 50
+            }
+          },
+          "F": {
+            "count": 64,
+            "why": {
+              "parent": 64
+            }
+          }
+        }
+      },
+      {
+        "ms": 626.6999988555908,
+        "lines": 1978,
+        "commits": [
+          {
+            "id": "room",
+            "phase": "update",
+            "actualDuration": 626.6999988555908,
+            "baseDuration": 616.6999969482422,
+            "startTime": 53676.300000190735,
+            "commitTime": 54323.5
+          }
+        ]
+      },
+      {
+        "ms": 566.000002861023,
+        "lines": 1978,
+        "commits": [
+          {
+            "id": "room",
+            "phase": "update",
+            "actualDuration": 566.000002861023,
+            "baseDuration": 552.3000025749207,
+            "startTime": 54674.5,
+            "commitTime": 55260.90000009537
+          }
+        ]
+      },
+      {
+        "ms": 566.8000001907349,
+        "lines": 1978,
+        "commits": [
+          {
+            "id": "room",
+            "phase": "update",
+            "actualDuration": 566.8000001907349,
+            "baseDuration": 556.6999983787537,
+            "startTime": 55674.09999990463,
+            "commitTime": 56259
+          }
+        ]
+      },
+      {
+        "ms": 619.7000036239624,
+        "lines": 1978,
+        "commits": [
+          {
+            "id": "room",
+            "phase": "update",
+            "actualDuration": 619.7000036239624,
+            "baseDuration": 607.4000039100647,
+            "startTime": 56673.2000002861,
+            "commitTime": 57315.59999990463
+          }
+        ]
+      }
+    ]
+  }
+}

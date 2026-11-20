@@ -12,6 +12,7 @@ import {
 import { cn } from "@/shared/lib/format";
 
 export { Markdown } from "./Markdown";
+export { PerfProfiler } from "./PerfProfiler";
 export { ConfirmButton, RemovalError, RevocationNotice } from "./RemovalFeedback";
 
 // ---------- Button ----------
