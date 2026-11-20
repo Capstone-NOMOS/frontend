@@ -94,7 +94,7 @@ export function RoleRoomView({ projectId, role }: { projectId: string; role: Tea
   // 에이전트가 없거나 오프라인이어도 서버가 받아 두었다가 다음 실행에 전달한다
   const canSend = owner?.userId === me.userId;
   const send = useSendRoomMessage(projectId, role);
-  const thinkingSec = useThinking(messages);
+  const thinkingSince = runningSince(messages);
   const newestId = feed.data?.[0]?.id;
   const scrollRef = useRef<HTMLDivElement>(null);
   // 새 줄이 오면 맨 아래로. 이전 줄을 더 불러올 때는 newestId가 그대로라 움직이지 않는다
@@ -233,20 +233,8 @@ export function RoleRoomView({ projectId, role }: { projectId: string; role: Tea
                       </Fragment>
                     );
                   })}
-                  {thinkingSec !== null && !noAgent && (
-                    <LeftRow head who={agentName} tone={roleMeta.tone}>
-                      <span
-                        className="inline-flex items-center gap-2 rounded-2xl rounded-tl-md bg-ink-100 px-3 py-1.5 text-[13px] text-ink-500"
-                        aria-live="polite"
-                      >
-                        <span className="inline-flex gap-1" aria-hidden>
-                          <span className="h-1.5 w-1.5 rounded-full bg-ink-400 pulse-dot" />
-                          <span className="h-1.5 w-1.5 rounded-full bg-ink-400 pulse-dot [animation-delay:150ms]" />
-                          <span className="h-1.5 w-1.5 rounded-full bg-ink-400 pulse-dot [animation-delay:300ms]" />
-                        </span>
-                        생각 중 · <span className="tabular-nums">{fmtElapsed(thinkingSec)}</span>
-                      </span>
-                    </LeftRow>
+                  {thinkingSince !== null && !noAgent && (
+                    <ThinkingRow since={thinkingSince} who={agentName} tone={roleMeta.tone} />
                   )}
                 </ol>
               )}
@@ -477,26 +465,42 @@ function ToolBlock({ activity: a }: { activity: Activity }) {
 
 const IDLE_MS = 6000;
 
-/**
- * 실행 중(AGENT_RUN_STARTED 뒤 ENDED 없음)인 태스크가 있고 몇 초간 새 줄이 없으면 마지막 줄 뒤로 지난 초, 아니면 null.
- * 서버 데이터는 없다 — 화면이 매초 센다
- */
-function useThinking(messages: RoomMessage[]): number | null {
+/** 실행 중(AGENT_RUN_STARTED 뒤 ENDED 없음)인 태스크가 있으면 마지막 줄의 시각, 아니면 null */
+function runningSince(messages: RoomMessage[]): string | null {
   const running = new Set<string>();
   for (const m of messages) {
     if (!m.taskId) continue;
     if (m.type === "AGENT_RUN_STARTED") running.add(m.taskId);
     else if (m.type === "AGENT_RUN_ENDED") running.delete(m.taskId);
   }
-  const last = messages.at(-1)?.ts;
-  const active = running.size > 0;
+  return running.size > 0 ? (messages.at(-1)?.ts ?? null) : null;
+}
+
+/**
+ * "생각 중" 줄. 마지막 줄 뒤 몇 초간 새 줄이 없으면 지난 초를 보인다. 서버 데이터는 없다 — 화면이 매초 센다.
+ * 타이머 상태를 이 컴포넌트에 둔다 — 룸 전체에 두면 피드의 모든 줄이 매초 다시 그려진다 (docs/perf-room-feed.md)
+ */
+function ThinkingRow({ since, who, tone }: { since: string; who: string; tone: "fe" | "be" | "pm" }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    if (!active) return;
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
-  }, [active]);
-  if (!active || last === undefined) return null;
-  const idle = now - new Date(last).getTime();
-  return idle > IDLE_MS ? Math.floor(idle / 1000) : null;
+  }, []);
+  const idle = now - new Date(since).getTime();
+  if (idle <= IDLE_MS) return null;
+  return (
+    <LeftRow head who={who} tone={tone}>
+      <span
+        className="inline-flex items-center gap-2 rounded-2xl rounded-tl-md bg-ink-100 px-3 py-1.5 text-[13px] text-ink-500"
+        aria-live="polite"
+      >
+        <span className="inline-flex gap-1" aria-hidden>
+          <span className="h-1.5 w-1.5 rounded-full bg-ink-400 pulse-dot" />
+          <span className="h-1.5 w-1.5 rounded-full bg-ink-400 pulse-dot [animation-delay:150ms]" />
+          <span className="h-1.5 w-1.5 rounded-full bg-ink-400 pulse-dot [animation-delay:300ms]" />
+        </span>
+        생각 중 · <span className="tabular-nums">{fmtElapsed(Math.floor(idle / 1000))}</span>
+      </span>
+    </LeftRow>
+  );
 }

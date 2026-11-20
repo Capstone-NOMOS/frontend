@@ -1,4 +1,5 @@
 // 룸 피드 측정 스크립트 (docs/perf-room-feed.md). 룸 화면(/p/perf-project/rooms/frontend)의 브라우저 콘솔에 붙여 넣는다.
+//   await perfRoom.all("dev", "baseline")       아래 둘을 500줄 · 2,000줄에 대해 차례로 돌린다
 //   await perfRoom.idle("dev-500-baseline")     처음 그리기 5회 + 새 줄 1개 5회   (목 서버: reset?n=500&running=0)
 //   await perfRoom.running("dev-500-baseline")  "생각 중" 타이머 5틱              (목 서버: reset?n=500&running=1)
 // 결과는 목 서버가 perf/results/<이름>.json으로 저장한다. NEXT_PUBLIC_PERF=1로 띄운 화면에서만 동작한다 (PerfProfiler)
@@ -155,6 +156,9 @@
     return JSON.stringify({ name, lines: lines(), ...body.summary });
   }
 
+  const thinking = () => !!document.querySelector(FEED)?.lastElementChild?.textContent.includes("생각 중");
+  const reset = (n, running) => fetch(`${MOCK}/__perf/reset?n=${n}&running=${running}`, { method: "POST" });
+
   window.perfRoom = {
     loadAll,
     rendered,
@@ -167,6 +171,19 @@
       const newLine = [];
       for (let i = 0; i < RUNS; i++) newLine.push(await newLineOnce(i === 0));
       return save(`${name}-idle`, { mount, newLine });
+    },
+    /** 500줄 → 2,000줄, 각각 idle · running을 차례로 잰다. 예: await perfRoom.all("prod", "baseline") */
+    async all(mode, label) {
+      const out = [];
+      for (const n of [500, 2000]) {
+        await reset(n, 0);
+        await until(() => !thinking());
+        out.push(await this.idle(`${mode}-${n}-${label}`));
+        await reset(n, 1);
+        await until(thinking);
+        out.push(await this.running(`${mode}-${n}-${label}`));
+      }
+      return out.join("\n");
     },
     async running(name) {
       await loadAll();

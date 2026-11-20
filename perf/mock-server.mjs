@@ -1,6 +1,6 @@
 // 룸 피드 성능 측정용 목 서버 (docs/perf-room-feed.md). 의존성 없이 node:http만 쓴다. 제품 코드가 아니다.
 //   node perf/mock-server.mjs            → http://localhost:3900/api
-//   POST /__perf/reset?n=500&running=0   더미 피드를 다시 만든다 (running=1이면 끝나지 않은 실행이 있다 → "생각 중")
+//   POST /__perf/reset?n=500&running=0   더미 피드를 다시 만들고 resync 신호를 보낸다 (running=1이면 끝나지 않은 실행이 있다 → "생각 중")
 //   POST /__perf/push                    에이전트 말 한 줄을 더하고 room 신호를 보낸다
 // 더미는 전부 지어낸 값이다. 실제 팀 데이터·개인정보를 넣지 않는다.
 import { createHash } from "node:crypto";
@@ -365,6 +365,8 @@ const server = createServer((req, res) => {
   if (req.method === "OPTIONS") return void res.writeHead(204, CORS).end();
   if (url.pathname === "/__perf/reset") {
     reset(Number(url.searchParams.get("n") ?? 500), url.searchParams.get("running") === "1");
+    // 열려 있는 화면이 새 더미를 다시 읽게 한다
+    broadcast({ type: "resync" });
     return json(200, mixOf());
   }
   if (url.pathname === "/__perf/collect.js") {
