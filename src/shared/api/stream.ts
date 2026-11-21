@@ -118,7 +118,7 @@ if (typeof window !== "undefined") {
 }
 
 /** 로그인·조직이 있는 동안 연결을 유지한다. 돌려준 함수로 해제한다 (마지막 해제 뒤 잠시 기다렸다 닫는다) */
-function acquire(nextToken: string) {
+export function acquire(nextToken: string) {
   users++;
   if (closeTimer) clearTimeout(closeTimer);
   closeTimer = null;
@@ -146,24 +146,30 @@ export function useStreamConnection(accessToken: string | null) {
 
 /** 프로젝트 화면에 있는 동안 그 프로젝트의 신호를 받는다. 조직 신호는 구독 없이 온다 */
 export function useProjectStream(projectId: string) {
-  useEffect(() => {
-    const n = subscriptions.get(projectId) ?? 0;
-    subscriptions.set(projectId, n + 1);
-    if (n === 0) send({ type: "subscribe", projectId });
-    return () => {
-      const left = (subscriptions.get(projectId) ?? 1) - 1;
-      if (left > 0) return void subscriptions.set(projectId, left);
-      subscriptions.delete(projectId);
-      send({ type: "unsubscribe", projectId });
-    };
-  }, [projectId]);
+  useEffect(() => subscribeProject(projectId), [projectId]);
+}
+
+/** 같은 프로젝트를 여러 화면이 구독해도 서버에는 한 번만 알린다. 돌려준 함수로 해제한다 */
+export function subscribeProject(projectId: string) {
+  const n = subscriptions.get(projectId) ?? 0;
+  subscriptions.set(projectId, n + 1);
+  if (n === 0) send({ type: "subscribe", projectId });
+  return () => {
+    const left = (subscriptions.get(projectId) ?? 1) - 1;
+    if (left > 0) return void subscriptions.set(projectId, left);
+    subscriptions.delete(projectId);
+    send({ type: "unsubscribe", projectId });
+  };
 }
 
 export function useStreamSignal(listener: (s: StreamSignal) => void) {
-  useEffect(() => {
-    signalListeners.add(listener);
-    return () => void signalListeners.delete(listener);
-  }, [listener]);
+  useEffect(() => onStreamSignal(listener), [listener]);
+}
+
+/** 신호를 받는다. 돌려준 함수로 해제한다 */
+export function onStreamSignal(listener: (s: StreamSignal) => void) {
+  signalListeners.add(listener);
+  return () => void signalListeners.delete(listener);
 }
 
 export function useStreamConnected() {

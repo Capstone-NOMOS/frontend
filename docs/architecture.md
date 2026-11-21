@@ -88,11 +88,10 @@
 | 프레임워크 | Next.js 16 App Router (→ [adr/0001](./adr/0001-next-16-유지.md)) | 설치됨 · 적용됨 |
 | 아이콘 | lucide-react | 설치됨 · 적용됨 |
 | 서버 상태 | `@tanstack/react-query` | 설치됨 · 적용됨 (`app/providers.tsx`) |
-| UI 상태 | zustand | 설치됨 · 미적용 |
 | 로그 뷰어 | `@tanstack/react-virtual` + 배치 flush | 설치됨 · 미적용 |
-| 마크다운 | react-markdown + remark-gfm + rehype-sanitize | 설치됨 · 미적용 (현재는 `components/docs/Markdown.tsx` 자체 파서) |
+| 마크다운 | 자체 파서 | 라이브러리 미설치 (adr/0019) |
 | API 타입 | openapi-typescript (계약에서 생성). BE가 TS지만 소스를 직접 import하지 않는다 | 설치됨 · 적용됨 (`pnpm gen:api` → `shared/api/schema.d.ts`) |
-| 목업 | MSW | 설치됨 · 미적용 |
+| 테스트 | Vitest (node 환경, `src/**/*.test.ts`) | 설치됨 · 적용됨 (`pnpm test`, adr/0019) |
 | 실시간 | 브라우저 `WebSocket` 직접 사용 (`shared/api/stream.ts`) + 대비용 `refetchInterval` (adr/0009) | 라이브러리 **설치 금지** |
 | UI 부품 | 자체 구현 유지. 모달·팝오버가 필요한 시점에 Radix만 부분 도입 | 미설치 (그 시점에 질문) |
 
