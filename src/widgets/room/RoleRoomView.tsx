@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
+import { memo, useEffect, useRef, useState, type ReactNode } from "react";
 import { FilePlus, FileText, Loader2, Pencil, Search, Terminal, Wrench, type LucideIcon } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ApiError, errorMessage, type Schemas } from "@/shared/api";
@@ -26,6 +26,7 @@ import {
 import { TEAM_ROLE_META, taskKeys, useTasks } from "@/entities/task";
 import { useCurrentUser } from "@/entities/user";
 import { Composer } from "./Composer";
+import { belongsTo, toRows } from "./feedRows";
 
 type RoomMessage = Schemas["RoomMessage"];
 type Question = Schemas["AgentQuestion"];
@@ -93,7 +94,7 @@ export function RoleRoomView({ projectId, role }: { projectId: string; role: Tea
   // 에이전트가 없거나 오프라인이어도 서버가 받아 두었다가 다음 실행에 전달한다
   const canSend = owner?.userId === me.userId;
   const send = useSendRoomMessage(projectId, role);
-  const thinkingSec = useThinking(messages);
+  const thinkingSince = runningSince(messages);
   const newestId = feed.data?.[0]?.id;
   const scrollRef = useRef<HTMLDivElement>(null);
   // 새 줄이 오면 맨 아래로. 이전 줄을 더 불러올 때는 newestId가 그대로라 움직이지 않는다
@@ -173,79 +174,44 @@ export function RoleRoomView({ projectId, role }: { projectId: string; role: Tea
                   {rows.map(({ message: m, question: q, folded }, i) => {
                     const prev = rows[i - 1];
                     const newDay = !prev || !sameDay(prev.message.ts, m.ts);
-                    // 같은 화자가 이어 말하면 마크·이름을 한 번만 그린다. 질문 카드 앞뒤에서는 다시 그린다
-                    const head =
-                      newDay ||
-                      !!q ||
-                      !!prev.question ||
-                      prev.message.speaker !== m.speaker ||
-                      prev.message.userId !== m.userId;
-                    const who = m.speaker === "agent" ? agentName : m.speaker === "pm" ? "PM" : "NOMOS";
-                    const human = q ? humanAnswer(q) : null;
                     return (
-                      <Fragment key={m.id}>
-                        {newDay && (
-                          <li className="py-2 text-center text-[11.5px] text-ink-400" aria-label="날짜">
-                            {fmtDate(m.ts)}
-                          </li>
-                        )}
-                        {m.speaker === "human" ? (
-                          <HumanRow
-                            mine={m.userId === me.userId}
-                            head={head}
-                            who={m.userId ? nameOf(m.userId) : "사람"}
-                            ts={m.ts}
-                          >
-                            {m.text}
-                          </HumanRow>
-                        ) : (
-                          <LeftRow head={head} who={who} tone={m.speaker === "agent" ? roleMeta.tone : "pm"} ts={m.ts}>
-                            {q ? (
-                              <>
-                                <QuestionCard
-                                  question={q}
-                                  canAnswer={canAnswer(q)}
-                                  canLabel={isRep}
-                                  taskHref={questionTaskHref(projectId, q)}
-                                  taskTitle={m.taskTitle ?? undefined}
-                                />
-                                {/* 같은 질문의 뒤 줄(답함·내려놓음 등)은 카드 아래로 접는다 */}
-                                <ul className="mt-1 space-y-0.5 pl-1">
-                                  {[m, ...folded].map((f) => (
-                                    <li key={f.id} className="text-[12px] text-ink-500">
-                                      <span className="font-mono tabular-nums text-ink-400">{fmtTime(f.ts)}</span>{" "}
-                                      {f.text}
-                                    </li>
-                                  ))}
-                                </ul>
-                              </>
-                            ) : (
-                              <FeedBody message={m} />
-                            )}
-                          </LeftRow>
-                        )}
-                        {q && human !== null && q.answeredBy && (
-                          <HumanRow mine={q.answeredBy === me.userId} head who={nameOf(q.answeredBy)} ts={q.answeredAt}>
-                            {human}
-                          </HumanRow>
-                        )}
-                      </Fragment>
+                      <FeedRow
+                        key={m.id}
+                        message={m}
+                        question={q}
+                        folded={folded}
+                        newDay={newDay}
+                        // 같은 화자가 이어 말하면 마크·이름을 한 번만 그린다. 질문 카드 앞뒤에서는 다시 그린다
+                        head={
+                          newDay ||
+                          !!q ||
+                          !!prev.question ||
+                          prev.message.speaker !== m.speaker ||
+                          prev.message.userId !== m.userId
+                        }
+                        who={
+                          m.speaker === "human"
+                            ? m.userId
+                              ? nameOf(m.userId)
+                              : "사람"
+                            : m.speaker === "agent"
+                              ? agentName
+                              : m.speaker === "pm"
+                                ? "PM"
+                                : "NOMOS"
+                        }
+                        mine={m.userId === me.userId}
+                        tone={m.speaker === "agent" ? roleMeta.tone : "pm"}
+                        canAnswer={q ? canAnswer(q) : false}
+                        canLabel={isRep}
+                        projectId={projectId}
+                        answerer={q?.answeredBy ? nameOf(q.answeredBy) : null}
+                        answeredByMe={q?.answeredBy === me.userId}
+                      />
                     );
                   })}
-                  {thinkingSec !== null && !noAgent && (
-                    <LeftRow head who={agentName} tone={roleMeta.tone}>
-                      <span
-                        className="inline-flex items-center gap-2 rounded-2xl rounded-tl-md bg-ink-100 px-3 py-1.5 text-[13px] text-ink-500"
-                        aria-live="polite"
-                      >
-                        <span className="inline-flex gap-1" aria-hidden>
-                          <span className="h-1.5 w-1.5 rounded-full bg-ink-400 pulse-dot" />
-                          <span className="h-1.5 w-1.5 rounded-full bg-ink-400 pulse-dot [animation-delay:150ms]" />
-                          <span className="h-1.5 w-1.5 rounded-full bg-ink-400 pulse-dot [animation-delay:300ms]" />
-                        </span>
-                        생각 중 · <span className="tabular-nums">{fmtElapsed(thinkingSec)}</span>
-                      </span>
-                    </LeftRow>
+                  {thinkingSince !== null && !noAgent && (
+                    <ThinkingRow since={thinkingSince} who={agentName} tone={roleMeta.tone} />
                   )}
                 </ol>
               )}
@@ -325,6 +291,98 @@ export function RoleRoomView({ projectId, role }: { projectId: string; role: Tea
     </div>
   );
 }
+
+interface FeedRowProps {
+  message: RoomMessage;
+  question?: Question;
+  /** 같은 질문의 뒤 줄 — 카드 아래로 접는다 */
+  folded: RoomMessage[];
+  newDay: boolean;
+  head: boolean;
+  /** 이 줄의 화자 이름 (에이전트 · PM · NOMOS · 사람) */
+  who: string;
+  /** 사람 줄이 내가 쓴 것인가 */
+  mine: boolean;
+  tone: "fe" | "be" | "pm";
+  canAnswer: boolean;
+  canLabel: boolean;
+  projectId: string;
+  /** 질문에 답한 사람의 이름 */
+  answerer: string | null;
+  answeredByMe: boolean;
+}
+
+/** folded는 줄 계산(toRows) 때마다 새 배열이라 안의 줄로 비교한다. 나머지는 값·참조 그대로 */
+function sameRow(a: FeedRowProps, b: FeedRowProps) {
+  return (Object.keys(b) as (keyof FeedRowProps)[]).every((k) =>
+    k === "folded" ? a.folded.length === b.folded.length && a.folded.every((m, i) => m === b.folded[i]) : a[k] === b[k],
+  );
+}
+
+/**
+ * 피드 한 줄(날짜 구분 · 말풍선/도구/카드 · 사람의 답). 바뀌지 않은 줄은 다시 그리지 않는다 —
+ * 새 줄 하나가 올 때마다 피드 전체를 다시 그리지 않게 (docs/perf-room-feed.md)
+ */
+const FeedRow = memo(function FeedRow({
+  message: m,
+  question: q,
+  folded,
+  newDay,
+  head,
+  who,
+  mine,
+  tone,
+  canAnswer,
+  canLabel,
+  projectId,
+  answerer,
+  answeredByMe,
+}: FeedRowProps) {
+  const human = q ? humanAnswer(q) : null;
+  return (
+    <>
+      {newDay && (
+        <li className="py-2 text-center text-[11.5px] text-ink-400" aria-label="날짜">
+          {fmtDate(m.ts)}
+        </li>
+      )}
+      {m.speaker === "human" ? (
+        <HumanRow mine={mine} head={head} who={who} ts={m.ts}>
+          {m.text}
+        </HumanRow>
+      ) : (
+        <LeftRow head={head} who={who} tone={tone} ts={m.ts}>
+          {q ? (
+            <>
+              <QuestionCard
+                question={q}
+                canAnswer={canAnswer}
+                canLabel={canLabel}
+                taskHref={questionTaskHref(projectId, q)}
+                taskTitle={m.taskTitle ?? undefined}
+              />
+              {/* 같은 질문의 뒤 줄(답함·내려놓음 등)은 카드 아래로 접는다 */}
+              <ul className="mt-1 space-y-0.5 pl-1">
+                {[m, ...folded].map((f) => (
+                  <li key={f.id} className="text-[12px] text-ink-500">
+                    <span className="font-mono tabular-nums text-ink-400">{fmtTime(f.ts)}</span> {f.text}
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <FeedBody message={m} />
+          )}
+        </LeftRow>
+      )}
+      {q && human !== null && answerer !== null && (
+        <HumanRow mine={answeredByMe} head who={answerer} ts={q.answeredAt}>
+          {human}
+        </HumanRow>
+      )}
+    </>
+  );
+}, sameRow);
 
 /** 사람 메시지. 내가 쓴 것만 오른쪽, 다른 사람(담당·대표)은 왼쪽에 이름과 함께 */
 function HumanRow({
@@ -474,64 +532,44 @@ function ToolBlock({ activity: a }: { activity: Activity }) {
   );
 }
 
-/**
- * 이 역할 룸에 보일 줄인가. 질문은 묻는 쪽·답하는 쪽 룸에만(PM→PM 질문은 대표 룸에만), 태스크 줄은 그 태스크 역할 룸에만.
- * 아직 못 읽은 질문·태스크의 줄은 판단할 수 없어 남긴다
- */
-function belongsTo(role: TeamRole, questions: Question[], tasks: Schemas["Task"][]) {
-  const qs = new Map(questions.map((q) => [q.id, q]));
-  const taskRoles = new Map(tasks.map((t) => [t.id, t.teamRole]));
-  return (m: RoomMessage) => {
-    const q = m.questionId ? qs.get(m.questionId) : undefined;
-    if (q) return q.askerRole === role || q.targetRole === role;
-    const r = m.taskId ? taskRoles.get(m.taskId) : undefined;
-    return !r || r === role;
-  };
-}
-
-type Row = { message: RoomMessage; question?: Question; folded: RoomMessage[] };
-
-/** 같은 questionId 줄은 처음 줄 자리의 카드 하나로 묶는다. 질문 내용을 아직 못 읽었으면 그냥 줄로 둔다 */
-function toRows(messages: RoomMessage[], questions: Question[]): Row[] {
-  const byId = new Map(questions.map((q) => [q.id, q]));
-  const cards = new Map<string, Row>();
-  const rows: Row[] = [];
-  for (const m of messages) {
-    const q = m.questionId ? byId.get(m.questionId) : undefined;
-    const card = q && cards.get(q.id);
-    if (card) {
-      card.folded.push(m);
-      continue;
-    }
-    const row: Row = { message: m, question: q, folded: [] };
-    if (q) cards.set(q.id, row);
-    rows.push(row);
-  }
-  return rows;
-}
-
 const IDLE_MS = 6000;
 
-/**
- * 실행 중(AGENT_RUN_STARTED 뒤 ENDED 없음)인 태스크가 있고 몇 초간 새 줄이 없으면 마지막 줄 뒤로 지난 초, 아니면 null.
- * 서버 데이터는 없다 — 화면이 매초 센다
- */
-function useThinking(messages: RoomMessage[]): number | null {
+/** 실행 중(AGENT_RUN_STARTED 뒤 ENDED 없음)인 태스크가 있으면 마지막 줄의 시각, 아니면 null */
+function runningSince(messages: RoomMessage[]): string | null {
   const running = new Set<string>();
   for (const m of messages) {
     if (!m.taskId) continue;
     if (m.type === "AGENT_RUN_STARTED") running.add(m.taskId);
     else if (m.type === "AGENT_RUN_ENDED") running.delete(m.taskId);
   }
-  const last = messages.at(-1)?.ts;
-  const active = running.size > 0;
+  return running.size > 0 ? (messages.at(-1)?.ts ?? null) : null;
+}
+
+/**
+ * "생각 중" 줄. 마지막 줄 뒤 몇 초간 새 줄이 없으면 지난 초를 보인다. 서버 데이터는 없다 — 화면이 매초 센다.
+ * 타이머 상태를 이 컴포넌트에 둔다 — 룸 전체에 두면 피드의 모든 줄이 매초 다시 그려진다 (docs/perf-room-feed.md)
+ */
+function ThinkingRow({ since, who, tone }: { since: string; who: string; tone: "fe" | "be" | "pm" }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    if (!active) return;
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
-  }, [active]);
-  if (!active || last === undefined) return null;
-  const idle = now - new Date(last).getTime();
-  return idle > IDLE_MS ? Math.floor(idle / 1000) : null;
+  }, []);
+  const idle = now - new Date(since).getTime();
+  if (idle <= IDLE_MS) return null;
+  return (
+    <LeftRow head who={who} tone={tone}>
+      <span
+        className="inline-flex items-center gap-2 rounded-2xl rounded-tl-md bg-ink-100 px-3 py-1.5 text-[13px] text-ink-500"
+        aria-live="polite"
+      >
+        <span className="inline-flex gap-1" aria-hidden>
+          <span className="h-1.5 w-1.5 rounded-full bg-ink-400 pulse-dot" />
+          <span className="h-1.5 w-1.5 rounded-full bg-ink-400 pulse-dot [animation-delay:150ms]" />
+          <span className="h-1.5 w-1.5 rounded-full bg-ink-400 pulse-dot [animation-delay:300ms]" />
+        </span>
+        생각 중 · <span className="tabular-nums">{fmtElapsed(Math.floor(idle / 1000))}</span>
+      </span>
+    </LeftRow>
+  );
 }

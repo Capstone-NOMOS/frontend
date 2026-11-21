@@ -1,0 +1,318 @@
+{
+  "name": "dev-500-baseline-idle",
+  "at": "2026-11-20T09:28:21.951Z",
+  "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+  "url": "http://localhost:3001/p/perf-project/rooms/frontend",
+  "summary": {
+    "mount": {
+      "median": 668.2000017166138,
+      "max": 893.8999972343445,
+      "all": [608.5, 747.6000032424927, 668.2000017166138, 893.8999972343445, 621.3000001907349]
+    },
+    "newLine": {
+      "median": 420.69999742507935,
+      "max": 465.9000015258789,
+      "all": [465.9000015258789, 420.69999742507935, 451.6000008583069, 390.80000019073486, 372.29999923706055]
+    }
+  },
+  "scenarios": {
+    "mount": [
+      {
+        "ms": 608.5,
+        "clickToFeedMs": 1310.8000001907349,
+        "lines": 495,
+        "commits": [
+          {
+            "id": "room",
+            "phase": "mount",
+            "actualDuration": 608.5,
+            "baseDuration": 464.6999955177307,
+            "startTime": 30429.699999809265,
+            "commitTime": 31076.699999809265
+          }
+        ]
+      },
+      {
+        "ms": 747.6000032424927,
+        "clickToFeedMs": 1521.7000002861023,
+        "lines": 495,
+        "commits": [
+          {
+            "id": "room",
+            "phase": "mount",
+            "actualDuration": 747.6000032424927,
+            "baseDuration": 598.5000052452087,
+            "startTime": 35097.699999809265,
+            "commitTime": 35885.5
+          }
+        ]
+      },
+      {
+        "ms": 668.2000017166138,
+        "clickToFeedMs": 1470.2000002861023,
+        "lines": 495,
+        "commits": [
+          {
+            "id": "room",
+            "phase": "mount",
+            "actualDuration": 668.2000017166138,
+            "baseDuration": 502.50000619888306,
+            "startTime": 39894.5,
+            "commitTime": 40600.699999809265
+          }
+        ]
+      },
+      {
+        "ms": 893.8999972343445,
+        "clickToFeedMs": 1746.5,
+        "lines": 495,
+        "commits": [
+          {
+            "id": "room",
+            "phase": "mount",
+            "actualDuration": 893.8999972343445,
+            "baseDuration": 701.9999914169312,
+            "startTime": 44794.09999990463,
+            "commitTime": 45746.300000190735
+          }
+        ]
+      },
+      {
+        "ms": 621.3000001907349,
+        "clickToFeedMs": 1357.9000000953674,
+        "lines": 495,
+        "commits": [
+          {
+            "id": "room",
+            "phase": "mount",
+            "actualDuration": 621.3000001907349,
+            "baseDuration": 484.30000162124634,
+            "startTime": 49909.90000009537,
+            "commitTime": 50567.59999990463
+          }
+        ]
+      }
+    ],
+    "newLine": [
+      {
+        "ms": 465.9000015258789,
+        "signalToFeedMs": 623.5,
+        "lines": 495,
+        "commits": [
+          {
+            "id": "room",
+            "phase": "update",
+            "actualDuration": 465.9000015258789,
+            "baseDuration": 459.60000228881836,
+            "startTime": 58196.59999990463,
+            "commitTime": 58670.90000009537
+          }
+        ],
+        "rendered": {
+          "RoleRoomView": {
+            "count": 1,
+            "why": {
+              "state": 1
+            }
+          },
+          "RoomParticipants": {
+            "count": 1,
+            "why": {
+              "props(people)": 1
+            }
+          },
+          "AgentMark": {
+            "count": 200,
+            "why": {
+              "parent": 199,
+              "mount": 1
+            }
+          },
+          "Avatar": {
+            "count": 13,
+            "why": {
+              "parent": 13
+            }
+          },
+          "Button": {
+            "count": 10,
+            "why": {
+              "props(onClick)": 10
+            }
+          },
+          "LeftRow": {
+            "count": 494,
+            "why": {
+              "props(head,children)": 1,
+              "props(children)": 492,
+              "mount": 1
+            }
+          },
+          "FeedBody": {
+            "count": 471,
+            "why": {
+              "props(message)": 470,
+              "mount": 1
+            }
+          },
+          "ToolBlock": {
+            "count": 251,
+            "why": {
+              "props(activity)": 251
+            }
+          },
+          "FileText": {
+            "count": 70,
+            "why": {
+              "parent": 70
+            }
+          },
+          "(이름 없음)": {
+            "count": 263,
+            "why": {
+              "parent": 263
+            }
+          },
+          "FilePlus": {
+            "count": 30,
+            "why": {
+              "parent": 30
+            }
+          },
+          "Search": {
+            "count": 33,
+            "why": {
+              "parent": 33
+            }
+          },
+          "Wrench": {
+            "count": 29,
+            "why": {
+              "parent": 29
+            }
+          },
+          "Terminal": {
+            "count": 36,
+            "why": {
+              "parent": 36
+            }
+          },
+          "Pencil": {
+            "count": 53,
+            "why": {
+              "parent": 53
+            }
+          },
+          "Badge": {
+            "count": 56,
+            "why": {
+              "parent": 56
+            }
+          },
+          "QuestionCard": {
+            "count": 12,
+            "why": {
+              "parent": 12
+            }
+          },
+          "ArrowRight": {
+            "count": 12,
+            "why": {
+              "parent": 12
+            }
+          },
+          "LinkComponent": {
+            "count": 12,
+            "why": {
+              "parent": 12
+            }
+          },
+          "GoldLabel": {
+            "count": 6,
+            "why": {
+              "parent": 6
+            }
+          },
+          "Input": {
+            "count": 6,
+            "why": {
+              "props(onChange)": 6
+            }
+          },
+          "HumanRow": {
+            "count": 11,
+            "why": {
+              "parent": 11
+            }
+          },
+          "Textarea": {
+            "count": 3,
+            "why": {
+              "props(onChange)": 3
+            }
+          }
+        }
+      },
+      {
+        "ms": 420.69999742507935,
+        "signalToFeedMs": 633.6999998092651,
+        "lines": 495,
+        "commits": [
+          {
+            "id": "room",
+            "phase": "update",
+            "actualDuration": 420.69999742507935,
+            "baseDuration": 414.2999963760376,
+            "startTime": 59629.800000190735,
+            "commitTime": 60057.699999809265
+          }
+        ]
+      },
+      {
+        "ms": 451.6000008583069,
+        "signalToFeedMs": 686.5999999046326,
+        "lines": 495,
+        "commits": [
+          {
+            "id": "room",
+            "phase": "update",
+            "actualDuration": 451.6000008583069,
+            "baseDuration": 445.5000042915344,
+            "startTime": 61080,
+            "commitTime": 61538.59999990463
+          }
+        ]
+      },
+      {
+        "ms": 390.80000019073486,
+        "signalToFeedMs": 536.8999996185303,
+        "lines": 495,
+        "commits": [
+          {
+            "id": "room",
+            "phase": "update",
+            "actualDuration": 390.80000019073486,
+            "baseDuration": 384.70000076293945,
+            "startTime": 62579.800000190735,
+            "commitTime": 62976
+          }
+        ]
+      },
+      {
+        "ms": 372.29999923706055,
+        "signalToFeedMs": 542.1999998092651,
+        "lines": 495,
+        "commits": [
+          {
+            "id": "room",
+            "phase": "update",
+            "actualDuration": 372.29999923706055,
+            "baseDuration": 366.49999713897705,
+            "startTime": 63931.800000190735,
+            "commitTime": 64309.300000190735
+          }
+        ]
+      }
+    ]
+  }
+}
