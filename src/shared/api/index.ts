@@ -12,6 +12,7 @@ export {
 export type { RequestBody, ResponseData, Schemas } from "./types";
 export {
   livePoll,
+  liveStaleTime,
   useProjectStream,
   useStreamConnected,
   useStreamConnection,

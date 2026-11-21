@@ -190,3 +190,11 @@ export function useStreamConnected() {
 export function livePoll(ms: number) {
   return () => (connected ? FALLBACK_POLL_MS : ms);
 }
+
+/**
+ * staleTime용 (adr/0020). 신호를 받는 동안은 "신호가 없었다 = 바뀌지 않았다"이므로 화면을 오가도 다시 읽지 않는다.
+ * 신호가 오면 무효화되어 이 값과 상관없이 다시 읽는다. 상한은 대비용 폴링과 같은 30초 — 신호가 없는 쿼리도 그 안에 갱신된다
+ */
+export function liveStaleTime() {
+  return connected ? FALLBACK_POLL_MS : 0;
+}
