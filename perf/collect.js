@@ -2,13 +2,29 @@
 //   await perfRoom.all("dev", "baseline")       아래 둘을 500줄 · 2,000줄에 대해 차례로 돌린다
 //   await perfRoom.idle("dev-500-baseline")     처음 그리기 5회 + 새 줄 1개 5회   (목 서버: reset?n=500&running=0)
 //   await perfRoom.running("dev-500-baseline")  "생각 중" 타이머 5틱              (목 서버: reset?n=500&running=1)
+//   await perfActivity.run("prod-3000-baseline")  활동 화면(/p/perf-project/activity, docs/perf-activity.md): 처음 그리기 · 새 이벤트 1건 · 스크롤
 // 결과는 목 서버가 perf/results/<이름>.json으로 저장한다. NEXT_PUBLIC_PERF=1로 띄운 화면에서만 동작한다 (PerfProfiler)
 (() => {
   const MOCK = "http://localhost:3900";
   const RUNS = 5;
   // 측정 전에 같은 동작을 버리는 횟수. 개발 모드는 JIT 예열 전후로 값이 몇 배 달라진다
   const WARMUP = 3;
-  const FEED = "ol.space-y-1";
+  // 화면별 설정. newest는 새 줄이 놓이는 자리
+  const ROOM = {
+    id: "room",
+    feed: "ol.space-y-1",
+    link: "/rooms/frontend",
+    push: "/__perf/push",
+    newest: (ol) => ol.lastElementChild,
+  };
+  const ACTIVITY = {
+    id: "activity",
+    feed: "ol.card",
+    link: "/activity",
+    push: "/__perf/events/push",
+    newest: (ol) => ol.firstElementChild,
+  };
+  let S = ROOM;
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const until = async (ok, ms = 120_000) => {
     const t = performance.now();
@@ -18,11 +34,11 @@
     }
   };
   const commits = () => (window.__perf ??= []);
-  const lines = () => document.querySelectorAll(`${FEED} > li`).length;
+  const lines = () => document.querySelectorAll(`${S.feed} > li`).length;
   const link = (suffix) =>
     [...document.querySelectorAll("a[href]")].find((a) => a.getAttribute("href").endsWith(suffix));
   const moreButton = () =>
-    [...document.querySelectorAll("button")].find((b) => /이전 줄 더 보기|불러오는 중/.test(b.textContent));
+    [...document.querySelectorAll("button")].find((b) => /더 보기|불러오는 중/.test(b.textContent));
   const median = (xs) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];
   const stat = (xs) => ({ median: median(xs), max: Math.max(...xs), all: xs });
 
@@ -67,7 +83,7 @@
         inside = null;
         continue;
       }
-      if (f.tag === 12 && f.memoizedProps?.id === "room") {
+      if (f.tag === 12 && f.memoizedProps?.id === S.id) {
         // Profiler 서브트리만 훑는다
         const sub = [f.child];
         while (sub.length) {
@@ -92,11 +108,11 @@
   /** 처음 그리기: 피드가 캐시에 있는 채로 다른 화면에 갔다가 룸으로 돌아온다 → mount 커밋 */
   async function mountOnce() {
     link("/inbox").click();
-    await until(() => !document.querySelector(FEED));
+    await until(() => !document.querySelector(S.feed));
     await sleep(500);
     const from = commits().length;
     const t0 = performance.now();
-    link("/rooms/frontend").click();
+    link(S.link).click();
     await until(
       () =>
         commits()
@@ -118,9 +134,9 @@
   async function newLineOnce(withWhy) {
     const from = commits().length;
     const t0 = performance.now();
-    const { text } = await (await fetch(`${MOCK}/__perf/push`, { method: "POST" })).json();
+    const { text } = await (await fetch(`${MOCK}${S.push}`, { method: "POST" })).json();
     // 줄 수는 그대로일 수 있다 (불러온 페이지 수가 같으면 가장 오래된 줄이 다음 페이지로 밀린다) — 새 줄의 문장을 기다린다
-    await until(() => document.querySelector(FEED).lastElementChild.textContent.includes(text));
+    await until(() => S.newest(document.querySelector(S.feed)).textContent.includes(text));
     const signalToFeedMs = performance.now() - t0;
     await sleep(100);
     const cs = commits().slice(from);
@@ -143,20 +159,77 @@
     };
   }
 
-  async function save(name, scenarios) {
+  /** 맨 위에서 맨 아래까지 프레임마다 조금씩 내린다: 프레임 간격 · Long Task · 그동안의 React 커밋 */
+  async function scrollOnce(steps) {
+    const el = document.querySelector(S.feed).closest(".overflow-y-auto");
+    const frame = () => new Promise((r) => requestAnimationFrame(r));
+    el.scrollTop = 0;
+    await sleep(300);
+    const long = [];
+    const po = new PerformanceObserver((l) => long.push(...l.getEntries().map((e) => e.duration)));
+    po.observe({ entryTypes: ["longtask"] });
+    const from = commits().length;
+    const dist = el.scrollHeight - el.clientHeight;
+    const STEPS = steps ?? 600; // 60Hz에서 약 10초
+    const frames = [];
+    await frame();
+    let last = performance.now();
+    for (let i = 1; i <= STEPS; i++) {
+      el.scrollTop = (dist * i) / STEPS;
+      await frame();
+      const now = performance.now();
+      frames.push(now - last);
+      last = now;
+    }
+    await sleep(200);
+    po.disconnect();
+    const sorted = [...frames].sort((a, b) => a - b);
+    const cs = commits().slice(from);
+    return {
+      ms: sorted[Math.floor(STEPS * 0.95)], // 프레임 간격 p95
+      frameMedianMs: sorted[Math.floor(STEPS / 2)],
+      frameMaxMs: sorted.at(-1),
+      framesOver33ms: frames.filter((f) => f > 33.4).length,
+      longTasks: long.length,
+      longTaskTotalMs: long.reduce((a, b) => a + b, 0),
+      scrolledPx: dist,
+      pxPerFrame: dist / STEPS,
+      commitCount: cs.length,
+      commitTotalMs: cs.reduce((a, c) => a + c.actualDuration, 0),
+      lines: lines(),
+      commits: [],
+    };
+  }
+
+  /** 지금 화면의 크기: DOM 노드 수 · JS heap (Chrome 전용, 대략값) */
+  const size = () => ({
+    domNodes: document.getElementsByTagName("*").length,
+    feedNodes: document.querySelector(S.feed).getElementsByTagName("*").length,
+    rows: lines(),
+    heapMB: performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1048576) : null,
+  });
+
+  const total = (cs) => cs.reduce((a, c) => a + c.actualDuration, 0);
+
+  async function save(name, scenarios, extra) {
     const body = {
       name,
       at: new Date().toISOString(),
       userAgent: navigator.userAgent,
       url: location.href,
+      ...extra,
       summary: Object.fromEntries(Object.entries(scenarios).map(([k, runs]) => [k, stat(runs.map((r) => r.ms))])),
+      // 그 동작이 만든 커밋 전부의 합. 가상화한 목록은 처음 그리기가 여러 커밋으로 나뉘어 가장 큰 커밋 하나로는 비교가 안 된다
+      totals: Object.fromEntries(
+        Object.entries(scenarios).map(([k, runs]) => [k, stat(runs.map((r) => total(r.commits)))]),
+      ),
       scenarios,
     };
     await fetch(`${MOCK}/__perf/save?name=${encodeURIComponent(name)}`, { method: "POST", body: JSON.stringify(body) });
     return JSON.stringify({ name, lines: lines(), ...body.summary });
   }
 
-  const thinking = () => !!document.querySelector(FEED)?.lastElementChild?.textContent.includes("생각 중");
+  const thinking = () => !!document.querySelector(S.feed)?.lastElementChild?.textContent.includes("생각 중");
   const reset = (n, running) => fetch(`${MOCK}/__perf/reset?n=${n}&running=${running}`, { method: "POST" });
 
   window.perfRoom = {
@@ -187,12 +260,45 @@
     },
     async running(name) {
       await loadAll();
-      if (!document.querySelector(FEED)?.textContent.includes("생각 중"))
+      if (!document.querySelector(S.feed)?.textContent.includes("생각 중"))
         throw new Error('perfRoom: "생각 중"이 보이지 않는다');
       for (let i = 0; i < WARMUP; i++) await tickOnce(false);
       const tick = [];
       for (let i = 0; i < RUNS; i++) tick.push(await tickOnce(i === 0));
       return save(`${name}-running`, { tick });
+    },
+  };
+  window.perfActivity = {
+    /** 지금 펼쳐진 만큼만 스크롤을 잰다 (고치는 도중 빠르게 확인할 때). 프레임당 이동 거리는 run과 같게 맞춘다 */
+    async scroll() {
+      S = ACTIVITY;
+      try {
+        const el = document.querySelector(S.feed).closest(".overflow-y-auto");
+        const steps = Math.round((el.scrollHeight - el.clientHeight) / 184);
+        await scrollOnce(steps);
+        return JSON.stringify({ ...(await scrollOnce(steps)), commits: undefined });
+      } finally {
+        S = ROOM;
+      }
+    },
+    async run(name) {
+      S = ACTIVITY;
+      try {
+        await loadAll();
+        const loaded = size();
+        for (let i = 0; i < WARMUP; i++) await mountOnce();
+        const mount = [];
+        for (let i = 0; i < RUNS; i++) mount.push(await mountOnce());
+        for (let i = 0; i < WARMUP; i++) await newLineOnce(false);
+        const newLine = [];
+        for (let i = 0; i < RUNS; i++) newLine.push(await newLineOnce(i === 0));
+        await scrollOnce();
+        const scroll = [];
+        for (let i = 0; i < RUNS; i++) scroll.push(await scrollOnce());
+        return await save(`${name}-activity`, { mount, newLine, scroll }, { size: loaded });
+      } finally {
+        S = ROOM;
+      }
     },
   };
   return "perfRoom ready";
