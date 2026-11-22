@@ -40,28 +40,28 @@ flowchart LR
 
   subgraph FE["브라우저"]
     direction TB
-    subgraph shared["shared"]
-      stream["stream.ts<br/>연결 · 재연결 · 구독"]
+    subgraph L3["shared"]
+      strm["stream.ts<br/>연결 · 재연결 · 구독"]
       client["client.ts<br/>apiFetch · 쓰기 중복 제거"]
     end
-    subgraph entities["entities"]
+    subgraph L2["entities"]
       hooks["쿼리 훅<br/>useTasks · useRoomFeed …"]
     end
-    subgraph widgets["widgets"]
-      sync["useRealtimeSync<br/>topic → 쿼리 키"]
+    subgraph L1["widgets"]
+      rsync["useRealtimeSync<br/>topic → 쿼리 키"]
       view["화면 블록<br/>대시보드 · 룸 …"]
     end
     cache[("쿼리 캐시")]
   end
 
-  WS -- "changed: topics<br/>(데이터 없음)" --> stream
-  stream --> sync
-  sync -- "invalidateQueries" --> cache
+  WS -->|"changed · topics<br/>(데이터 없음)"| strm
+  strm --> rsync
+  rsync -->|"invalidateQueries"| cache
   cache --> hooks
-  hooks -- "GET" --> client
-  client <--> API
+  hooks -->|"GET"| client
+  client --> API
   hooks --> view
-  hooks -. "대비용 폴링<br/>연결 중 30초 · 끊기면 4~5초" .-> client
+  hooks -.->|"대비용 폴링<br/>연결 중 30초 · 끊기면 4~5초"| client
 ```
 
 - **신호 경로(실선)** — 서버에서 변화가 커밋되면 `/api/stream`으로 topic이 온다. `useRealtimeSync`가 topic을 쿼리 키로 바꿔 무효화하고, 화면에 떠 있는 쿼리만 다시 읽는다
