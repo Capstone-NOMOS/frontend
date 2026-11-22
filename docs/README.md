@@ -10,6 +10,7 @@
 | [design.md](./design.md) | 색·배지·여백 등 UI를 만들 때 |
 | [adr/](./adr/) | "왜 이렇게 돼 있지?" 싶을 때. 이미 내린 결정과 재검토 조건 |
 | [perf-room-feed.md](./perf-room-feed.md) | 룸 피드 성능을 건드릴 때. 측정 방법 · 전후 수치 · 바꾸지 않은 것 |
+| [perf-activity.md](./perf-activity.md) | 활동 로그 · 가상화한 목록을 건드릴 때. 측정 방법 · 단계별 수치 · 바꾸지 않은 것 |
 | [log.md](./log.md) | 측정 · 검증을 어떻게 했는지 과정이 궁금할 때 |
 
 ## 규칙
