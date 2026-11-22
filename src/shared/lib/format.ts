@@ -1,11 +1,13 @@
+// 포매터는 한 번만 만든다. toLocale*String은 부를 때마다 새로 만들어 줄이 많은 목록에서 렌더 시간의 대부분을 썼다 (docs/perf-activity.md)
+const TIME = new Intl.DateTimeFormat("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false });
+const DATE = new Intl.DateTimeFormat("ko-KR", { month: "long", day: "numeric", weekday: "short" });
+
 export function fmtTime(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false });
+  return TIME.format(new Date(iso));
 }
 
 export function fmtDate(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleDateString("ko-KR", { month: "long", day: "numeric", weekday: "short" });
+  return DATE.format(new Date(iso));
 }
 
 export function fmtDateTime(iso: string) {
