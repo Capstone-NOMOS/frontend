@@ -1,0 +1,303 @@
+{
+  "name": "prod-3000-baseline-activity",
+  "at": "2026-11-22T14:37:24.179Z",
+  "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
+  "url": "http://localhost:3001/p/perf-project/activity",
+  "size": {
+    "domNodes": 21158,
+    "feedNodes": 21000,
+    "rows": 3000,
+    "heapMB": 43
+  },
+  "summary": {
+    "mount": {
+      "median": 667.999993801117,
+      "max": 702.100001335144,
+      "all": [
+        680.5000009536743,
+        617.7000002861023,
+        600.8999991416931,
+        702.100001335144,
+        667.999993801117
+      ]
+    },
+    "newLine": {
+      "median": 773.7999997138977,
+      "max": 974.7000031471252,
+      "all": [
+        757.5999979972839,
+        864.3000001907349,
+        974.7000031471252,
+        773.7999997138977,
+        517.1999998092651
+      ]
+    },
+    "scroll": {
+      "median": 17,
+      "max": 17,
+      "all": [
+        16.90000009536743,
+        17,
+        16.90000009536743,
+        17,
+        17
+      ]
+    }
+  },
+  "scenarios": {
+    "mount": [
+      {
+        "ms": 680.5000009536743,
+        "clickToFeedMs": 1399.7000002861023,
+        "lines": 3000,
+        "commits": [
+          {
+            "id": "activity",
+            "phase": "mount",
+            "actualDuration": 680.5000009536743,
+            "baseDuration": 609.800003528595,
+            "startTime": 84674.2000002861,
+            "commitTime": 85493.40000009537
+          }
+        ]
+      },
+      {
+        "ms": 617.7000002861023,
+        "clickToFeedMs": 1246.3000001907349,
+        "lines": 3000,
+        "commits": [
+          {
+            "id": "activity",
+            "phase": "mount",
+            "actualDuration": 617.7000002861023,
+            "baseDuration": 552.5999975204468,
+            "startTime": 89173.80000019073,
+            "commitTime": 89816.59999990463
+          }
+        ]
+      },
+      {
+        "ms": 600.8999991416931,
+        "clickToFeedMs": 1271.5999999046326,
+        "lines": 3000,
+        "commits": [
+          {
+            "id": "activity",
+            "phase": "mount",
+            "actualDuration": 600.8999991416931,
+            "baseDuration": 528.9000034332275,
+            "startTime": 93537.09999990463,
+            "commitTime": 94311.90000009537
+          }
+        ]
+      },
+      {
+        "ms": 702.100001335144,
+        "clickToFeedMs": 1442.1000003814697,
+        "lines": 3000,
+        "commits": [
+          {
+            "id": "activity",
+            "phase": "mount",
+            "actualDuration": 702.100001335144,
+            "baseDuration": 585.7000012397766,
+            "startTime": 97911.30000019073,
+            "commitTime": 98780
+          }
+        ]
+      },
+      {
+        "ms": 667.999993801117,
+        "clickToFeedMs": 1244.6000003814697,
+        "lines": 3000,
+        "commits": [
+          {
+            "id": "activity",
+            "phase": "mount",
+            "actualDuration": 667.999993801117,
+            "baseDuration": 596.0999975204468,
+            "startTime": 102476.7000002861,
+            "commitTime": 103170.09999990463
+          },
+          {
+            "id": "activity",
+            "phase": "update",
+            "actualDuration": 668.4000020027161,
+            "baseDuration": 663.100001335144,
+            "startTime": 103713.90000009537,
+            "commitTime": 104393.2000002861
+          }
+        ]
+      }
+    ],
+    "newLine": [
+      {
+        "ms": 757.5999979972839,
+        "signalToFeedMs": 1434.6999998092651,
+        "lines": 3000,
+        "commits": [
+          {
+            "id": "activity",
+            "phase": "update",
+            "actualDuration": 757.5999979972839,
+            "baseDuration": 750.7999987602234,
+            "startTime": 112665.7000002861,
+            "commitTime": 113433.7000002861
+          }
+        ],
+        "rendered": {
+          "m": {
+            "count": 1,
+            "why": {
+              "state": 1
+            }
+          },
+          "(이름 없음)": {
+            "count": 3001,
+            "why": {
+              "mount": 1,
+              "props(event,lookup)": 2999,
+              "props(onClick)": 1
+            }
+          }
+        }
+      },
+      {
+        "ms": 864.3000001907349,
+        "signalToFeedMs": 1342.8000001907349,
+        "lines": 3000,
+        "commits": [
+          {
+            "id": "activity",
+            "phase": "update",
+            "actualDuration": 864.3000001907349,
+            "baseDuration": 856.5000019073486,
+            "startTime": 114702.2000002861,
+            "commitTime": 115578.59999990463
+          }
+        ]
+      },
+      {
+        "ms": 974.7000031471252,
+        "signalToFeedMs": 1628.9000000953674,
+        "lines": 3000,
+        "commits": [
+          {
+            "id": "activity",
+            "phase": "update",
+            "actualDuration": 974.7000031471252,
+            "baseDuration": 965.6000027656555,
+            "startTime": 117237.90000009537,
+            "commitTime": 118230
+          }
+        ]
+      },
+      {
+        "ms": 773.7999997138977,
+        "signalToFeedMs": 1257.0999999046326,
+        "lines": 3000,
+        "commits": [
+          {
+            "id": "activity",
+            "phase": "update",
+            "actualDuration": 773.7999997138977,
+            "baseDuration": 767.899998664856,
+            "startTime": 119574.2000002861,
+            "commitTime": 120361.5
+          }
+        ]
+      },
+      {
+        "ms": 517.1999998092651,
+        "signalToFeedMs": 1044.7000002861023,
+        "lines": 3000,
+        "commits": [
+          {
+            "id": "activity",
+            "phase": "update",
+            "actualDuration": 517.1999998092651,
+            "baseDuration": 513.5999989509583,
+            "startTime": 121468.40000009537,
+            "commitTime": 121994.7000002861
+          }
+        ]
+      }
+    ],
+    "scroll": [
+      {
+        "ms": 16.90000009536743,
+        "frameMedianMs": 16.699999809265137,
+        "frameMaxMs": 90.30000019073486,
+        "framesOver33ms": 1,
+        "longTasks": 0,
+        "longTaskTotalMs": 0,
+        "scrolledPx": 108871,
+        "pxPerFrame": 181.45166666666665,
+        "commitCount": 0,
+        "commitTotalMs": 0,
+        "lines": 3000,
+        "commits": []
+      },
+      {
+        "ms": 17,
+        "frameMedianMs": 16.699999809265137,
+        "frameMaxMs": 19.100000381469727,
+        "framesOver33ms": 0,
+        "longTasks": 0,
+        "longTaskTotalMs": 0,
+        "scrolledPx": 108871,
+        "pxPerFrame": 181.45166666666665,
+        "commitCount": 0,
+        "commitTotalMs": 0,
+        "lines": 3000,
+        "commits": []
+      },
+      {
+        "ms": 16.90000009536743,
+        "frameMedianMs": 16.699999809265137,
+        "frameMaxMs": 17.300000190734863,
+        "framesOver33ms": 0,
+        "longTasks": 0,
+        "longTaskTotalMs": 0,
+        "scrolledPx": 108871,
+        "pxPerFrame": 181.45166666666665,
+        "commitCount": 0,
+        "commitTotalMs": 0,
+        "lines": 3000,
+        "commits": []
+      },
+      {
+        "ms": 17,
+        "frameMedianMs": 16.699999809265137,
+        "frameMaxMs": 17.200000286102295,
+        "framesOver33ms": 0,
+        "longTasks": 0,
+        "longTaskTotalMs": 0,
+        "scrolledPx": 108871,
+        "pxPerFrame": 181.45166666666665,
+        "commitCount": 0,
+        "commitTotalMs": 0,
+        "lines": 3000,
+        "commits": []
+      },
+      {
+        "ms": 17,
+        "frameMedianMs": 16.699999809265137,
+        "frameMaxMs": 19.299999713897705,
+        "framesOver33ms": 0,
+        "longTasks": 0,
+        "longTaskTotalMs": 0,
+        "scrolledPx": 108871,
+        "pxPerFrame": 181.45166666666665,
+        "commitCount": 0,
+        "commitTotalMs": 0,
+        "lines": 3000,
+        "commits": []
+      }
+    ]
+  },
+  "cdp": {
+    "domNodes": 36203,
+    "heapUsedMB": 21.2
+  }
+}

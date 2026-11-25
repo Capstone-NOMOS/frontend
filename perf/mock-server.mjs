@@ -2,6 +2,8 @@
 //   node perf/mock-server.mjs            → http://localhost:3900/api
 //   POST /__perf/reset?n=500&running=0   더미 피드를 다시 만들고 resync 신호를 보낸다 (running=1이면 끝나지 않은 실행이 있다 → "생각 중")
 //   POST /__perf/push                    에이전트 말 한 줄을 더하고 room 신호를 보낸다
+//   POST /__perf/events/reset?n=3000     더미 이벤트 로그를 다시 만든다 (docs/perf-activity.md)
+//   POST /__perf/events/push             이벤트 한 건을 더하고 events 신호를 보낸다
 // 더미는 전부 지어낸 값이다. 실제 팀 데이터·개인정보를 넣지 않는다.
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -244,6 +246,58 @@ function push() {
   broadcast({ type: "changed", projectId: PROJECT, topics: ["room"] });
 }
 
+// ── 활동 화면의 이벤트 로그 (docs/perf-activity.md) ──
+let events = []; // 오래된 것부터. id는 정수 문자열 (페이지 커서)
+const OUTCOMES = ["DONE", "AWAITING_APPROVAL", "RETRY", "ESCALATED"];
+
+function resetEvents(n) {
+  const rand = mulberry32(7);
+  const end = Date.now() - 60_000;
+  events = [];
+  for (let i = 0; i < n; i++) {
+    const taskId = `t${String((Math.floor(i / 6) % Math.max(tasks.length, 1)) + 1).padStart(4, "0")}`;
+    const r = rand();
+    // 태스크 하나가 생성 → 수령 → 제출 → 검증을 도는 로그를 가정한다. 사람 메시지가 가끔 낀다
+    const [type, payload, byAgent] =
+      r < 0.3
+        ? ["TASK_CLAIMED", { taskId }, true]
+        : r < 0.55
+          ? ["ARTIFACT_SUBMITTED", { taskId, attempt: 1 + Math.floor(rand() * 3) }, true]
+          : r < 0.8
+            ? ["VERIFICATION_COMPLETED", { taskId, outcome: OUTCOMES[Math.floor(rand() * 4)] }, false]
+            : r < 0.92
+              ? ["TASK_CREATED", { taskId, title: `더미 태스크 ${i}` }, false]
+              : ["ROOM_MESSAGE_SENT", { role: "FRONTEND", text: "수량 0은 삭제로 처리해 주세요." }, false];
+    events.push({
+      id: String(i + 1),
+      type,
+      ts: new Date(end - (n - 1 - i) * 90_000).toISOString(),
+      onBehalfOf: type === "VERIFICATION_COMPLETED" ? "system:pm" : OWNER,
+      actorAgentId: byAgent ? AGENT : null,
+      payload,
+      tokenCost: null,
+      pathViolation: null,
+    });
+  }
+}
+
+function pushEvent() {
+  const id = String(Number(events.at(-1)?.id ?? 0) + 1);
+  const title = `새 이벤트 ${id}`;
+  events.push({
+    id,
+    type: "TASK_CREATED",
+    ts: new Date().toISOString(),
+    onBehalfOf: OWNER,
+    actorAgentId: null,
+    payload: { title },
+    tokenCost: null,
+    pathViolation: null,
+  });
+  broadcast({ type: "changed", projectId: PROJECT, topics: ["events"] });
+  return title;
+}
+
 function mixOf() {
   const c = {};
   for (const m of messages) {
@@ -345,6 +399,14 @@ function route(path, query) {
     const page = messages.slice(start, end).reverse(); // 최신 줄부터
     return { messages: page, nextBefore: start > 0 ? page.at(-1).id : null };
   }
+  if (path === `${p}/events`) {
+    const limit = Number(query.get("limit") ?? 30);
+    const before = query.get("before");
+    const end = before ? events.findIndex((e) => e.id === before) : events.length;
+    const start = Math.max(0, end - limit);
+    const page = events.slice(start, end).reverse(); // 최신부터
+    return { events: page, nextBefore: start > 0 ? page.at(-1).id : null };
+  }
   if (path === `${p}/questions`) return { questions: [...questions].reverse() };
   if (path === `${p}/tasks`) return { tasks };
   if (path === `${p}/contracts`) return { contracts: [] };
@@ -387,6 +449,12 @@ const server = createServer((req, res) => {
     });
     return;
   }
+  if (url.pathname === "/__perf/events/reset") {
+    resetEvents(Number(url.searchParams.get("n") ?? 3000));
+    broadcast({ type: "resync" });
+    return json(200, { events: events.length });
+  }
+  if (url.pathname === "/__perf/events/push") return json(200, { text: pushEvent(), events: events.length });
   if (url.pathname === "/__perf/push") {
     push();
     return json(200, { lines: messages.length, text: messages.at(-1).text });
@@ -452,5 +520,6 @@ export function dummy(n, running = false) {
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   reset(500, false);
+  resetEvents(3000);
   server.listen(PORT, () => console.log(`perf mock on http://localhost:${PORT}/api`, mixOf()));
 }

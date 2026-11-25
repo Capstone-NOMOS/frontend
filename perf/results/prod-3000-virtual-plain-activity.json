@@ -1,0 +1,603 @@
+{
+  "name": "prod-3000-virtual-plain-activity",
+  "at": "2026-11-22T15:08:19.084Z",
+  "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
+  "url": "http://localhost:3001/p/perf-project/activity",
+  "size": {
+    "domNodes": 347,
+    "feedNodes": 189,
+    "rows": 27,
+    "heapMB": 12
+  },
+  "summary": {
+    "mount": {
+      "median": 0.8999996185302734,
+      "max": 1.3000001907348633,
+      "all": [
+        0.8999996185302734,
+        0.9000000953674316,
+        0.5999999046325684,
+        1.3000001907348633,
+        0.5
+      ]
+    },
+    "newLine": {
+      "median": 1.6999998092651367,
+      "max": 2.299999713897705,
+      "all": [
+        2.299999713897705,
+        2.0999999046325684,
+        1.4000000953674316,
+        1.6999998092651367,
+        1.5
+      ]
+    },
+    "scroll": {
+      "median": 24.299999713897705,
+      "max": 24.59999990463257,
+      "all": [
+        24.40000009536743,
+        24.100000381469727,
+        24.59999990463257,
+        24.299999713897705,
+        23.200000286102295
+      ]
+    }
+  },
+  "totals": {
+    "mount": {
+      "median": 4.400000095367432,
+      "max": 4.899999618530273,
+      "all": [
+        4.499999523162842,
+        4.400000095367432,
+        4.899999618530273,
+        3.700000286102295,
+        2.8999996185302734
+      ]
+    },
+    "newLine": {
+      "median": 2.8000001907348633,
+      "max": 3.6999988555908203,
+      "all": [
+        3.6999988555908203,
+        2.8000001907348633,
+        2.5999999046325684,
+        2.9000000953674316,
+        2.299999713897705
+      ]
+    },
+    "scroll": {
+      "median": 0,
+      "max": 0,
+      "all": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    }
+  },
+  "scenarios": {
+    "mount": [
+      {
+        "ms": 0.8999996185302734,
+        "clickToFeedMs": 60.200000286102295,
+        "lines": 27,
+        "commits": [
+          {
+            "id": "activity",
+            "phase": "mount",
+            "actualDuration": 0.8999996185302734,
+            "baseDuration": 0.7999997138977051,
+            "startTime": 19368.400000095367,
+            "commitTime": 19369.799999713898
+          },
+          {
+            "id": "activity",
+            "phase": "nested-update",
+            "actualDuration": 0.40000009536743164,
+            "baseDuration": 0.40000009536743164,
+            "startTime": 19378.699999809265,
+            "commitTime": 19379.299999713898
+          },
+          {
+            "id": "activity",
+            "phase": "nested-update",
+            "actualDuration": 1.1999998092651367,
+            "baseDuration": 0.6999993324279785,
+            "startTime": 19381,
+            "commitTime": 19382.599999904633
+          },
+          {
+            "id": "activity",
+            "phase": "nested-update",
+            "actualDuration": 2,
+            "baseDuration": 2.0999999046325684,
+            "startTime": 19389.199999809265,
+            "commitTime": 19391.599999904633
+          },
+          {
+            "id": "activity",
+            "phase": "nested-update",
+            "actualDuration": 0,
+            "baseDuration": 2.0999999046325684,
+            "startTime": 19393.199999809265,
+            "commitTime": 19393.900000095367
+          }
+        ]
+      },
+      {
+        "ms": 0.9000000953674316,
+        "clickToFeedMs": 56.09999990463257,
+        "lines": 27,
+        "commits": [
+          {
+            "id": "activity",
+            "phase": "mount",
+            "actualDuration": 0.9000000953674316,
+            "baseDuration": 0.8000001907348633,
+            "startTime": 22524.599999904633,
+            "commitTime": 22527.5
+          },
+          {
+            "id": "activity",
+            "phase": "nested-update",
+            "actualDuration": 0.5,
+            "baseDuration": 0.5,
+            "startTime": 22538.599999904633,
+            "commitTime": 22539.400000095367
+          },
+          {
+            "id": "activity",
+            "phase": "nested-update",
+            "actualDuration": 1.700000286102295,
+            "baseDuration": 1.0000004768371582,
+            "startTime": 22541.299999713898,
+            "commitTime": 22543.400000095367
+          },
+          {
+            "id": "activity",
+            "phase": "nested-update",
+            "actualDuration": 1.299999713897705,
+            "baseDuration": 1.299999713897705,
+            "startTime": 22549.900000095367,
+            "commitTime": 22551.699999809265
+          },
+          {
+            "id": "activity",
+            "phase": "nested-update",
+            "actualDuration": 0,
+            "baseDuration": 1.299999713897705,
+            "startTime": 22553.5,
+            "commitTime": 22554.299999713898
+          }
+        ]
+      },
+      {
+        "ms": 0.5999999046325684,
+        "clickToFeedMs": 54.40000009536743,
+        "lines": 27,
+        "commits": [
+          {
+            "id": "activity",
+            "phase": "mount",
+            "actualDuration": 0.5999999046325684,
+            "baseDuration": 0.40000009536743164,
+            "startTime": 25634,
+            "commitTime": 25636
+          },
+          {
+            "id": "activity",
+            "phase": "nested-update",
+            "actualDuration": 0.40000009536743164,
+            "baseDuration": 0.40000009536743164,
+            "startTime": 25647.699999809265,
+            "commitTime": 25648.400000095367
+          },
+          {
+            "id": "activity",
+            "phase": "nested-update",
+            "actualDuration": 2.9000000953674316,
+            "baseDuration": 1.4000000953674316,
+            "startTime": 25650.199999809265,
+            "commitTime": 25653.400000095367
+          },
+          {
+            "id": "activity",
+            "phase": "nested-update",
+            "actualDuration": 0.9999995231628418,
+            "baseDuration": 0.9999995231628418,
+            "startTime": 25662.5,
+            "commitTime": 25663.799999713898
+          },
+          {
+            "id": "activity",
+            "phase": "nested-update",
+            "actualDuration": 0,
+            "baseDuration": 0.9999995231628418,
+            "startTime": 25665.099999904633,
+            "commitTime": 25665.400000095367
+          }
+        ]
+      },
+      {
+        "ms": 1.3000001907348633,
+        "clickToFeedMs": 49.799999713897705,
+        "lines": 27,
+        "commits": [
+          {
+            "id": "activity",
+            "phase": "mount",
+            "actualDuration": 1.3000001907348633,
+            "baseDuration": 1.0999999046325684,
+            "startTime": 28752.099999904633,
+            "commitTime": 28754.900000095367
+          },
+          {
+            "id": "activity",
+            "phase": "nested-update",
+            "actualDuration": 0.40000009536743164,
+            "baseDuration": 0.40000009536743164,
+            "startTime": 28761.599999904633,
+            "commitTime": 28762.099999904633
+          },
+          {
+            "id": "activity",
+            "phase": "nested-update",
+            "actualDuration": 1,
+            "baseDuration": 0.8000001907348633,
+            "startTime": 28763.299999713898,
+            "commitTime": 28764.599999904633
+          },
+          {
+            "id": "activity",
+            "phase": "nested-update",
+            "actualDuration": 1,
+            "baseDuration": 1,
+            "startTime": 28774.900000095367,
+            "commitTime": 28776.400000095367
+          },
+          {
+            "id": "activity",
+            "phase": "nested-update",
+            "actualDuration": 0,
+            "baseDuration": 1,
+            "startTime": 28778,
+            "commitTime": 28778.699999809265
+          }
+        ]
+      },
+      {
+        "ms": 0.5,
+        "clickToFeedMs": 37.40000009536743,
+        "lines": 27,
+        "commits": [
+          {
+            "id": "activity",
+            "phase": "mount",
+            "actualDuration": 0.5,
+            "baseDuration": 0.5,
+            "startTime": 31880.5,
+            "commitTime": 31881.299999713898
+          },
+          {
+            "id": "activity",
+            "phase": "nested-update",
+            "actualDuration": 0.39999961853027344,
+            "baseDuration": 0.39999961853027344,
+            "startTime": 31887.400000095367,
+            "commitTime": 31887.900000095367
+          },
+          {
+            "id": "activity",
+            "phase": "nested-update",
+            "actualDuration": 1.299999713897705,
+            "baseDuration": 0.8999991416931152,
+            "startTime": 31889,
+            "commitTime": 31890.400000095367
+          },
+          {
+            "id": "activity",
+            "phase": "nested-update",
+            "actualDuration": 0.7000002861022949,
+            "baseDuration": 0.8000001907348633,
+            "startTime": 31895.699999809265,
+            "commitTime": 31896.900000095367
+          },
+          {
+            "id": "activity",
+            "phase": "nested-update",
+            "actualDuration": 0,
+            "baseDuration": 0.8000001907348633,
+            "startTime": 31898.400000095367,
+            "commitTime": 31898.900000095367
+          }
+        ]
+      }
+    ],
+    "newLine": [
+      {
+        "ms": 2.299999713897705,
+        "signalToFeedMs": 379.40000009536743,
+        "lines": 27,
+        "commits": [
+          {
+            "id": "activity",
+            "phase": "update",
+            "actualDuration": 2.299999713897705,
+            "baseDuration": 2.3999996185302734,
+            "startTime": 38521.7999997139,
+            "commitTime": 38524.5
+          },
+          {
+            "id": "activity",
+            "phase": "nested-update",
+            "actualDuration": 0,
+            "baseDuration": 2.3999996185302734,
+            "startTime": 38527,
+            "commitTime": 38527.5
+          },
+          {
+            "id": "activity",
+            "phase": "update",
+            "actualDuration": 1.3999991416931152,
+            "baseDuration": 1.4999990463256836,
+            "startTime": 38531.199999809265,
+            "commitTime": 38532.90000009537
+          },
+          {
+            "id": "activity",
+            "phase": "nested-update",
+            "actualDuration": 0,
+            "baseDuration": 1.4999990463256836,
+            "startTime": 38534.699999809265,
+            "commitTime": 38535.40000009537
+          }
+        ],
+        "rendered": {
+          "(이름 없음)": {
+            "count": 28,
+            "why": {
+              "props(lookup)": 27,
+              "props(onClick)": 1
+            }
+          }
+        }
+      },
+      {
+        "ms": 2.0999999046325684,
+        "signalToFeedMs": 349.5,
+        "lines": 27,
+        "commits": [
+          {
+            "id": "activity",
+            "phase": "update",
+            "actualDuration": 2.0999999046325684,
+            "baseDuration": 2.0999999046325684,
+            "startTime": 39691.59999990463,
+            "commitTime": 39694
+          },
+          {
+            "id": "activity",
+            "phase": "nested-update",
+            "actualDuration": 0,
+            "baseDuration": 2.0999999046325684,
+            "startTime": 39696.5,
+            "commitTime": 39697
+          },
+          {
+            "id": "activity",
+            "phase": "update",
+            "actualDuration": 0.7000002861022949,
+            "baseDuration": 0.8000001907348633,
+            "startTime": 39701.59999990463,
+            "commitTime": 39702.5
+          },
+          {
+            "id": "activity",
+            "phase": "nested-update",
+            "actualDuration": 0,
+            "baseDuration": 0.8000001907348633,
+            "startTime": 39703.40000009537,
+            "commitTime": 39703.90000009537
+          }
+        ]
+      },
+      {
+        "ms": 1.4000000953674316,
+        "signalToFeedMs": 362.5,
+        "lines": 27,
+        "commits": [
+          {
+            "id": "activity",
+            "phase": "update",
+            "actualDuration": 1.4000000953674316,
+            "baseDuration": 1.200000286102295,
+            "startTime": 40879.699999809265,
+            "commitTime": 40881.5
+          },
+          {
+            "id": "activity",
+            "phase": "nested-update",
+            "actualDuration": 0,
+            "baseDuration": 1.200000286102295,
+            "startTime": 40883.7999997139,
+            "commitTime": 40884.199999809265
+          },
+          {
+            "id": "activity",
+            "phase": "update",
+            "actualDuration": 1.1999998092651367,
+            "baseDuration": 1.0999994277954102,
+            "startTime": 40887.90000009537,
+            "commitTime": 40889.199999809265
+          },
+          {
+            "id": "activity",
+            "phase": "nested-update",
+            "actualDuration": 0,
+            "baseDuration": 1.0999994277954102,
+            "startTime": 40890.2999997139,
+            "commitTime": 40890.90000009537
+          }
+        ]
+      },
+      {
+        "ms": 1.6999998092651367,
+        "signalToFeedMs": 400,
+        "lines": 27,
+        "commits": [
+          {
+            "id": "activity",
+            "phase": "update",
+            "actualDuration": 1.6999998092651367,
+            "baseDuration": 1.5999999046325684,
+            "startTime": 42103.09999990463,
+            "commitTime": 42105.199999809265
+          },
+          {
+            "id": "activity",
+            "phase": "nested-update",
+            "actualDuration": 0,
+            "baseDuration": 1.5999999046325684,
+            "startTime": 42108.5,
+            "commitTime": 42109.2999997139
+          },
+          {
+            "id": "activity",
+            "phase": "update",
+            "actualDuration": 1.1000003814697266,
+            "baseDuration": 1.200000286102295,
+            "startTime": 42113.7999997139,
+            "commitTime": 42115.09999990463
+          },
+          {
+            "id": "activity",
+            "phase": "nested-update",
+            "actualDuration": 0.09999990463256836,
+            "baseDuration": 1.200000286102295,
+            "startTime": 42116,
+            "commitTime": 42116.59999990463
+          }
+        ]
+      },
+      {
+        "ms": 1.5,
+        "signalToFeedMs": 423.5,
+        "lines": 27,
+        "commits": [
+          {
+            "id": "activity",
+            "phase": "update",
+            "actualDuration": 1.5,
+            "baseDuration": 1.4000000953674316,
+            "startTime": 43343.59999990463,
+            "commitTime": 43345.2999997139
+          },
+          {
+            "id": "activity",
+            "phase": "nested-update",
+            "actualDuration": 0,
+            "baseDuration": 1.4000000953674316,
+            "startTime": 43347.699999809265,
+            "commitTime": 43348.09999990463
+          },
+          {
+            "id": "activity",
+            "phase": "update",
+            "actualDuration": 0.7999997138977051,
+            "baseDuration": 0.8999996185302734,
+            "startTime": 43351.90000009537,
+            "commitTime": 43353
+          },
+          {
+            "id": "activity",
+            "phase": "nested-update",
+            "actualDuration": 0,
+            "baseDuration": 0.8999996185302734,
+            "startTime": 43354,
+            "commitTime": 43354.5
+          }
+        ]
+      }
+    ],
+    "scroll": [
+      {
+        "ms": 24.40000009536743,
+        "frameMedianMs": 18.09999990463257,
+        "frameMaxMs": 33.59999990463257,
+        "framesOver33ms": 1,
+        "longTasks": 0,
+        "longTaskTotalMs": 0,
+        "scrolledPx": 110357,
+        "pxPerFrame": 183.92833333333334,
+        "commitCount": 2399,
+        "commitTotalMs": 1747.3000011444092,
+        "lines": 29,
+        "commits": []
+      },
+      {
+        "ms": 24.100000381469727,
+        "frameMedianMs": 17.600000381469727,
+        "frameMaxMs": 31.699999809265137,
+        "framesOver33ms": 0,
+        "longTasks": 0,
+        "longTaskTotalMs": 0,
+        "scrolledPx": 110357,
+        "pxPerFrame": 183.92833333333334,
+        "commitCount": 2398,
+        "commitTotalMs": 1688.6000051498413,
+        "lines": 29,
+        "commits": []
+      },
+      {
+        "ms": 24.59999990463257,
+        "frameMedianMs": 18.300000190734863,
+        "frameMaxMs": 31.699999809265137,
+        "framesOver33ms": 0,
+        "longTasks": 0,
+        "longTaskTotalMs": 0,
+        "scrolledPx": 110357,
+        "pxPerFrame": 183.92833333333334,
+        "commitCount": 2398,
+        "commitTotalMs": 1693.900002002716,
+        "lines": 29,
+        "commits": []
+      },
+      {
+        "ms": 24.299999713897705,
+        "frameMedianMs": 18.199999809265137,
+        "frameMaxMs": 29.40000009536743,
+        "framesOver33ms": 0,
+        "longTasks": 0,
+        "longTaskTotalMs": 0,
+        "scrolledPx": 110357,
+        "pxPerFrame": 183.92833333333334,
+        "commitCount": 2399,
+        "commitTotalMs": 1728.3999934196472,
+        "lines": 29,
+        "commits": []
+      },
+      {
+        "ms": 23.200000286102295,
+        "frameMedianMs": 17.40000009536743,
+        "frameMaxMs": 28.5,
+        "framesOver33ms": 0,
+        "longTasks": 0,
+        "longTaskTotalMs": 0,
+        "scrolledPx": 110357,
+        "pxPerFrame": 183.92833333333334,
+        "commitCount": 2399,
+        "commitTotalMs": 1604.2000050544739,
+        "lines": 29,
+        "commits": []
+      }
+    ]
+  },
+  "cdp": {
+    "domNodes": 551,
+    "heapUsedMB": 9.4
+  }
+}
