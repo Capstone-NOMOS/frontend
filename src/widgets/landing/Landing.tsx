@@ -3,21 +3,21 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { ArrowRight, CircleHelp, ShieldBan, Table2 } from "lucide-react";
+import { ArrowRight, CircleHelp, Loader2, ShieldBan, Table2 } from "lucide-react";
 import { AgentMark, Badge, Button, Logo } from "@/shared/ui";
 import { CLI_NPX } from "@/entities/agent";
-import { useCurrentUser } from "@/entities/user";
+import { useHasSession } from "@/entities/user";
 
 const STEPS = [
   {
     n: "01",
-    t: "가입 · 키 발급 · 에이전트 연결",
+    t: "가입 · 에이전트 연결",
     d: "터미널에서 로그인 한 번으로 내 Claude Code를 NOMOS에 붙입니다. 프로젝트에 참여하기 전엔 아무 태스크도 받지 않습니다.",
   },
   {
     n: "02",
     t: "프로젝트 생성 (채팅형)",
-    d: "이름·설명·허용 레벨(L1–L4)·스택을 대화로 정하면 대표 룸, PM 에이전트, MCP 문서 페이지, 초대 링크가 만들어집니다.",
+    d: "이름·레포·초대할 팀원을 대화로 정하면 대표 룸, PM 에이전트, MCP 문서 페이지, 초대 링크가 만들어집니다.",
   },
   {
     n: "03",
@@ -32,17 +32,22 @@ const STEPS = [
 ];
 
 export function Landing() {
-  const { status } = useCurrentUser();
+  const hasSession = useHasSession();
   const router = useRouter();
-  const primary =
-    status === "authenticated"
-      ? { href: "/projects", label: "프로젝트로 이동" }
-      : { href: "/signup", label: "시작하기" };
 
-  // 로그인 상태면 랜딩을 건너뛴다. 조직이 없으면 /projects의 AuthGate가 /onboarding으로 보낸다
+  // 로그인 상태면 랜딩을 건너뛴다. /me를 기다리지 않는다 — 기다리는 동안 랜딩이 깜빡인다.
+  // 토큰이 무효면 /projects의 AuthGate가 /login으로, 조직이 없으면 /onboarding으로 보낸다
   useEffect(() => {
-    if (status === "authenticated") router.replace("/projects");
-  }, [status, router]);
+    if (hasSession) router.replace("/projects");
+  }, [hasSession, router]);
+
+  if (hasSession) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center text-ink-400" aria-busy="true">
+        <Loader2 size={20} className="animate-spin" aria-label="불러오는 중" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-dvh bg-white">
@@ -60,16 +65,16 @@ export function Landing() {
               작동 방식
             </Link>
             <Link
-              href="#policy"
+              href="#rooms"
               className="hidden rounded-lg px-3 py-2 text-[13.5px] font-medium text-ink-600 hover:bg-ink-50 hover:text-ink-900 sm:inline"
             >
-              정책표
+              Room 구조
             </Link>
             <Button href="/login" variant="ghost" size="sm">
               로그인
             </Button>
-            <Button href={primary.href} size="sm">
-              {primary.label}
+            <Button href="/signup" size="sm">
+              시작하기
             </Button>
           </nav>
         </div>
@@ -90,8 +95,8 @@ export function Landing() {
             사이의 실행 구간을 자동화하는 협업 플랫폼.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
-            <Button href={primary.href} size="lg">
-              {primary.label} <ArrowRight size={16} />
+            <Button href="/signup" size="lg">
+              시작하기 <ArrowRight size={16} />
             </Button>
           </div>
           <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-ink-200 bg-white px-3 py-1.5 font-mono text-[12.5px] text-ink-600">
@@ -110,8 +115,8 @@ export function Landing() {
         <div className="mx-auto grid max-w-[1120px] grid-cols-1 gap-6 px-5 py-16 sm:px-8 md:grid-cols-3">
           <Feature
             icon={<Table2 size={18} />}
-            title="행동별 승인 정책표"
-            desc="에이전트의 17가지 행동을 L1–L4 표로 고정합니다. 탐지는 diff 경로·파일 패턴·도구 호출명뿐 — LLM 판단이 하나도 없습니다."
+            title="서버가 판정하는 승인"
+            desc="계약 변경·위험한 작업처럼 사람이 봐야 할 행동은 서버가 멈추고 승인을 기다립니다. 탐지는 diff 경로·파일 패턴·도구 호출명뿐 — LLM 판단이 하나도 없습니다."
           />
           <Feature
             icon={<CircleHelp size={18} />}
@@ -144,7 +149,7 @@ export function Landing() {
         </div>
       </section>
 
-      <section id="policy" className="border-t border-ink-100">
+      <section id="rooms" className="border-t border-ink-100">
         <div className="mx-auto max-w-[1120px] px-5 py-16 sm:px-8">
           <div className="grid grid-cols-1 gap-8 md:grid-cols-[1fr_1.2fr] md:items-center">
             <div>

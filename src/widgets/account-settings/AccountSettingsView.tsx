@@ -5,10 +5,12 @@ import { useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Plug } from "lucide-react";
 import { Button, ConfirmButton, RemovalError, SectionTitle } from "@/shared/ui";
+import { useOrgAgents } from "@/entities/agent";
 import { orgKeys, useRemoveMember } from "@/entities/org";
 import { GithubConnect, displayName, useCurrentUser } from "@/entities/user";
 
-export function AccountSettingsView() {
+/** returnTo: 에이전트 연결 화면에서 "완료"를 누르면 돌아올 이 화면의 주소 */
+export function AccountSettingsView({ returnTo }: { returnTo: string }) {
   // AuthGate 안쪽이므로 me와 조직이 있다
   const me = useCurrentUser().me!;
 
@@ -25,17 +27,7 @@ export function AccountSettingsView() {
         </dl>
       </section>
 
-      <section className="card flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <SectionTitle>에이전트</SectionTitle>
-          <p className="text-[13px] text-ink-500">
-            내 노트북의 코딩 에이전트를 NOMOS에 연결합니다. 꺼진 에이전트를 다시 켤 때도 여기서 명령을 받습니다.
-          </p>
-        </div>
-        <Button href="/connect" className="shrink-0">
-          <Plug size={15} /> 에이전트 연결
-        </Button>
-      </section>
+      <AgentSection orgId={me.orgId} userId={me.userId} returnTo={returnTo} />
 
       <GithubSection githubLogin={me.githubLogin} />
 
@@ -55,6 +47,37 @@ export function AccountSettingsView() {
         </section>
       )}
     </div>
+  );
+}
+
+/**
+ * 켜진 내 에이전트가 없을 때만 연결 화면으로 보낸다(처음 연결·꺼진 에이전트 다시 켜기).
+ * 연결 화면은 next로 받은 이 주소로 "완료" 후 돌아온다. 조직이 없으면 에이전트 목록을 볼 수 없어 막지 않는다
+ */
+function AgentSection({ orgId, userId, returnTo }: { orgId: string | null; userId: string; returnTo: string }) {
+  const agents = useOrgAgents(orgId).data?.agents;
+  const online = agents?.find((a) => a.userId === userId && a.online);
+
+  return (
+    <section className="card flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <SectionTitle>에이전트</SectionTitle>
+        <p className="text-[13px] text-ink-500">
+          {online
+            ? `${online.agentName} 에이전트가 연결돼 있습니다.`
+            : "내 노트북의 코딩 에이전트를 NOMOS에 연결합니다. 꺼진 에이전트를 다시 켤 때도 여기서 명령을 받습니다."}
+        </p>
+      </div>
+      {online ? (
+        <Button className="shrink-0" disabled>
+          <Plug size={15} /> 연결됨
+        </Button>
+      ) : (
+        <Button href={`/connect?next=${encodeURIComponent(returnTo)}`} className="shrink-0">
+          <Plug size={15} /> 에이전트 연결
+        </Button>
+      )}
+    </section>
   );
 }
 

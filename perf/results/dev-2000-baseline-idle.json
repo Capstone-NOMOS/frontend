@@ -1,0 +1,318 @@
+{
+  "name": "dev-2000-baseline-idle",
+  "at": "2026-11-20T09:32:30.735Z",
+  "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+  "url": "http://localhost:3001/p/perf-project/rooms/frontend",
+  "summary": {
+    "mount": {
+      "median": 2213.4999980926514,
+      "max": 2491.8999972343445,
+      "all": [2491.8999972343445, 2450.4000034332275, 2145.4999957084656, 2154.400001525879, 2213.4999980926514]
+    },
+    "newLine": {
+      "median": 1657.4999995231628,
+      "max": 1698.8000020980835,
+      "all": [1624.7999982833862, 1657.4999995231628, 1698.8000020980835, 1629.5999956130981, 1689.4999976158142]
+    }
+  },
+  "scenarios": {
+    "mount": [
+      {
+        "ms": 2491.8999972343445,
+        "clickToFeedMs": 6086.599999904633,
+        "lines": 1977,
+        "commits": [
+          {
+            "id": "room",
+            "phase": "mount",
+            "actualDuration": 2491.8999972343445,
+            "baseDuration": 1899.3999862670898,
+            "startTime": 128543.5,
+            "commitTime": 131321.09999990463
+          }
+        ]
+      },
+      {
+        "ms": 2450.4000034332275,
+        "clickToFeedMs": 5199.299999713898,
+        "lines": 1977,
+        "commits": [
+          {
+            "id": "room",
+            "phase": "mount",
+            "actualDuration": 2450.4000034332275,
+            "baseDuration": 1856.1000227928162,
+            "startTime": 138940.40000009537,
+            "commitTime": 141615.40000009537
+          }
+        ]
+      },
+      {
+        "ms": 2145.4999957084656,
+        "clickToFeedMs": 4602.10000038147,
+        "lines": 1977,
+        "commits": [
+          {
+            "id": "room",
+            "phase": "mount",
+            "actualDuration": 2145.4999957084656,
+            "baseDuration": 1637.5999913215637,
+            "startTime": 148253.7999997139,
+            "commitTime": 150605.19999980927
+          }
+        ]
+      },
+      {
+        "ms": 2154.400001525879,
+        "clickToFeedMs": 4609.599999904633,
+        "lines": 1977,
+        "commits": [
+          {
+            "id": "room",
+            "phase": "mount",
+            "actualDuration": 2154.400001525879,
+            "baseDuration": 1644.4000144004822,
+            "startTime": 157250,
+            "commitTime": 159604
+          }
+        ]
+      },
+      {
+        "ms": 2213.4999980926514,
+        "clickToFeedMs": 5124.800000190735,
+        "lines": 1977,
+        "commits": [
+          {
+            "id": "room",
+            "phase": "mount",
+            "actualDuration": 2213.4999980926514,
+            "baseDuration": 1680.6000051498413,
+            "startTime": 166137,
+            "commitTime": 168555.09999990463
+          }
+        ]
+      }
+    ],
+    "newLine": [
+      {
+        "ms": 1624.7999982833862,
+        "signalToFeedMs": 2224.9000000953674,
+        "lines": 1977,
+        "commits": [
+          {
+            "id": "room",
+            "phase": "update",
+            "actualDuration": 1624.7999982833862,
+            "baseDuration": 1597.6999988555908,
+            "startTime": 183548.2999997139,
+            "commitTime": 185202.59999990463
+          }
+        ],
+        "rendered": {
+          "RoleRoomView": {
+            "count": 1,
+            "why": {
+              "state": 1
+            }
+          },
+          "RoomParticipants": {
+            "count": 1,
+            "why": {
+              "props(people)": 1
+            }
+          },
+          "AgentMark": {
+            "count": 811,
+            "why": {
+              "parent": 810,
+              "mount": 1
+            }
+          },
+          "Avatar": {
+            "count": 65,
+            "why": {
+              "parent": 65
+            }
+          },
+          "Button": {
+            "count": 39,
+            "why": {
+              "props(onClick)": 39
+            }
+          },
+          "LeftRow": {
+            "count": 1976,
+            "why": {
+              "props(head,children)": 1,
+              "props(children)": 1974,
+              "mount": 1
+            }
+          },
+          "FeedBody": {
+            "count": 1862,
+            "why": {
+              "props(message)": 1861,
+              "mount": 1
+            }
+          },
+          "ToolBlock": {
+            "count": 1000,
+            "why": {
+              "props(activity)": 1000
+            }
+          },
+          "FileText": {
+            "count": 253,
+            "why": {
+              "parent": 253
+            }
+          },
+          "(이름 없음)": {
+            "count": 1050,
+            "why": {
+              "parent": 1050
+            }
+          },
+          "FilePlus": {
+            "count": 128,
+            "why": {
+              "parent": 128
+            }
+          },
+          "Search": {
+            "count": 144,
+            "why": {
+              "parent": 144
+            }
+          },
+          "Wrench": {
+            "count": 123,
+            "why": {
+              "parent": 123
+            }
+          },
+          "Terminal": {
+            "count": 126,
+            "why": {
+              "parent": 126
+            }
+          },
+          "Pencil": {
+            "count": 226,
+            "why": {
+              "parent": 226
+            }
+          },
+          "Badge": {
+            "count": 241,
+            "why": {
+              "parent": 241
+            }
+          },
+          "QuestionCard": {
+            "count": 50,
+            "why": {
+              "parent": 50
+            }
+          },
+          "ArrowRight": {
+            "count": 50,
+            "why": {
+              "parent": 50
+            }
+          },
+          "LinkComponent": {
+            "count": 50,
+            "why": {
+              "parent": 50
+            }
+          },
+          "GoldLabel": {
+            "count": 26,
+            "why": {
+              "parent": 26
+            }
+          },
+          "Input": {
+            "count": 26,
+            "why": {
+              "props(onChange)": 26
+            }
+          },
+          "HumanRow": {
+            "count": 64,
+            "why": {
+              "parent": 64
+            }
+          },
+          "Textarea": {
+            "count": 12,
+            "why": {
+              "props(onChange)": 12
+            }
+          }
+        }
+      },
+      {
+        "ms": 1657.4999995231628,
+        "signalToFeedMs": 2428.5,
+        "lines": 1977,
+        "commits": [
+          {
+            "id": "room",
+            "phase": "update",
+            "actualDuration": 1657.4999995231628,
+            "baseDuration": 1632.9999995231628,
+            "startTime": 186588.5,
+            "commitTime": 188274.19999980927
+          }
+        ]
+      },
+      {
+        "ms": 1698.8000020980835,
+        "signalToFeedMs": 2573.0999999046326,
+        "lines": 1977,
+        "commits": [
+          {
+            "id": "room",
+            "phase": "update",
+            "actualDuration": 1698.8000020980835,
+            "baseDuration": 1668.9000010490417,
+            "startTime": 189851,
+            "commitTime": 191577.40000009537
+          }
+        ]
+      },
+      {
+        "ms": 1629.5999956130981,
+        "signalToFeedMs": 2273.5,
+        "lines": 1977,
+        "commits": [
+          {
+            "id": "room",
+            "phase": "update",
+            "actualDuration": 1629.5999956130981,
+            "baseDuration": 1603.3999981880188,
+            "startTime": 193234.09999990463,
+            "commitTime": 194892.7999997139
+          }
+        ]
+      },
+      {
+        "ms": 1689.4999976158142,
+        "signalToFeedMs": 2455.9000000953674,
+        "lines": 1977,
+        "commits": [
+          {
+            "id": "room",
+            "phase": "update",
+            "actualDuration": 1689.4999976158142,
+            "baseDuration": 1661.999994277954,
+            "startTime": 196322,
+            "commitTime": 198040.40000009537
+          }
+        ]
+      }
+    ]
+  }
+}

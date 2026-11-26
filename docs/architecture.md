@@ -53,7 +53,8 @@
 1. **데이터 조회는 반드시 쿼리 훅으로 감싼다.** 컴포넌트에서 `fetch`를 직접 부르지 않는다.
    나중에 실시간 채널이 붙으면 훅 내부만 바꾸면 되도록 하기 위해서다
 2. **폴링 주기는 화면별로 정한다.** 실시간 데이터는 `livePoll(4000~5000)`(연결 중 30초), 문서·설정은 폴링하지 않음
-3. **탭이 숨겨지면 멈춘다.** 돌아왔을 때 즉시 한 번 갱신한다 (`refetchIntervalInBackground: false`, `refetchOnWindowFocus: true`)
+3. **탭이 숨겨지면 멈춘다.** 돌아왔을 때 낡은 쿼리만 갱신한다 (`refetchIntervalInBackground: false`, `refetchOnWindowFocus: true`).
+   신호 연결 중에는 30초 동안 낡지 않은 것으로 본다 — 화면 이동·탭 복귀로 다시 읽지 않는다 (`staleTime: liveStaleTime`, adr/0020)
 4. **증분 조회가 가능한 곳은 증분으로.** 노트는 `since_seq`로 이후 분만 받아 이어 붙인다
 5. **에이전트 오프라인 판정은 서버 신호로.** 프론트 타이머로 추정하지 않는다. `GET /orgs/{orgId}/agents`의 `online`과 `agents` 신호를 쓴다
 
@@ -88,11 +89,10 @@
 | 프레임워크 | Next.js 16 App Router (→ [adr/0001](./adr/0001-next-16-유지.md)) | 설치됨 · 적용됨 |
 | 아이콘 | lucide-react | 설치됨 · 적용됨 |
 | 서버 상태 | `@tanstack/react-query` | 설치됨 · 적용됨 (`app/providers.tsx`) |
-| UI 상태 | zustand | 설치됨 · 미적용 |
-| 로그 뷰어 | `@tanstack/react-virtual` + 배치 flush | 설치됨 · 미적용 |
-| 마크다운 | react-markdown + remark-gfm + rehype-sanitize | 설치됨 · 미적용 (현재는 `components/docs/Markdown.tsx` 자체 파서) |
+| 로그 뷰어 | `@tanstack/react-virtual` | 설치됨 · 적용됨 (활동 로그 `widgets/activity`, adr/0021). 룸 피드에는 쓰지 않는다 |
+| 마크다운 | 자체 파서 | 라이브러리 미설치 (adr/0019) |
 | API 타입 | openapi-typescript (계약에서 생성). BE가 TS지만 소스를 직접 import하지 않는다 | 설치됨 · 적용됨 (`pnpm gen:api` → `shared/api/schema.d.ts`) |
-| 목업 | MSW | 설치됨 · 미적용 |
+| 테스트 | Vitest (node 환경, `src/**/*.test.ts`) | 설치됨 · 적용됨 (`pnpm test`, adr/0019) |
 | 실시간 | 브라우저 `WebSocket` 직접 사용 (`shared/api/stream.ts`) + 대비용 `refetchInterval` (adr/0009) | 라이브러리 **설치 금지** |
 | UI 부품 | 자체 구현 유지. 모달·팝오버가 필요한 시점에 Radix만 부분 도입 | 미설치 (그 시점에 질문) |
 

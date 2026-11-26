@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
 import { apiFetch, clearSession, setSession, type RequestBody, type Schemas } from "@/shared/api";
 
 export const userKeys = {
@@ -37,12 +36,13 @@ export function useLogin() {
   });
 }
 
+/**
+ * 랜딩으로 나간다. 화면 안 이동이 아니라 새로 불러온다 — 세션을 지우는 순간 AuthGate가 먼저
+ * /login?next=…로 보낼 수 있고, 새로 불러오면 쿼리 캐시·웹소켓도 함께 정리된다
+ */
 export function useLogout() {
-  const queryClient = useQueryClient();
-  const router = useRouter();
   return () => {
-    router.replace("/login");
     clearSession();
-    queryClient.clear();
+    window.location.replace("/");
   };
 }

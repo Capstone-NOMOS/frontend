@@ -6,7 +6,7 @@ import { ArrowRight, Bot } from "lucide-react";
 import { Badge, Button, CopyField, Logo } from "@/shared/ui";
 import { cn, fmtDateTime } from "@/shared/lib/format";
 import { errorMessage } from "@/shared/api";
-import { CLI_NPX, useCreateConnectCode, useOrgAgents } from "@/entities/agent";
+import { CLI_NPX, StatusDot, useCreateConnectCode, useOrgAgents } from "@/entities/agent";
 import { AccountMenu, HomeLink, useCurrentUser } from "@/entities/user";
 import { GITHUB_STEP, StepLabel } from "./steps";
 
@@ -59,8 +59,9 @@ const CLIS = [
 /**
  * 가입 흐름 2단계: 에이전트 연결. 다음은 GitHub 연동(/connect/github)이다.
  * joined: 초대 수락 직후. 이미 연결한 에이전트가 있으면 이 단계를 건너뛴다
+ * returnTo: 설정에서 들어왔다. 버튼이 "완료"가 되고 그 주소로 돌아간다
  */
-export function ConnectAgentView({ joined = false }: { joined?: boolean }) {
+export function ConnectAgentView({ joined = false, returnTo }: { joined?: boolean; returnTo?: string }) {
   const router = useRouter();
   // AuthGate 안에서만 그려지므로 me가 있다
   const me = useCurrentUser().me!;
@@ -68,6 +69,8 @@ export function ConnectAgentView({ joined = false }: { joined?: boolean }) {
   const agents = useOrgAgents(me.orgId, { poll: true });
   const myAgents = agents.data?.agents.filter((a) => a.userId === me.userId) ?? [];
   const skip = joined && myAgents.length > 0;
+  // 켜진 에이전트가 보여야 넘어간다. 조직이 없으면 목록을 볼 수 없어 막지 않는다
+  const locked = me.orgId !== null && !myAgents.some((a) => a.online);
 
   useEffect(() => {
     if (skip) router.replace(GITHUB_STEP);
@@ -88,7 +91,7 @@ export function ConnectAgentView({ joined = false }: { joined?: boolean }) {
               {me.orgName ?? "조직"}에 합류했습니다. 에이전트를 연결하세요.
             </p>
           )}
-          <StepLabel step={2} />
+          {!returnTo && <StepLabel step={2} />}
           <h1 className="text-[22px] font-semibold tracking-tight">에이전트 연결</h1>
           <p className="mt-1 text-[13.5px] text-ink-500">
             내 노트북의 코딩 에이전트를 NOMOS에 연결합니다. 프로젝트에 배정되기 전까지 에이전트는 어떤 태스크도 받지
@@ -162,6 +165,9 @@ export function ConnectAgentView({ joined = false }: { joined?: boolean }) {
                   <li key={a.agentId} className="flex items-center gap-3 rounded-xl border border-ink-200 px-3 py-2">
                     <Bot size={16} className="text-ink-500" />
                     <span className="flex-1 truncate text-[13.5px] font-medium">{a.agentName}</span>
+                    <span className="inline-flex items-center gap-1.5 text-[12px] text-ink-500">
+                      <StatusDot status={a.online ? "online" : "offline"} /> {a.online ? "켜짐" : "꺼짐"}
+                    </span>
                     <span className="text-[12px] text-ink-500">{fmtDateTime(a.connectedAt)} 연결</span>
                   </li>
                 ))}
@@ -169,9 +175,18 @@ export function ConnectAgentView({ joined = false }: { joined?: boolean }) {
             )}
           </section>
 
-          <Button size="lg" className="mt-6" onClick={() => router.push(GITHUB_STEP)}>
-            다음 <ArrowRight size={16} />
-          </Button>
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            <Button size="lg" disabled={locked} onClick={() => router.push(returnTo ?? GITHUB_STEP)}>
+              {returnTo ? (
+                "완료"
+              ) : (
+                <>
+                  다음 <ArrowRight size={16} />
+                </>
+              )}
+            </Button>
+            {locked && <p className="text-[12.5px] text-ink-500">터미널에서 연결을 마치면 누를 수 있습니다.</p>}
+          </div>
         </div>
       </main>
     </div>

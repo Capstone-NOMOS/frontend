@@ -1,0 +1,113 @@
+{
+  "name": "prod-2000-memo-rows-running",
+  "at": "2026-11-20T09:54:03.355Z",
+  "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+  "url": "http://localhost:3001/p/perf-project/rooms/frontend",
+  "summary": {
+    "tick": {
+      "median": 0.40000009536743164,
+      "max": 0.5999999046325684,
+      "all": [
+        0.3000001907348633,
+        0.40000009536743164,
+        0.5999999046325684,
+        0.5,
+        0.39999961853027344
+      ]
+    }
+  },
+  "scenarios": {
+    "tick": [
+      {
+        "ms": 0.3000001907348633,
+        "lines": 1978,
+        "commits": [
+          {
+            "id": "room",
+            "phase": "update",
+            "actualDuration": 0.3000001907348633,
+            "baseDuration": 584.7999997138977,
+            "startTime": 161232.69999980927,
+            "commitTime": 161233.19999980927
+          }
+        ],
+        "rendered": {
+          "J": {
+            "count": 1,
+            "why": {
+              "state": 1
+            }
+          },
+          "U": {
+            "count": 1,
+            "why": {
+              "props(children)": 1
+            }
+          },
+          "k": {
+            "count": 1,
+            "why": {
+              "parent": 1
+            }
+          }
+        }
+      },
+      {
+        "ms": 0.40000009536743164,
+        "lines": 1978,
+        "commits": [
+          {
+            "id": "room",
+            "phase": "update",
+            "actualDuration": 0.40000009536743164,
+            "baseDuration": 584.7999997138977,
+            "startTime": 162241.09999990463,
+            "commitTime": 162241.7999997139
+          }
+        ]
+      },
+      {
+        "ms": 0.5999999046325684,
+        "lines": 1978,
+        "commits": [
+          {
+            "id": "room",
+            "phase": "update",
+            "actualDuration": 0.5999999046325684,
+            "baseDuration": 584.9000000953674,
+            "startTime": 163245.90000009537,
+            "commitTime": 163246.59999990463
+          }
+        ]
+      },
+      {
+        "ms": 0.5,
+        "lines": 1978,
+        "commits": [
+          {
+            "id": "room",
+            "phase": "update",
+            "actualDuration": 0.5,
+            "baseDuration": 584.8999996185303,
+            "startTime": 164250.2999997139,
+            "commitTime": 164250.90000009537
+          }
+        ]
+      },
+      {
+        "ms": 0.39999961853027344,
+        "lines": 1978,
+        "commits": [
+          {
+            "id": "room",
+            "phase": "update",
+            "actualDuration": 0.39999961853027344,
+            "baseDuration": 584.8999996185303,
+            "startTime": 165255.40000009537,
+            "commitTime": 165256
+          }
+        ]
+      }
+    ]
+  }
+}

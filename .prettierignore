@@ -11,3 +11,5 @@ src/shared/api/schema.d.ts
 # next dev가 재생성하는 관리 블록이 있다. 표 패딩 재배치로 diff만 지저분해진다.
 *.md
 docs/*.docx
+# 측정 원본. 스크립트가 쓴 그대로 둔다
+perf/results

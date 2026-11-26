@@ -1,4 +1,11 @@
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  replaceEqualDeep,
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type InfiniteData,
+} from "@tanstack/react-query";
 import { apiFetch, livePoll, type Schemas } from "@/shared/api";
 import type { TeamRole } from "@/shared/model";
 
@@ -22,7 +29,33 @@ export function useRooms(projectId: string) {
 
 const LIMIT = 50;
 
-type Page = { messages: Schemas["RoomMessage"][]; nextBefore: string | null };
+type RoomMessage = Schemas["RoomMessage"];
+type Page = { messages: RoomMessage[]; nextBefore: string | null };
+
+const sameItems = (a: readonly unknown[], b: readonly unknown[]) =>
+  a.length === b.length && a.every((x, i) => x === b[i]);
+
+/**
+ * 피드의 구조 공유. 새 줄이 하나 오면 페이지 경계가 한 칸씩 밀리는데, 기본 구조 공유는 자리(인덱스)로 비교해서
+ * 모든 줄을 새 객체로 만든다 — 같은 id의 줄은 이전 객체를 다시 써서 바뀌지 않은 줄이 다시 그려지지 않게 한다 (docs/perf-room-feed.md).
+ * react-query는 이 함수를 쿼리 데이터(페이지들)와 select 결과(줄 배열) 양쪽에 부른다
+ */
+export function keepMessagesById(prev: unknown, next: unknown): unknown {
+  if (prev === undefined) return next;
+  if (Array.isArray(next)) return sameItems(prev as RoomMessage[], next) ? prev : next;
+  const old = prev as InfiniteData<Page, string | null>;
+  const data = next as InfiniteData<Page, string | null>;
+  const byId = new Map(old.pages.flatMap((p) => p.messages).map((m) => [m.id, m]));
+  const pages = data.pages.map((page, i) => {
+    const messages = page.messages.map((m) => {
+      const was = byId.get(m.id);
+      return was ? replaceEqualDeep(was, m) : m;
+    });
+    const was = old.pages[i];
+    return was && was.nextBefore === page.nextBefore && sameItems(was.messages, messages) ? was : { ...page, messages };
+  });
+  return sameItems(old.pages, pages) && sameItems(old.pageParams, data.pageParams) ? old : { ...data, pages };
+}
 
 /**
  * 룸 피드 (최신 줄부터). 문장(text)은 서버가 만든다 — 화면은 그대로 보여 준다. 실시간 신호는 room 토픽.
@@ -39,6 +72,7 @@ export function useRoomFeed(projectId: string, role: TeamRole) {
     initialPageParam: null as string | null,
     getNextPageParam: (last) => last.nextBefore,
     select: (data) => data.pages.flatMap((p) => p.messages),
+    structuralSharing: keepMessagesById,
     refetchInterval: livePoll(4000),
     refetchIntervalInBackground: false,
   });

@@ -88,7 +88,8 @@ function SpecDocs({ specs, who }: { specs: ReturnType<typeof useSpecs>; who: str
           </ul>
         )}
       </div>
-      <div className="divide-y divide-ink-100">
+      {/* API 탭(ContractCard)과 같은 카드 모양 */}
+      <div className="mt-4 space-y-3">
         {specs.data.map((s) => (
           <SpecSection key={s.id} spec={s} />
         ))}
@@ -148,10 +149,10 @@ function ContractDocs({ projectId, contracts }: { projectId: string; contracts: 
 
 function SpecSection({ spec: s }: { spec: Schemas["Spec"] }) {
   return (
-    <section id={`spec-${s.featureKey}`} className="scroll-mt-4 py-6">
+    <section id={`spec-${s.featureKey}`} className="card scroll-mt-4 p-4">
       <div className="flex flex-wrap items-center gap-2">
         <span className="font-mono text-[13px] font-semibold text-brand-600">{s.featureKey}</span>
-        <h2 className="text-[16px] font-semibold">{s.title}</h2>
+        <h2 className="min-w-0 flex-1 truncate text-[14.5px] font-semibold">{s.title}</h2>
         <Badge>v{s.version}</Badge>
         {s.needsApi && <Badge tone="info">API 필요</Badge>}
         <span className="text-[12px] text-ink-500">{fmtDateTime(s.createdAt)}</span>
@@ -161,7 +162,7 @@ function SpecSection({ spec: s }: { spec: Schemas["Spec"] }) {
           <span className="font-medium text-review">오가야 하는 데이터</span> · {s.apiNeeds}
         </p>
       )}
-      <div className="pt-3">
+      <div className="mt-2">
         <Markdown content={s.content} />
       </div>
       <div className="mt-4">

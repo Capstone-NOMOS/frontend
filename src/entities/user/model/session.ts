@@ -8,16 +8,21 @@ export type AuthStatus = "loading" | "anonymous" | "authenticated";
 
 const noSubscribe = () => () => {};
 
+/** 토큰이 있는가. /me를 기다리지 않는다. 서버 렌더·첫 하이드레이션에서는 알 수 없어 null */
+export function useHasSession(): boolean | null {
+  return useSyncExternalStore(
+    noSubscribe,
+    () => getSession() !== null,
+    () => null,
+  );
+}
+
 /**
  * 현재 로그인한 사용자. orgId·orgRole은 반드시 이 훅(= /me)으로만 읽는다. 따로 저장하지 말 것.
  * 서버 렌더와 첫 하이드레이션에서는 sessionStorage를 읽을 수 없으므로 loading이다.
  */
 export function useCurrentUser(): { status: AuthStatus; me: Me | null; error: unknown; retry: () => void } {
-  const hasToken = useSyncExternalStore(
-    noSubscribe,
-    () => getSession() !== null,
-    () => null,
-  );
+  const hasToken = useHasSession();
   const meQuery = useMe(hasToken === true);
   const base = { error: null, retry: () => void meQuery.refetch() };
 
