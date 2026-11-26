@@ -20,7 +20,8 @@ export function ProjectListView() {
 
   const projects = useProjects(orgId, { pollWhileEmpty: !isRep });
   const agents = useOrgAgents(orgId);
-  const myAgent = agents.data?.agents.find((a) => a.userId === me.userId);
+  // 내 에이전트가 여럿일 수 있다(노트북마다). 켜진 것을 보인다 — 꺼진 에이전트를 "연결됨"으로 보이지 않는다
+  const myAgent = agents.data?.agents.find((a) => a.userId === me.userId && a.online);
 
   // 조직 소속이 바뀌었다(탈퇴·다른 조직). me를 다시 불러 AuthGate가 재라우팅하게 한다
   const error = projects.error;
@@ -45,7 +46,7 @@ export function ProjectListView() {
             ) : (
               <>
                 <span className="h-2 w-2 rounded-full bg-ink-300" /> 에이전트 미연결 ·{" "}
-                <Link href="/connect" className="font-medium text-ink-900 hover:underline">
+                <Link href="/connect?next=%2Fprojects" className="font-medium text-ink-900 hover:underline">
                   연결
                 </Link>
               </>
@@ -138,7 +139,7 @@ export function ProjectListView() {
                     ) : (
                       <p className="mt-1 text-[13px] text-ink-500">
                         배정되려면 에이전트가 연결돼 있어야 합니다.{" "}
-                        <Link href="/connect" className="font-medium text-ink-900 hover:underline">
+                        <Link href="/connect?next=%2Fprojects" className="font-medium text-ink-900 hover:underline">
                           에이전트 연결
                         </Link>
                       </p>
