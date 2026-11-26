@@ -18,8 +18,9 @@ export function LoginForm({ next }: { next?: string }) {
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!loginId.trim() || !password) return;
-    // 401 INVALID_CREDENTIALS는 아이디·비밀번호 중 어느 쪽인지 구분하지 않는다
-    login.mutate({ loginId: loginId.trim(), password }, { onSuccess: () => router.replace(target ?? "/") });
+    // 401 INVALID_CREDENTIALS는 아이디·비밀번호 중 어느 쪽인지 구분하지 않는다.
+    // "/"(랜딩)를 거치지 않고 바로 보낸다. 조직이 없으면 /projects의 AuthGate가 /onboarding으로 보낸다
+    login.mutate({ loginId: loginId.trim(), password }, { onSuccess: () => router.replace(target ?? "/projects") });
   };
 
   return (

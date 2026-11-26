@@ -17,13 +17,11 @@ import {
   Segmented,
   Textarea,
 } from "@/shared/ui";
-import { cn, fmtDateTime } from "@/shared/lib/format";
+import { fmtDateTime } from "@/shared/lib/format";
 import { agentKeys, useOrgAgents } from "@/entities/agent";
 import { useOrgMembers } from "@/entities/org";
-import { DECIDER_META, LEVELS, LevelGates, POLICY_TABLE } from "@/entities/policy";
 import {
   ProjectStatusBadge,
-  fmtUsd,
   useAbortProject,
   useAssignMember,
   useDeleteProject,
@@ -73,11 +71,6 @@ export function SettingsView({ projectId }: { projectId: string }) {
           <Row k="상태">
             <ProjectStatusBadge status={project.status} />
           </Row>
-          <Row k="레벨">
-            {project.autonomyPreset} · {LEVELS.find((l) => l.id === project.autonomyPreset)?.title}
-          </Row>
-          <Row k="PM 예산">{fmtUsd(project.pmBudgetUsd)}</Row>
-          <Row k="전체 예산">{project.budgetUsd ? fmtUsd(project.budgetUsd) : "상한 없음"}</Row>
           <Row k="마감일">{project.deadline ?? "없음"}</Row>
           <Row k="레포">
             {repos.length > 0 ? (
@@ -110,8 +103,6 @@ export function SettingsView({ projectId }: { projectId: string }) {
 
       {isRep && open && <AbortSection projectId={projectId} />}
       {isRep && <DeleteSection projectId={projectId} />}
-
-      <PolicySection level={project.autonomyPreset} />
     </div>
   );
 }
@@ -676,63 +667,6 @@ function DeleteSection({ projectId }: { projectId: string }) {
         />
       </div>
       {del.isError && <p className="mt-2 text-[12.5px] text-forbidden">{errorMessage(del.error)}</p>}
-    </section>
-  );
-}
-
-function PolicySection({ level }: { level: Schemas["Project"]["autonomyPreset"] }) {
-  return (
-    <section className="card p-5">
-      <SectionTitle>허용 레벨 · {level}</SectionTitle>
-      <LevelGates level={level} />
-      <p className="mt-3 text-[12.5px] text-ink-500">
-        레벨은 자율성 정도가 아니라 <strong>행동마다 누가 승인하는가</strong>를 정한 표입니다. 🔒 항목은 레벨과 무관하게
-        고정되며 대표도 바꿀 수 없습니다.
-      </p>
-
-      <div className="mt-4 overflow-x-auto rounded-xl border border-ink-200">
-        <table className="w-full min-w-[720px] text-[12.5px]">
-          <thead className="bg-ink-50 text-[11px] uppercase tracking-wide text-ink-500">
-            <tr>
-              <th className="px-3 py-2 text-left font-semibold">#</th>
-              <th className="px-3 py-2 text-left font-semibold">행동</th>
-              <th className="px-3 py-2 text-left font-semibold">탐지 (결정적)</th>
-              {LEVELS.map((l) => (
-                <th
-                  key={l.id}
-                  className={cn("px-3 py-2 text-center font-semibold", level === l.id && "bg-brand-50 text-brand-600")}
-                >
-                  {l.id}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-ink-100">
-            {POLICY_TABLE.map((r) => (
-              <tr key={r.actionKey}>
-                <td className="px-3 py-2 text-ink-400">{r.n}</td>
-                <td className="px-3 py-2">
-                  <div className="flex items-center gap-1.5 font-medium">
-                    {r.locked && <Lock size={11} className="text-ink-400" />} {r.label}
-                  </div>
-                  <div className="font-mono text-[10.5px] text-ink-500">{r.actionKey}</div>
-                </td>
-                <td className="px-3 py-2 text-ink-700">{r.detect}</td>
-                {LEVELS.map((l) => {
-                  const m = DECIDER_META[r.deciders[l.id]];
-                  return (
-                    <td key={l.id} className={cn("px-3 py-2 text-center", level === l.id && "bg-brand-50/60")}>
-                      <span className={cn("inline-block rounded-md px-1.5 py-0.5 text-[10.5px] font-semibold", m.cls)}>
-                        {m.label}
-                      </span>
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
     </section>
   );
 }

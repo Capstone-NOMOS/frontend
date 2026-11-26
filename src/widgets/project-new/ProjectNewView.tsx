@@ -5,25 +5,22 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ArrowUp, Check, Loader2 } from "lucide-react";
 import { ApiError, errorMessage, type Schemas } from "@/shared/api";
-import { AgentMark, Badge, Button, CopyField, Input, Logo } from "@/shared/ui";
+import { AgentMark, Button, CopyField, Input, Logo } from "@/shared/ui";
 import { cn, fmtDateTime } from "@/shared/lib/format";
-import type { Level, TeamRole } from "@/shared/model";
+import type { TeamRole } from "@/shared/model";
 import { useCreateInvite } from "@/entities/org";
-import { LEVELS, LevelGates } from "@/entities/policy";
 import { useCreateProject } from "@/entities/project";
 import { ConnectRepos, CreateGithubRepo, OwnershipBadge, useRepos } from "@/entities/repo";
 import { TEAM_ROLE_META, TeamRoleBadge } from "@/entities/task";
 import { useCurrentUser } from "@/entities/user";
 
-type Step = "name" | "repos" | "invite" | "level" | "pmBudget" | "extras";
+type Step = "name" | "repos" | "invite" | "extras";
 type Line = { from: "nomos" | "me"; text: ReactNode };
 
 const STEPS: { key: Step; label: string }[] = [
   { key: "name", label: "이름" },
   { key: "repos", label: "레포" },
   { key: "invite", label: "초대" },
-  { key: "level", label: "레벨" },
-  { key: "pmBudget", label: "PM 예산" },
   { key: "extras", label: "선택" },
 ];
 
@@ -32,15 +29,12 @@ const PROMPTS: Record<Step, string> = {
   repos: "이 프로젝트에서 쓸 레포를 골라주세요. 소유 역할(FE·BE)이 지정된 레포만 넣을 수 있습니다.",
   invite:
     "같이 일할 FE·BE 개발자에게 보낼 초대 링크를 만들 수 있습니다. 이미 조직에 있는 사람은 건너뛰세요. 링크는 나중에 설정 > 조직에서도 만들 수 있습니다.",
-  level:
-    "에이전트 허용 레벨을 정해주세요. 레벨은 자율성이 아니라 '행동마다 누가 승인하는가'를 정한 표입니다. 기본값은 L2입니다.",
-  pmBudget: "PM 예산(USD)을 정해주세요. PM은 NOMOS 키로 돌기 때문에 상한이 꼭 필요합니다.",
-  extras: "프로젝트 전체 예산과 마감일을 정할 수 있습니다. 둘 다 선택입니다.",
+  extras: "마감일과 질문 중계를 정할 수 있습니다. 둘 다 선택입니다.",
 };
 
-/** 소수 둘째 자리까지의 양수 */
-const USD = /^(?:\d+)(?:\.\d{1,2})?$/;
-const parseUsd = (v: string) => (USD.test(v.trim()) && Number(v) > 0 ? Number(v) : null);
+// 서버가 아직 필수로 받는다(adr/0022). 화면에서는 묻지 않는다 — BE가 선택값으로 바꾸면 지운다
+const AUTONOMY_PRESET = "L2";
+const PM_BUDGET_USD = 100;
 
 export function ProjectNewView() {
   // AuthGate 안쪽이므로 me와 orgId가 있다
@@ -53,8 +47,8 @@ export function ProjectNewView() {
   const [lines, setLines] = useState<Line[]>([{ from: "nomos", text: PROMPTS.name }]);
   const [typing, setTyping] = useState(false);
   const [input, setInput] = useState("");
-  const [form, setForm] = useState({ name: "", repoIds: [] as string[], level: "L2" as Level, pmBudgetUsd: 0 });
-  // 409 REPO_IN_ACTIVE_PROJECT로 레포만 다시 고르는 중. 고르면 레벨·예산을 다시 묻지 않고 마지막 단계로 간다
+  const [form, setForm] = useState({ name: "", repoIds: [] as string[] });
+  // 409 REPO_IN_ACTIVE_PROJECT로 레포만 다시 고르는 중. 고르면 초대를 다시 묻지 않고 마지막 단계로 간다
   const [returning, setReturning] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -68,7 +62,7 @@ export function ProjectNewView() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [lines, typing, step]);
 
-  const textStep = step === "name" || step === "pmBudget";
+  const textStep = step === "name";
   useEffect(() => {
     if (!typing && textStep) inputRef.current?.focus();
   }, [typing, textStep]);
@@ -83,18 +77,12 @@ export function ProjectNewView() {
     }, 500);
   };
 
-  const budgetValue = parseUsd(input);
   const submitText = () => {
     const v = input.trim();
-    if (step === "name" && v) {
-      setForm((f) => ({ ...f, name: v }));
-      setInput("");
-      answer(v, "repos");
-    } else if (step === "pmBudget" && budgetValue !== null) {
-      setForm((f) => ({ ...f, pmBudgetUsd: budgetValue }));
-      setInput("");
-      answer(`$${budgetValue}`, "extras");
-    }
+    if (!v) return;
+    setForm((f) => ({ ...f, name: v }));
+    setInput("");
+    answer(v, "repos");
   };
 
   if (!isRep) return null;
@@ -165,15 +153,8 @@ export function ProjectNewView() {
             <InviteStep
               orgId={orgId}
               onDone={(made) =>
-                answer(made.length > 0 ? `${made.join("·")} 초대 링크를 만들었어요` : "초대는 나중에 할게요", "level")
+                answer(made.length > 0 ? `${made.join("·")} 초대 링크를 만들었어요` : "초대는 나중에 할게요", "extras")
               }
-            />
-          ) : step === "level" ? (
-            <LevelPicker
-              onPick={(level) => {
-                setForm((f) => ({ ...f, level }));
-                answer(`${level} · ${LEVELS.find((l) => l.id === level)!.title}`, "pmBudget");
-              }}
             />
           ) : step === "extras" ? (
             <Extras
@@ -200,29 +181,24 @@ export function ProjectNewView() {
               }}
               className="flex items-center gap-2 rounded-2xl border border-ink-200 bg-white px-2 py-1.5 shadow-card focus-within:border-ink-300 focus-within:ring-4 focus-within:ring-ink-100"
             >
-              {step === "pmBudget" && <span className="pl-2 text-[15px] text-ink-500">$</span>}
               <input
                 ref={inputRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 disabled={typing}
-                maxLength={step === "name" ? 128 : 12}
-                inputMode={step === "pmBudget" ? "decimal" : undefined}
-                placeholder={step === "name" ? "예: 스터디 관리 웹앱" : "예: 40"}
+                maxLength={128}
+                placeholder="예: 스터디 관리 웹앱"
                 className="h-10 flex-1 bg-transparent px-2 text-[15px] outline-none placeholder:text-ink-400"
               />
               <button
                 type="submit"
-                disabled={typing || (step === "name" ? !input.trim() : budgetValue === null)}
+                disabled={typing || !input.trim()}
                 aria-label="보내기"
                 className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-ink-900 text-white disabled:bg-ink-200"
               >
                 <ArrowUp size={16} />
               </button>
             </form>
-            {step === "pmBudget" && input.trim() !== "" && budgetValue === null && (
-              <div className="mt-1.5 text-center text-[11.5px] text-forbidden">0보다 큰 금액 (소수 둘째 자리까지)</div>
-            )}
           </div>
         </div>
       )}
@@ -445,28 +421,6 @@ function InviteRow({ orgId, role, onMade }: { orgId: string; role: TeamRole; onM
   );
 }
 
-function LevelPicker({ onPick }: { onPick: (level: Level) => void }) {
-  return (
-    <div className="ml-0 grid grid-cols-1 gap-2 animate-rise sm:ml-10 sm:grid-cols-2">
-      {LEVELS.map((l) => (
-        <button
-          key={l.id}
-          onClick={() => onPick(l.id)}
-          className="rounded-xl border border-ink-200 p-3.5 text-left transition hover:border-ink-900 hover:ring-2 hover:ring-ink-900/10"
-        >
-          <div className="mb-1.5 flex items-center justify-between">
-            <span className="text-[15px] font-semibold">
-              {l.id} <span className="font-medium">{l.title}</span>
-            </span>
-            {l.id === "L2" ? <Badge>기본값</Badge> : <span className="text-[11.5px] text-ink-400">{l.blurb}</span>}
-          </div>
-          <LevelGates level={l.id} />
-        </button>
-      ))}
-    </div>
-  );
-}
-
 function Extras({
   orgId,
   form,
@@ -474,24 +428,21 @@ function Extras({
   onBackToRepos,
 }: {
   orgId: string;
-  form: { name: string; repoIds: string[]; level: Level; pmBudgetUsd: number };
+  form: { name: string; repoIds: string[] };
   onCreated: (projectId: string) => void;
   onBackToRepos: () => void;
 }) {
   const create = useCreateProject(orgId);
-  const [budget, setBudget] = useState("");
   const [deadline, setDeadline] = useState("");
   const [questionRelay, setQuestionRelay] = useState(true);
-  const budgetUsd = budget.trim() === "" ? undefined : parseUsd(budget);
 
   const submit = () =>
     create.mutate(
       {
         name: form.name,
         repoIds: form.repoIds,
-        autonomyPreset: form.level,
-        pmBudgetUsd: form.pmBudgetUsd,
-        ...(budgetUsd != null && { budgetUsd }),
+        autonomyPreset: AUTONOMY_PRESET,
+        pmBudgetUsd: PM_BUDGET_USD,
         // <input type="date">는 YYYY-MM-DD 문자열을 준다. Date로 바꾸지 않는다(타임존)
         ...(deadline && { deadline }),
         // 생략하면 켜짐
@@ -504,17 +455,6 @@ function Extras({
   return (
     <ChatCard>
       <div className="grid gap-3 sm:grid-cols-2">
-        <div>
-          <Input
-            label="전체 예산 (USD, 선택)"
-            inputMode="decimal"
-            placeholder="비우면 상한 없음"
-            value={budget}
-            onChange={(e) => setBudget(e.target.value)}
-            aria-invalid={budgetUsd === null}
-          />
-          {budgetUsd === null && <p className="mt-1 text-[12px] text-forbidden">0보다 큰 금액 (소수 둘째 자리까지)</p>}
-        </div>
         <Input label="마감일 (선택)" type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
       </div>
       <label className="mt-3 flex cursor-pointer items-start gap-2.5 text-[13.5px]">
@@ -560,7 +500,7 @@ function Extras({
           )}
         </div>
       )}
-      <Button className="mt-4" onClick={submit} disabled={budgetUsd === null || create.isPending || create.isSuccess}>
+      <Button className="mt-4" onClick={submit} disabled={create.isPending || create.isSuccess}>
         {create.isPending || create.isSuccess ? "만드는 중…" : "프로젝트 만들기"}
       </Button>
     </ChatCard>

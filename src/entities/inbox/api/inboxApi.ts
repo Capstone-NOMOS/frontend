@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch, livePoll, type Schemas } from "@/shared/api";
 
 export const inboxKeys = {
@@ -9,12 +9,31 @@ export const inboxKeys = {
 
 const POLL = { refetchInterval: livePoll(30000), refetchIntervalInBackground: false } as const;
 
-/** 알림 — 일어난 일 (최신순, 최근 30일). 내가 직접 한 일은 오지 않는다. id는 큰 정수라 문자열 그대로 다룬다 */
+const LIMIT = 30;
+
+type NotificationPage = { notifications: Schemas["Notification"][]; unreadCount: number };
+
+// 훅 밖에 둔다 (eventApi.ts와 같은 이유). 안 읽은 수는 매 페이지 같은 값이라 첫 페이지 것을 쓴다
+const flatten = (data: { pages: NotificationPage[] }): NotificationPage => ({
+  notifications: data.pages.flatMap((p) => p.notifications),
+  unreadCount: data.pages[0]?.unreadCount ?? 0,
+});
+
+/**
+ * 알림 — 일어난 일 (최신순, 최근 30일). 내가 직접 한 일은 오지 않는다. id는 큰 정수라 문자열 그대로 다룬다.
+ * "더 보기"는 이전 응답의 마지막 id를 before로 보낸다. 응답에 다음 커서가 없어서 꽉 찬 페이지면 더 있다고 본다
+ */
 export function useNotifications() {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: inboxKeys.notifications(),
-    queryFn: () =>
-      apiFetch<{ notifications: Schemas["Notification"][]; unreadCount: number }>("/me/notifications?limit=30"),
+    queryFn: ({ pageParam }) => {
+      const q = new URLSearchParams({ limit: String(LIMIT) });
+      if (pageParam) q.set("before", pageParam);
+      return apiFetch<NotificationPage>(`/me/notifications?${q}`);
+    },
+    initialPageParam: null as string | null,
+    getNextPageParam: (last) => (last.notifications.length === LIMIT ? (last.notifications.at(-1)?.id ?? null) : null),
+    select: flatten,
     ...POLL,
   });
 }
