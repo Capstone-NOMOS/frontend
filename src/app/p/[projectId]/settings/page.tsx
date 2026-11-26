@@ -35,7 +35,7 @@ export default async function SettingsPage({
         {current === "org" ? (
           <OrgView />
         ) : current === "account" ? (
-          <AccountSettingsView />
+          <AccountSettingsView returnTo={`${base}?tab=account`} />
         ) : (
           <SettingsView projectId={projectId} />
         )}

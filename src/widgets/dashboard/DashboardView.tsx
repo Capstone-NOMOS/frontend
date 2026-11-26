@@ -13,8 +13,7 @@ import { useProjectApprovals } from "@/entities/approval";
 import { useContracts } from "@/entities/contract";
 import { EventRow, makeEventLookup, useProjectEvents } from "@/entities/event";
 import { useOrgMembers } from "@/entities/org";
-import { LEVELS } from "@/entities/policy";
-import { ProjectErrorView, ProjectStatusBadge, fmtUsd, useProject } from "@/entities/project";
+import { ProjectErrorView, ProjectStatusBadge, useProject } from "@/entities/project";
 import { DECISIONS_MAX, useDecisions } from "@/entities/question";
 import { ROLE_ROOM, ROOM_META, useRooms } from "@/entities/room";
 import { useSpecs } from "@/entities/spec";
@@ -57,7 +56,6 @@ export function DashboardView({ projectId }: { projectId: string }) {
   const myMember = members.find((m) => m.userId === me?.userId);
   const myTeamRole = myMember?.teamRole;
 
-  const level = LEVELS.find((l) => l.id === project.autonomyPreset);
   const contractList = contracts.data ?? [];
   const docRows = [
     { href: "spec", label: "명세", count: specs.data?.length ?? 0, unit: "개" },
@@ -94,21 +92,14 @@ export function DashboardView({ projectId }: { projectId: string }) {
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-[22px] font-semibold tracking-tight">{project.name}</h1>
-              <Badge tone="brand">
-                {project.autonomyPreset}
-                {level && ` · ${level.title}`}
-              </Badge>
               <ProjectStatusBadge status={project.status} />
               {project.questionMode === "experiment" && <Badge tone="warn">실험 모드</Badge>}
             </div>
-            <p className="mt-1 inline-flex items-center gap-1 text-[13px] text-ink-500">
-              {project.deadline && (
-                <>
-                  <CalendarDays size={13} /> 마감 {project.deadline} ·{" "}
-                </>
-              )}
-              PM 예산 {fmtUsd(project.pmBudgetUsd)}
-            </p>
+            {project.deadline && (
+              <p className="mt-1 inline-flex items-center gap-1 text-[13px] text-ink-500">
+                <CalendarDays size={13} /> 마감 {project.deadline}
+              </p>
+            )}
           </div>
         </div>
 

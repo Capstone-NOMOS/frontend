@@ -7,15 +7,7 @@ import { errorMessage } from "@/shared/api";
 import { AgentMark, Badge, CopyField } from "@/shared/ui";
 import { cn, fmtDateTime } from "@/shared/lib/format";
 import { CLI_NPX } from "@/entities/agent";
-import {
-  chronological,
-  fmtUsdNumber,
-  isSuperseded,
-  usePlans,
-  usePmStatus,
-  useRequestFeatures,
-  type PmStatus,
-} from "@/entities/plan";
+import { chronological, isSuperseded, usePlans, usePmStatus, useRequestFeatures, type PmStatus } from "@/entities/plan";
 import { ApprovalCard, useProjectApprovals } from "@/entities/approval";
 import { projectKeys, useProject } from "@/entities/project";
 import { QuestionCard, questionTaskHref, useProjectQuestions } from "@/entities/question";
@@ -252,7 +244,7 @@ function Room({ projectId, meName }: { projectId: string; meName: string }) {
   );
 }
 
-/** PM 준비 상태와 예산. ready가 아니면 요청 버튼을 끄고 이유를 보여준다 */
+/** PM 준비 상태. ready가 아니면 요청 버튼을 끄고 이유를 보여준다 */
 function StatusBar({ status, error }: { status: PmStatus | undefined; error: Error | null }) {
   if (error) {
     return (
@@ -262,7 +254,6 @@ function StatusBar({ status, error }: { status: PmStatus | undefined; error: Err
     );
   }
   if (!status) return null;
-  const pct = status.budgetUsd > 0 ? Math.min(100, Math.round((status.spentUsd / status.budgetUsd) * 100)) : 0;
 
   return (
     <div className="border-b border-ink-100 bg-ink-50 px-4 py-2.5 sm:px-6">
@@ -276,29 +267,10 @@ function StatusBar({ status, error }: { status: PmStatus | undefined; error: Err
                 ? "서버에 PM 키가 없습니다"
                 : "PM 작업기가 꺼져 있습니다"}
           </span>
-          {/* 명세 F-08: 예산 80% 도달 시 경고 */}
-          <span className="flex min-w-[220px] flex-1 items-center gap-2">
-            <span className="shrink-0 text-ink-500">PM 예산</span>
-            <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-ink-200">
-              <span
-                className={cn(
-                  "block h-full rounded-full",
-                  pct >= 100 ? "bg-forbidden" : pct >= 80 ? "bg-human" : "bg-brand-500",
-                )}
-                style={{ width: `${pct}%` }}
-              />
-            </span>
-            <span className={cn("shrink-0 tabular-nums", pct >= 80 ? "font-medium text-human" : "text-ink-700")}>
-              {fmtUsdNumber(status.spentUsd)} / {fmtUsdNumber(status.budgetUsd)}
-            </span>
-          </span>
         </div>
-        {pct >= 80 && (
-          <p className="text-[12px] text-human">
-            {pct >= 100
-              ? "PM 예산을 다 썼습니다. 새 계획 요청은 거절됩니다."
-              : "PM 예산의 80%를 넘었습니다. 남은 예산으로는 계획을 받지 못할 수 있습니다."}
-          </p>
+        {/* 예산은 화면에서 정하지도 보이지도 않는다(adr/0022). 다 써서 PM이 거절할 때만 이유를 알린다 */}
+        {status.budgetUsd > 0 && status.spentUsd >= status.budgetUsd && (
+          <p className="text-[12px] text-human">PM 예산을 다 썼습니다. 새 계획 요청은 거절됩니다.</p>
         )}
         {!status.ready && status.reason === "WORKER_OFFLINE" && (
           <div className="space-y-1.5">

@@ -163,6 +163,18 @@ export function InboxView({ projectId }: { projectId: string }) {
               )}
             </ul>
           )}
+          {notifications.hasNextPage && (
+            <div className="mt-3 flex justify-center">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={notifications.isFetchingNextPage}
+                onClick={() => void notifications.fetchNextPage()}
+              >
+                {notifications.isFetchingNextPage ? "불러오는 중…" : "더 보기"}
+              </Button>
+            </div>
+          )}
         </section>
       </div>
     </div>

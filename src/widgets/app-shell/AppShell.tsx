@@ -9,6 +9,7 @@ import {
   FileText,
   Inbox,
   LayoutDashboard,
+  LogOut,
   Menu,
   MessageSquare,
   Plus,
@@ -24,7 +25,7 @@ import { ProjectErrorView, useProject, useProjects } from "@/entities/project";
 import { useMyInbox, useNotifications } from "@/entities/inbox";
 import { useMyQuestions } from "@/entities/question";
 import { ROLE_ROOM, ROOM_META, useRooms } from "@/entities/room";
-import { AccountMenu, RoleBadge, displayName, useCurrentUser } from "@/entities/user";
+import { RoleBadge, displayName, useCurrentUser, useLogout } from "@/entities/user";
 
 export function AppShell({ projectId, children }: { projectId: string; children: ReactNode }) {
   const detail = useProject(projectId);
@@ -175,10 +176,9 @@ function SidebarContent({
   const pathname = usePathname();
   const router = useRouter();
   const [projOpen, setProjOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  // 바깥 클릭·Esc로 닫는다. 한쪽을 열면 다른 쪽은 바깥 클릭이 되어 닫힌다
+  const logout = useLogout();
+  // 바깥 클릭·Esc로 닫는다
   const projRef = useDismiss<HTMLDivElement>(projOpen, setProjOpen);
-  const menuRef = useDismiss<HTMLDivElement>(menuOpen, setMenuOpen);
 
   const base = `/p/${projectId}`;
   const is = (p: string) => pathname === p;
@@ -216,7 +216,6 @@ function SidebarContent({
                     )}
                   >
                     <span className="truncate">{p.name}</span>
-                    <Badge tone="brand">{p.autonomyPreset}</Badge>
                   </button>
                 ))}
               </div>
@@ -245,7 +244,7 @@ function SidebarContent({
         )}
       </div>
 
-      {/* 레벨·상태는 대시보드 머리에 있다. 실험 모드만 어느 화면에서든 보이게 남긴다 */}
+      {/* 상태는 대시보드 머리에 있다. 실험 모드만 어느 화면에서든 보이게 남긴다 */}
       {project.questionMode === "experiment" && (
         <div className="px-5 pb-2">
           <Badge tone="warn">실험 모드</Badge>
@@ -348,11 +347,8 @@ function SidebarContent({
         </div>
       </nav>
 
-      <div ref={menuRef} className="relative border-t border-ink-200 p-3">
-        <button
-          onClick={() => setMenuOpen((v) => !v)}
-          className="flex w-full items-center gap-2.5 rounded-lg px-1.5 py-1.5 text-left hover:bg-ink-100"
-        >
+      <div className="border-t border-ink-200 p-3">
+        <div className="flex items-center gap-2.5 px-1.5 py-1.5">
           <Avatar name={displayName(user)} size={32} />
           <span className="min-w-0 flex-1">
             <span className="flex items-center gap-1.5">
@@ -365,15 +361,15 @@ function SidebarContent({
               </span>
             )}
           </span>
-          <ChevronDown size={14} className="text-ink-500" />
-        </button>
-        {menuOpen && (
-          <div className="absolute bottom-full left-3 right-3 z-20 mb-1 rounded-xl border border-ink-200 bg-white p-1.5 shadow-pop animate-rise">
-            <div className="px-2.5 py-1.5">
-              <AccountMenu />
-            </div>
-          </div>
-        )}
+          <button
+            onClick={logout}
+            aria-label="로그아웃"
+            title="로그아웃"
+            className="shrink-0 rounded-lg p-1.5 text-ink-500 hover:bg-ink-100 hover:text-ink-900"
+          >
+            <LogOut size={16} />
+          </button>
+        </div>
       </div>
     </div>
   );

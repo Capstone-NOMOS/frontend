@@ -12,8 +12,3 @@ export const PROJECT_STATUS: Record<
   completed: { label: "완료", tone: "success" },
   aborted: { label: "중단", tone: "danger" },
 };
-
-/** pmBudgetUsd·budgetUsd는 numeric 문자열("40.00")이다. 숫자로 바꾸지 않고 표시만 한다 */
-export function fmtUsd(value: string) {
-  return `$${value}`;
-}

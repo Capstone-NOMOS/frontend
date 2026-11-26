@@ -5,11 +5,10 @@ import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, CalendarDays, Loader2, Plus, Settings } from "lucide-react";
 import { ApiError, errorMessage } from "@/shared/api";
-import { Badge, Button, Logo } from "@/shared/ui";
+import { Button, Logo } from "@/shared/ui";
 import { cn } from "@/shared/lib/format";
 import { useOrgAgents } from "@/entities/agent";
-import { LEVELS } from "@/entities/policy";
-import { ProjectStatusBadge, fmtUsd, useProjects } from "@/entities/project";
+import { ProjectStatusBadge, useProjects } from "@/entities/project";
 import { AccountMenu, HomeLink, useCurrentUser, userKeys } from "@/entities/user";
 
 export function ProjectListView() {
@@ -96,40 +95,30 @@ export function ProjectListView() {
             {/* 중단된 프로젝트는 지워지지 않는다 — 뒤로 보내고 흐리게 */}
             {[...projects.data]
               .sort((a, b) => Number(a.status === "aborted") - Number(b.status === "aborted"))
-              .map((p) => {
-                const level = LEVELS.find((l) => l.id === p.autonomyPreset);
-                return (
-                  <li key={p.id}>
-                    <Link
-                      href={`/p/${p.id}`}
-                      className={cn(
-                        "card block p-5 transition hover:border-ink-300 animate-rise",
-                        p.status === "aborted" && "opacity-60",
-                      )}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex min-w-0 items-center gap-2">
-                          <span className="truncate text-[17px] font-semibold">{p.name}</span>
-                          <ProjectStatusBadge status={p.status} />
-                        </div>
-                        <ArrowRight size={16} className="mt-1 shrink-0 text-ink-400" />
+              .map((p) => (
+                <li key={p.id}>
+                  <Link
+                    href={`/p/${p.id}`}
+                    className={cn(
+                      "card block h-full p-5 transition hover:border-ink-300 animate-rise",
+                      p.status === "aborted" && "opacity-60",
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span className="truncate text-[17px] font-semibold">{p.name}</span>
+                        <ProjectStatusBadge status={p.status} />
                       </div>
-                      <div className="mt-4 flex flex-wrap items-center gap-2 text-[12px] text-ink-500">
-                        <Badge tone="brand">
-                          {p.autonomyPreset}
-                          {level && ` · ${level.title}`}
-                        </Badge>
-                        <span>PM 예산 {fmtUsd(p.pmBudgetUsd)}</span>
-                        {p.deadline && (
-                          <span className="inline-flex items-center gap-1">
-                            <CalendarDays size={12} /> {p.deadline}
-                          </span>
-                        )}
+                      <ArrowRight size={16} className="mt-1 shrink-0 text-ink-400" />
+                    </div>
+                    {p.deadline && (
+                      <div className="mt-4 inline-flex items-center gap-1 text-[12px] text-ink-500">
+                        <CalendarDays size={12} /> {p.deadline}
                       </div>
-                    </Link>
-                  </li>
-                );
-              })}
+                    )}
+                  </Link>
+                </li>
+              ))}
             {projects.data.length === 0 && (
               <li className="col-span-full rounded-xl border border-dashed border-ink-200 bg-white/70 px-6 py-10 text-center">
                 {isRep ? (
