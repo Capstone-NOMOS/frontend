@@ -30,13 +30,22 @@ export function InboxAlerts() {
   const notifications = useNotifications().data?.notifications;
   const items = useMyInbox().data?.items;
   const seen = useRef<Set<string> | null>(null);
+  // 지금까지 본 가장 최신 알림 id. "더 보기"로 불러온 예전 알림은 이보다 작아 토스트로 띄우지 않는다
+  const newest = useRef<bigint | null>(null);
   const shown = useRef(new Set<string>());
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   useEffect(() => {
     if (!notifications || !items) return;
+    const floor = newest.current;
+    // 알림 id는 큰 정수 문자열이다(최신순). 숫자로 바꾸면 정밀도를 잃어 BigInt로 비교한다
+    const fresher = floor === null ? notifications : notifications.filter((n) => BigInt(n.id) > floor);
+    if (notifications[0]) {
+      const top = BigInt(notifications[0].id);
+      if (floor === null || top > floor) newest.current = top;
+    }
     const all: Toast[] = [
-      ...notifications.map((n) => ({
+      ...fresher.map((n) => ({
         key: `n:${n.id}`,
         text: n.text,
         projectName: n.projectName,
