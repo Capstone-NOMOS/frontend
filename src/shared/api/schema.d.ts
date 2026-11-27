@@ -4031,8 +4031,8 @@ export interface paths {
         head?: never;
         /**
          * 프로젝트 설정 (대표 전용, 시작 전에만)
-         * @description 질문 중계 스위치(`questionRelay`)와 질문 모드(`questionMode`, 033 — 실험 모드). **시작(G1) 뒤에는 403 `PROJECT_STARTED`** — 실행 중에 바뀌면 같은 프로젝트 안에서 결과가 섞인다.
-         *     실험 모드는 질문 중계가 켜져 있을 때만 켤 수 있다(422 `QUESTION_MODE_INVALID`).
+         * @description 질문 중계 스위치(`questionRelay`)·질문 모드(`questionMode`, 033 — 실험 모드)·완료 태스크 자동 병합(`autoMerge`, 037). **시작(G1) 뒤에는 403 `PROJECT_STARTED`** — 실행 중에 바뀌면 같은 프로젝트 안에서 결과가 섞인다.
+         *     실험 모드는 질문 중계가 켜져 있을 때만, 자동 병합은 실험 모드에서만 켤 수 있다(422 `QUESTION_MODE_INVALID`).
          *     바뀌면 이벤트 `PROJECT_SETTINGS_UPDATED`(before·after). 같은 값이면 그대로 돌려준다.
          */
         patch: {
@@ -4057,6 +4057,7 @@ export interface paths {
                         questionRelay?: boolean;
                         /** @enum {string} */
                         questionMode?: "normal" | "experiment";
+                        autoMerge?: boolean;
                     };
                 };
             };
@@ -5336,6 +5337,98 @@ export interface paths {
                     content?: never;
                 };
                 /** @description 키가 질문과 다르거나 답이 비었음(QUESTION_INVALID) — error.details에 전부 */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/questions/{questionId}/reroute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 질문을 다른 역할로 다시 보내기 (지금 대상 역할 담당 또는 대표)
+         * @description 라우터가 보낸 대상이 그 결정을 내릴 사람이 아니면 다른 역할(FRONTEND·BACKEND·PM)로 다시 보낸다. 보내는 즉시 새 대상 역할 담당의
+         *     "내가 답할 질문"·처리할 일에 나오고, 새 대상이 FE·BE면 그 역할 에이전트의 상담 실행이, PM이면 PM 답 초안이 돈다. 옛 대상은 더 이상 답할 수 없다(대표는 언제나 답할 수 있다).
+         *     - **대기 중(pending)인 질문만** 보낼 수 있다. 에이전트가 이미 답한 질문(agent_answered)은 답이 묻는 쪽에 갔으므로 다르게 정하려면 답 뒤집기(answer)를 쓴다.
+         *     - 질문한 역할로도 보낼 수 있다("그건 FE가 정할 일") — 그 역할의 **사람** 담당이 답한다(상담 실행은 돌지 않는다). 옛 대상의 상담 초안(draft)은 지워진다.
+         *     - 질문한 에이전트는 그대로 같은 질문의 답을 기다린다(질문 id가 같다). 만료 시각은 바뀌지 않는다.
+         *     - 라우터의 처음 판정은 `reroutedFrom`에 남고, 라우팅 평가(성적표·데이터셋)는 그 값을 쓴다 — 재지정은 평가 숫자를 바꾸지 않는다.
+         *     이벤트 `QUESTION_REROUTED`(fromRole·targetRole·reason)는 옛 대상과 새 대상의 룸에 모두 나온다.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    questionId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    /**
+                     * @example {
+                     *       "targetRole": "FRONTEND",
+                     *       "reason": "화면에 몇 개씩 보여 줄지는 프론트에서 정할 일이에요"
+                     *     }
+                     */
+                    "application/json": {
+                        /** @enum {string} */
+                        targetRole: "FRONTEND" | "BACKEND" | "PM";
+                        /** @description 왜 다시 보내는지(선택) — 룸에 나온다 */
+                        reason?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description 다시 보냄(targetRole이 새 대상, reroutedFrom이 처음 대상) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["AgentQuestion"];
+                        };
+                    };
+                };
+                /** @description 지금 대상 역할 담당도 대표도 아님(NOT_QUESTION_TARGET) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description 질문이 없음(QUESTION_NOT_FOUND) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description 이미 답했거나 만료됐거나 그 사이 다른 사람이 먼저 다시 보냄(QUESTION_CLOSED) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description 지금 대상과 같은 역할(QUESTION_INVALID) — error.details에 전부 */
                 422: {
                     headers: {
                         [name: string]: unknown;
@@ -8858,6 +8951,12 @@ export interface components {
              * @enum {string}
              */
             questionMode: "normal" | "experiment";
+            /**
+             * @description 완료 태스크를 기본 브랜치에 합치기(037, **실험 모드 전용**, 기본 꺼짐). 켜면 DONE이 된 태스크의 마지막 제출 커밋을 서버가 기본 브랜치에 합친다
+             *     (이벤트 `TASK_MERGED_TO_DEFAULT` — merged·already·conflict). 기능을 쌓아 큰 앱을 키우는 무인 실험용이다 — 회차를 반복하는 실험에서는 끈다(회차마다 같은 출발점이어야 한다).
+             *     시작(G1) 전에만 바꾼다
+             */
+            autoMerge: boolean;
         };
         RepoListItem: {
             /** Format: uuid */
@@ -9238,9 +9337,15 @@ export interface components {
             /**
              * @description 답할 쪽. 서버의 질문 라우터가 정한다(routedBy에 근거). PM(025) = 요구사항·정책 같은 제품 결정 — 대표가 운용하는 PM 에이전트가 답 초안(draft)을 쓰고
              *     **대표가 확정한다**(PM 질문은 초안이 곧 답이 되지 않는다, draftedByAgentId가 null일 수 있다). 답할 수 있는 사람은 대표뿐이다.
+             *     재지정(`POST /questions/{questionId}/reroute`)하면 새 대상으로 바뀐다 — 지금 답할 역할이다.
              * @enum {string}
              */
             targetRole: "FRONTEND" | "BACKEND" | "PM";
+            /**
+             * @description 재지정(038) 전에 라우터가 처음 정한 대상. 재지정된 적 없으면 null. 질문 카드에 "BE에서 넘어온 질문"처럼 표시할 때 쓴다
+             * @enum {string|null}
+             */
+            reroutedFrom: "FRONTEND" | "BACKEND" | "PM" | null;
             /** @description 대상을 정한 라우터 구현(이름·버전). 운영 기본은 LLM('llm:<relay|anthropic>:<모델>:v3'). 비교용으로 'openai:<모델>:v3'(OpenAI)·'jev:<모델>:v3'(TypeSafe Jev)도 고를 수 있다. 실패하면 대표에게('fallback:representative', targetRole PM) 보내고 fallback에 사유 */
             routedBy: string;
             /** @description 라우터 판정 상세 — 라우터 구현을 바꿔 가며 비교하는 근거 */
@@ -9442,6 +9547,15 @@ export interface components {
                 /** @description 라우터 → 판정(FRONTEND·BACKEND·PM·SELF, 실패면 null) */
                 decisions: {
                     [key: string]: string | null;
+                };
+                /** @description 라우터 → 이 질문의 판정 시간·비용(기준선 baseline:asker는 없다). 실제로 걸린 시간(분류 지연)은 싣지 않는다 — 중계 llm은 대기열·노트북 CLI 기동이 섞여 라우터 비교에 쓸 수 없다 */
+                metrics: {
+                    [key: string]: {
+                        /** @description 판정 시간(035, 판정자에게 도달 ~ 답). 모르면(옛 CLI 중계·실패) null */
+                        modelLatencyMs: number | null;
+                        /** @description 이 판정의 비용(USD). 모르면(실패·가격표에 없는 모델) null */
+                        costUsd: number | null;
+                    };
                 };
             }[];
         };

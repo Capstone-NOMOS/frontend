@@ -177,6 +177,11 @@ export function describeEvent(e: ProjectEvent, l: EventLookup): { text: string; 
         tone: "success",
       };
     }
+    case "QUESTION_REROUTED":
+      return {
+        text: `${ROLE[str("fromRole")] ?? "담당"} → ${ROLE[str("targetRole")] ?? str("targetRole")} 질문 다시 보냄${str("reason") && ` — ${str("reason")}`} · ${questionOf()}`,
+        tone: "default",
+      };
     case "QUESTION_GOLD_LABELED":
       return { text: `평가 · 질문에 정답 담당자를 붙임 · ${task()}`, tone: "default" };
     case "QUESTION_EXPIRED":
