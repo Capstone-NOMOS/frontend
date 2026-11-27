@@ -56,6 +56,10 @@ describe("keysForSignal — 실시간 신호가 다시 읽게 하는 쿼리", ()
     expect(await invalidatedBy("p1", ["tasks"])).toEqual<Screen[]>(["tasksP1", "artifactsT1", "verificationsA1"]);
   });
 
+  it("프로젝트 questions 신호는 룸 피드도 다시 읽는다 — 질문 줄(재지정 포함)에 room 신호가 같이 오지 않는다", async () => {
+    expect(await invalidatedBy("p1", ["questions"])).toEqual<Screen[]>(["pmStatusP1", "roomListP1", "roomFeedP1"]);
+  });
+
   it("다른 프로젝트의 태스크 목록은 다시 읽지 않는다", async () => {
     expect(await invalidatedBy("p2", ["tasks"])).not.toContain("tasksP1");
   });

@@ -47,8 +47,9 @@ const PROJECT_TOPICS: Record<string, (projectId: string) => QueryKey[]> = {
   specs: (id) => [specKeys.list(id)],
   contracts: (id) => [contractKeys.list(id)],
   room: (id) => [roomKeys.project(id)],
-  // 기획 단계 질문에 답하면 초안·계약의 답 대기 수(pendingQuestionCount)가 바뀐다
-  questions: (id) => [questionKeys.all, planKeys.project(id), contractKeys.list(id)],
+  // 기획 단계 질문에 답하면 초안·계약의 답 대기 수(pendingQuestionCount)가 바뀐다.
+  // 질문 줄(QUESTION_*)은 룸 피드에도 나오는데 서버가 room 신호를 같이 보내지 않아 룸도 다시 읽는다
+  questions: (id) => [questionKeys.all, planKeys.project(id), contractKeys.list(id), roomKeys.project(id)],
 };
 
 /** 신호 하나가 무효화할 쿼리 키. projectId가 null이면 조직 신호다. 모르는 topic은 건너뛴다 */

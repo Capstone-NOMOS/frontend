@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { useState } from "react";
 import { ArrowRight } from "lucide-react";
-import { errorMessage, type Schemas } from "@/shared/api";
+import { ApiError, errorMessage, type Schemas } from "@/shared/api";
 import { Badge, Button, Input, Textarea } from "@/shared/ui";
 import { cn, fmtDateTime, relTime } from "@/shared/lib/format";
-import { useAnswerQuestion, useSetGold } from "../api/questionApi";
+import { useAnswerQuestion, useRerouteQuestion, useSetGold } from "../api/questionApi";
 
 type AgentQuestion = Schemas["AgentQuestion"];
 
@@ -54,6 +54,15 @@ const STATUS: Record<
   self_owned: { label: "스스로 정할 일로 돌려보냄", tone: "neutral" },
 };
 
+// 재지정 실패 문구. 전역 문구(errors.ts)는 답하기 기준이라 여기서 바꿔 보인다. 403·409는 목록을 이미 다시 읽었다
+const REROUTE_ERROR: Record<string, string> = {
+  NOT_QUESTION_TARGET: "그 사이 다른 사람이 이 질문을 넘겼습니다. 목록을 새로 불러왔습니다.",
+  QUESTION_CLOSED: "그 사이 답이 달렸거나 만료됐습니다. 목록을 새로 불러왔습니다.",
+  QUESTION_INVALID: "지금 대상과 다른 역할을 골라 주세요.",
+};
+const rerouteErrorMessage = (error: unknown) =>
+  (error instanceof ApiError && REROUTE_ERROR[error.code]) || errorMessage(error);
+
 /** multiSelect는 고른 label을 "a, b"처럼 쉼표로 이어 보낸다 */
 function toggleLabel(value: string, label: string) {
   const picked = value.split(", ").filter(Boolean);
@@ -79,6 +88,12 @@ export function QuestionCard({
   taskTitle?: string;
 }) {
   const answer = useAnswerQuestion();
+  const reroute = useRerouteQuestion();
+  const busy = answer.isPending || reroute.isPending;
+  // 다른 역할에 보내기 폼. 대기 중 질문만 넘길 수 있다(에이전트가 답한 질문은 답 뒤집기로)
+  const [rerouteOpen, setRerouteOpen] = useState(false);
+  const [rerouteTo, setRerouteTo] = useState<AgentQuestion["targetRole"] | null>(null);
+  const [reason, setReason] = useState("");
   const isPm = q.targetRole === "PM";
   const agentAnswered = q.status === "agent_answered";
   const open = q.status === "pending" || agentAnswered;
@@ -111,6 +126,7 @@ export function QuestionCard({
         </Badge>
         <ArrowRight size={13} className="text-ink-400" aria-label="질문 대상" />
         <Badge tone={ROLE[q.targetRole].tone}>{ROLE[q.targetRole].label}</Badge>
+        {q.reroutedFrom && <Badge tone="neutral">{ROLE[q.reroutedFrom].label}에서 넘어옴</Badge>}
         {/* 기획 단계 질문은 태스크가 없다 — 만료는 넘어갈 태스크 없이 닫힘(가정으로 확정 포함) */}
         {q.status === "expired" && !q.taskId ? (
           <Badge tone="neutral">답 없이 닫힘</Badge>
@@ -170,7 +186,7 @@ export function QuestionCard({
                             <button
                               type="button"
                               aria-pressed={picked}
-                              disabled={answer.isPending}
+                              disabled={busy}
                               onClick={() =>
                                 set(x.question, x.multiSelect ? toggleLabel(values[x.question], o.label) : o.label)
                               }
@@ -192,7 +208,7 @@ export function QuestionCard({
                     className="mt-2"
                     value={values[x.question]}
                     onChange={(e) => set(x.question, e.target.value)}
-                    disabled={answer.isPending}
+                    disabled={busy}
                     placeholder={
                       x.options.length > 0
                         ? "선택지를 고르거나 직접 쓰세요. 근거를 덧붙이면 에이전트가 그것까지 따릅니다"
@@ -239,12 +255,7 @@ export function QuestionCard({
             </p>
           )}
           <div className="flex flex-wrap items-center gap-2">
-            <Button
-              size="sm"
-              variant={overriding ? "danger" : "primary"}
-              disabled={!complete || answer.isPending}
-              onClick={submit}
-            >
+            <Button size="sm" variant={overriding ? "danger" : "primary"} disabled={!complete || busy} onClick={submit}>
               {answer.isPending
                 ? "보내는 중…"
                 : overriding
@@ -257,10 +268,74 @@ export function QuestionCard({
               {!complete ? "모든 질문에 답해야 보낼 수 있습니다 · " : ""}
               {fmtDateTime(q.expiresAt)}까지 답이 없으면 만료됩니다
             </span>
+            {q.status === "pending" && !rerouteOpen && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="ml-auto"
+                disabled={busy}
+                onClick={() => setRerouteOpen(true)}
+              >
+                다른 역할에 보내기
+              </Button>
+            )}
           </div>
+          {q.status === "pending" && rerouteOpen && (
+            <div className="space-y-2 rounded-lg border border-ink-200 p-3">
+              <p className="text-[12.5px] text-ink-700">
+                이 질문을 정할 역할에게 보냅니다. 보내면 이 역할은 더 답할 수 없습니다.
+              </p>
+              <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="보낼 역할">
+                {(Object.keys(ROLE) as AgentQuestion["targetRole"][])
+                  .filter((r) => r !== q.targetRole)
+                  .map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      role="radio"
+                      aria-checked={rerouteTo === r}
+                      disabled={busy}
+                      onClick={() => setRerouteTo(r)}
+                      className={cn(
+                        "h-7 rounded-full border px-2.5 text-[12px] font-medium",
+                        rerouteTo === r
+                          ? "border-ink-900 bg-ink-900 text-white"
+                          : "border-ink-200 text-ink-600 hover:bg-ink-50",
+                      )}
+                    >
+                      {ROLE[r].label}
+                    </button>
+                  ))}
+              </div>
+              <Input
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                maxLength={500}
+                disabled={busy}
+                placeholder="왜 넘기는지 (선택) — 룸에 나옵니다"
+                aria-label="넘기는 이유"
+                className="h-8 text-[12.5px]"
+              />
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  disabled={!rerouteTo || busy}
+                  onClick={() =>
+                    rerouteTo && reroute.mutate({ id: q.id, targetRole: rerouteTo, reason: reason.trim() || undefined })
+                  }
+                >
+                  {reroute.isPending ? "보내는 중…" : "보내기"}
+                </Button>
+                <Button size="sm" variant="ghost" disabled={busy} onClick={() => setRerouteOpen(false)}>
+                  취소
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
       {answer.isError && <p className="mt-2 text-[12.5px] text-forbidden">{errorMessage(answer.error)}</p>}
+      {reroute.isError && <p className="mt-2 text-[12.5px] text-forbidden">{rerouteErrorMessage(reroute.error)}</p>}
       {canLabel && q.status === "answered" && <GoldLabel id={q.id} />}
     </div>
   );

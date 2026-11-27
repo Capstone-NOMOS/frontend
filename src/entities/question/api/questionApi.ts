@@ -50,6 +50,20 @@ export function useAnswerQuestion() {
   });
 }
 
+/**
+ * 다른 역할에 다시 보내기. pending 질문만 — 에이전트가 답한 질문은 답 뒤집기로 다룬다.
+ * 403 NOT_QUESTION_TARGET(그 사이 남이 넘김)·409 QUESTION_CLOSED(그 사이 닫힘)도 목록이 바뀐 것이라 성공·실패 모두 다시 읽는다.
+ * 처리할 일(inbox)은 서버의 inbox 신호로 갱신된다
+ */
+export function useRerouteQuestion() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...body }: { id: string; targetRole: AgentQuestion["targetRole"]; reason?: string }) =>
+      apiFetch<AgentQuestion>(`/questions/${id}/reroute`, { method: "POST", body }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: questionKeys.all }),
+  });
+}
+
 /** 대표 전용 평가. 답이 끝난 질문에 정답 담당자를 붙인다 (SELF = 질문한 쪽 소관). 라우팅 보고서만 바뀐다 */
 export function useSetGold() {
   const queryClient = useQueryClient();
