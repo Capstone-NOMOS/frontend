@@ -9,7 +9,9 @@ export const inboxKeys = {
 
 const POLL = { refetchInterval: livePoll(30000), refetchIntervalInBackground: false } as const;
 
-const LIMIT = 30;
+/** 첫 페이지는 10개, "더 보기"마다 20개 */
+const FIRST = 10;
+const NEXT = 20;
 
 type NotificationPage = { notifications: Schemas["Notification"][]; unreadCount: number };
 
@@ -27,12 +29,15 @@ export function useNotifications() {
   return useInfiniteQuery({
     queryKey: inboxKeys.notifications(),
     queryFn: ({ pageParam }) => {
-      const q = new URLSearchParams({ limit: String(LIMIT) });
+      const q = new URLSearchParams({ limit: String(pageParam ? NEXT : FIRST) });
       if (pageParam) q.set("before", pageParam);
       return apiFetch<NotificationPage>(`/me/notifications?${q}`);
     },
     initialPageParam: null as string | null,
-    getNextPageParam: (last) => (last.notifications.length === LIMIT ? (last.notifications.at(-1)?.id ?? null) : null),
+    getNextPageParam: (last, pages) =>
+      last.notifications.length === (pages.length === 1 ? FIRST : NEXT)
+        ? (last.notifications.at(-1)?.id ?? null)
+        : null,
     select: flatten,
     ...POLL,
   });
