@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import { ArrowRight, CalendarDays, FileText, GitBranch, Loader2, MessageSquare, Play } from "lucide-react";
 import type { TeamRole } from "@/shared/model";
 import { AgentMark, Badge, Button, EmptyState, SectionTitle } from "@/shared/ui";
@@ -25,8 +24,6 @@ const ROLE_FILTERS: { value: TeamRole | undefined; label: string }[] = [
   { value: "FRONTEND", label: "FE" },
   { value: "BACKEND", label: "BE" },
 ];
-const BOARD_PREVIEW = 4;
-
 export function DashboardView({ projectId }: { projectId: string }) {
   // AppShell이 불러온 뒤에만 그려진다
   const { project, members, repos } = useProject(projectId).data!;
@@ -49,8 +46,6 @@ export function DashboardView({ projectId }: { projectId: string }) {
   const specs = useSpecs(projectId);
   const contracts = useContracts(projectId);
   const decisions = useDecisions(projectId, null, DECISIONS_MAX);
-  // 칸마다 BOARD_PREVIEW장까지만 보여 세로로 길어지지 않게 한다
-  const [boardOpen, setBoardOpen] = useState(false);
 
   const rooms = useRooms(projectId).data ?? [];
   const myMember = members.find((m) => m.userId === me?.userId);
@@ -72,10 +67,6 @@ export function DashboardView({ projectId }: { projectId: string }) {
   const boardList = teamRole ? taskList.filter((t) => t.teamRole === teamRole) : taskList;
   // 제목 옆 "완료" 수는 칸반 완료 칸과 같은 기준으로 센다
   const DONE_STATES = TASK_BOARD.find((c) => c.key === "done")!.states;
-  const hiddenCount = TASK_BOARD.reduce(
-    (n, col) => n + Math.max(0, boardList.filter((t) => col.states.includes(t.state)).length - BOARD_PREVIEW),
-    0,
-  );
   // 진행 중인데 내 에이전트가 꺼져 있으면 태스크를 못 받는다. 다시 켜는 1회용 명령은 연결 화면이 새로 발급한다
   const myAgent = myMember?.agentId ? agents?.find((a) => a.agentId === myMember.agentId) : undefined;
   const myAgentOff = project.status === "active" && myAgent?.online === false;
@@ -285,18 +276,24 @@ export function DashboardView({ projectId }: { projectId: string }) {
                             <span>{col.label}</span>
                             <span>{items.length}</span>
                           </div>
-                          <div className="space-y-2">
-                            {(boardOpen ? items : items.slice(0, BOARD_PREVIEW)).map((t) => (
+                          {/* 칸마다 따로 스크롤해 보드가 세로로 길어지지 않게 한다. 끝에 닿아도 페이지로 넘기지 않는다 */}
+                          <div className="max-h-[26rem] space-y-2 overflow-y-auto overscroll-contain">
+                            {items.map((t) => (
                               <Link
                                 key={t.id}
                                 href={`/p/${projectId}/tasks/${t.id}`}
-                                className="block rounded-lg border border-ink-200 bg-white p-2.5 shadow-card transition hover:border-ink-300"
+                                className="block min-w-0 rounded-lg border border-ink-200 bg-white p-2.5 shadow-card transition hover:border-ink-300"
                               >
-                                <div className="flex items-center justify-between gap-2">
+                                <div className="flex flex-wrap items-center justify-between gap-1.5">
                                   <ApiTaskBadge state={t.state} />
                                   {t.teamRole && <TeamRoleBadge role={t.teamRole} />}
                                 </div>
-                                <div className="mt-1.5 text-[13px] font-medium leading-snug">{t.title}</div>
+                                <div
+                                  className="mt-1.5 line-clamp-2 break-words text-[13px] font-medium leading-snug"
+                                  title={t.title}
+                                >
+                                  {t.title}
+                                </div>
                                 {t.state === "BLOCKED" && t.blockedReason && (
                                   <div className="mt-1 text-[11px] font-medium text-human">
                                     {BLOCKED_REASON[t.blockedReason]}
@@ -317,14 +314,6 @@ export function DashboardView({ projectId }: { projectId: string }) {
                       );
                     })}
                   </div>
-                  {(hiddenCount > 0 || boardOpen) && (
-                    <button
-                      onClick={() => setBoardOpen((o) => !o)}
-                      className="mt-2 w-full rounded-lg py-1.5 text-[12px] font-medium text-ink-500 hover:bg-ink-50 hover:text-ink-900"
-                    >
-                      {boardOpen ? "접기" : `더 보기 (${hiddenCount}개)`}
-                    </button>
-                  )}
                 </div>
               )}
             </section>

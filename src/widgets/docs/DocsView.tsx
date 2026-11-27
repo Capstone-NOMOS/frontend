@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { flushSync } from "react-dom";
 import { Loader2, Lock } from "lucide-react";
 import { errorMessage, type Schemas } from "@/shared/api";
 import { Badge, Button, EmptyState, Markdown } from "@/shared/ui";
@@ -22,6 +23,26 @@ const TYPES: { slug: string; type: Exclude<DocType, "CONSTITUTION"> | "NOTES"; w
   { slug: "adr", type: "ADR", who: "쓰기: 질문에 답하면 자동" },
   { slug: "notes", type: "NOTES", who: "쓰기: 에이전트" },
 ];
+
+// 탭마다 처음 10개, "더 보기"마다 20개 (받은 편지함 알림과 같은 간격)
+const FIRST = 10;
+const NEXT = 20;
+
+/** 명세·계약은 서버가 전체를 주고, 노트는 최신 50개까지라 화면에서만 잘라 보인다 */
+function useShowMore<T>(items: T[]) {
+  const [count, setCount] = useState(FIRST);
+  return { shown: items.slice(0, count), hasMore: items.length > count, count, setCount };
+}
+
+function ShowMoreButton({ onClick, busy = false }: { onClick: () => void; busy?: boolean }) {
+  return (
+    <div className="mt-3 flex justify-center">
+      <Button variant="outline" size="sm" disabled={busy} onClick={onClick}>
+        {busy ? <Loader2 size={14} className="animate-spin" /> : null}더 보기
+      </Button>
+    </div>
+  );
+}
 
 /** 명세·계약·결정기록·인계 노트. 모르는 slug(예전 헌법 주소 포함)는 명세로 */
 export function DocsView({ projectId, slug }: { projectId: string; slug: string }) {
@@ -47,6 +68,7 @@ export function DocsView({ projectId, slug }: { projectId: string; slug: string 
 }
 
 function SpecDocs({ specs, who }: { specs: ReturnType<typeof useSpecs>; who: string }) {
+  const page = useShowMore(specs.data ?? []);
   if (specs.isPending) {
     return (
       <div className="flex justify-center py-10 text-ink-400" aria-busy="true">
@@ -74,10 +96,12 @@ function SpecDocs({ specs, who }: { specs: ReturnType<typeof useSpecs>; who: str
         <div className="mt-1 text-[12.5px] text-ink-500">{who} · 기능 키(featureKey) 순</div>
         {specs.data.length > 1 && (
           <ul className="mt-3 flex flex-wrap gap-1.5">
-            {specs.data.map((s) => (
+            {specs.data.map((s, i) => (
               <li key={s.id}>
                 <a
                   href={`#spec-${s.featureKey}`}
+                  // 아직 펼치지 않은 명세면 먼저 그려야 앵커가 그 자리로 간다
+                  onClick={() => flushSync(() => page.setCount((n) => Math.max(n, i + 1)))}
                   className="inline-flex items-center gap-1.5 rounded-lg border border-ink-200 px-2 py-1 text-[12px] hover:bg-ink-50"
                 >
                   <span className="font-mono text-brand-600">{s.featureKey}</span>
@@ -90,16 +114,18 @@ function SpecDocs({ specs, who }: { specs: ReturnType<typeof useSpecs>; who: str
       </div>
       {/* API 탭(ContractCard)과 같은 카드 모양 */}
       <div className="mt-4 space-y-3">
-        {specs.data.map((s) => (
+        {page.shown.map((s) => (
           <SpecSection key={s.id} spec={s} />
         ))}
       </div>
+      {page.hasMore && <ShowMoreButton onClick={() => page.setCount((n) => n + NEXT)} />}
     </>
   );
 }
 
 /** 새 계획 흐름 2단계. 문서는 읽기 전용이다 — 확정·수정 요청은 BE 룸에서 한다 (adr/0013) */
 function ContractDocs({ projectId, contracts }: { projectId: string; contracts: ReturnType<typeof useContracts> }) {
+  const page = useShowMore(contracts.data ?? []);
   if (contracts.isPending) {
     return (
       <div className="flex justify-center py-10 text-ink-400" aria-busy="true">
@@ -139,10 +165,11 @@ function ContractDocs({ projectId, contracts }: { projectId: string; contracts: 
         </p>
       </div>
       <div className="mt-4 space-y-3">
-        {contracts.data.map((c) => (
+        {page.shown.map((c) => (
           <ContractCard key={c.id} projectId={projectId} contract={c} canDecide={false} />
         ))}
       </div>
+      {page.hasMore && <ShowMoreButton onClick={() => page.setCount((n) => n + NEXT)} />}
     </>
   );
 }
@@ -206,6 +233,7 @@ function NoteDocs({ projectId }: { projectId: string }) {
   // 뒤로가기로 돌아와도 보던 종류가 남도록 주소에 둔다
   const [kind, setKind] = useQueryParam("kind", Object.keys(NOTE_KIND) as NoteKind[]);
   const list = (notes.data ?? []).filter((n) => !kind || n.kind === kind);
+  const page = useShowMore(list);
 
   return (
     <>
@@ -219,7 +247,10 @@ function NoteDocs({ projectId }: { projectId: string }) {
         {([null, ...(Object.keys(NOTE_KIND) as NoteKind[])] as const).map((k) => (
           <button
             key={k ?? "all"}
-            onClick={() => setKind(k)}
+            onClick={() => {
+              setKind(k);
+              page.setCount(FIRST);
+            }}
             className={cn(
               "h-7 rounded-full border px-2.5 text-[12px] font-medium",
               kind === k ? "border-ink-900 bg-ink-900 text-white" : "border-ink-200 text-ink-600 hover:bg-ink-50",
@@ -237,7 +268,7 @@ function NoteDocs({ projectId }: { projectId: string }) {
         <EmptyState title={errorMessage(notes.error)} />
       ) : (
         <ol className="card divide-y divide-ink-100">
-          {list.map((n) => (
+          {page.shown.map((n) => (
             <li key={n.id} className="px-4 py-3">
               <NoteItem note={n} notes={notes.data} />
             </li>
@@ -245,18 +276,18 @@ function NoteDocs({ projectId }: { projectId: string }) {
           {list.length === 0 && <li className="px-4 py-8 text-center text-[13px] text-ink-500">노트가 없습니다</li>}
         </ol>
       )}
+      {page.hasMore && <ShowMoreButton onClick={() => page.setCount((n) => n + NEXT)} />}
     </>
   );
 }
 
 const DECISION_ROLES = ["FRONTEND", "BACKEND", "PM"] as const;
 const ROLE_LABEL = { FRONTEND: "FE", BACKEND: "BE", PM: "PM" } as const;
-const DECISION_PAGE = 50;
 
 /** 에이전트가 물은 질문에 누가 무엇을 골랐는지. 확정된 결정은 서버가 관련 태스크의 에이전트에게 전달한다 */
 function DecisionDocs({ projectId }: { projectId: string }) {
   const [role, setRole] = useQueryParam("role", DECISION_ROLES);
-  const [limit, setLimit] = useState(DECISION_PAGE);
+  const [limit, setLimit] = useState(FIRST);
   const decisions = useDecisions(projectId, role, limit);
   // 받은 줄이 요청한 만큼 꽉 찼으면 더 있을 수 있다
   const hasMore = decisions.data?.length === limit && limit < DECISIONS_MAX;
@@ -276,7 +307,7 @@ function DecisionDocs({ projectId }: { projectId: string }) {
             key={r ?? "all"}
             onClick={() => {
               setRole(r);
-              setLimit(DECISION_PAGE);
+              setLimit(FIRST);
             }}
             className={cn(
               "h-7 rounded-full border px-2.5 text-[12px] font-medium",
@@ -308,15 +339,10 @@ function DecisionDocs({ projectId }: { projectId: string }) {
         </ol>
       )}
       {hasMore && (
-        <div className="mt-3 flex justify-center">
-          <Button
-            variant="outline"
-            disabled={decisions.isFetching}
-            onClick={() => setLimit((n) => Math.min(n + DECISION_PAGE, DECISIONS_MAX))}
-          >
-            {decisions.isFetching ? <Loader2 size={14} className="animate-spin" /> : null}더 보기
-          </Button>
-        </div>
+        <ShowMoreButton
+          busy={decisions.isFetching}
+          onClick={() => setLimit((n) => Math.min(n + NEXT, DECISIONS_MAX))}
+        />
       )}
     </>
   );
